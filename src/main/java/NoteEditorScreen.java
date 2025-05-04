@@ -1,57 +1,161 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.time.LocalDateTime;
 
-public class NoteEditorScreen extends JFrame {
+public class NoteEditorScreen extends JPanel {
+    private final MainFrame mainFrame;
+    private final NoteController controller;
     private Note note;
-    private JTextField titleField;
     private JTextArea contentArea;
-    private JCheckBox favoriteCheck;
+    private JTextField titleField;
+    private JLabel wordCountLabel;
+    private JPanel tagPanel;
 
-    public NoteEditorScreen(Note note) {
+    public NoteEditorScreen(MainFrame mainFrame, NoteController controller, Note note) {
+        this.mainFrame = mainFrame;
+        this.controller = controller;
         this.note = note;
-        setTitle("Edit Note - " + note.getTitle());
-        setSize(600, 400);
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout(10, 10));
         initUI();
-        setVisible(true);
+    }
+
+    public void setNote(Note note) {
+        this.note = note;
+        titleField.setText(note.getTitle());
+        contentArea.setText(note.getContent());
+        updateTagDisplay();
+        updateWordCount();
     }
 
     private void initUI() {
-        Container cp = getContentPane();
-        cp.setLayout(new BorderLayout(10, 10));
-
-        // Title
+        // Title Panel
+        JPanel topPanel = new JPanel(new FlowLayout());
         titleField = new JTextField(note.getTitle());
-        titleField.setFont(new Font("Arial", Font.BOLD, 18));
-        cp.add(titleField, BorderLayout.NORTH);
+        titleField.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        topPanel.add(titleField);
+        JButton backButton = new JButton("Back");
+        backButton.addActionListener(e -> mainFrame.showMainMenuScreen());
+        topPanel.add(backButton);
+        add(topPanel, BorderLayout.NORTH);
 
-        // Content
+        // Content Area
         contentArea = new JTextArea(note.getContent());
-        contentArea.setFont(new Font("Arial", Font.PLAIN, 14));
-        JScrollPane scroll = new JScrollPane(contentArea);
-        cp.add(scroll, BorderLayout.CENTER);
+        contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        contentArea.setLineWrap(true);
+        contentArea.setWrapStyleWord(true);
+        contentArea.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                note.setContent(contentArea.getText());
+                updateWordCount();
+            }
+        });
+        JScrollPane scrollPane = new JScrollPane(contentArea);
+        add(scrollPane, BorderLayout.CENTER);
 
-        // South panel: Favorite + Save
-        JPanel southPanel = new JPanel(new BorderLayout());
+        // Tag Panel
+        tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        updateTagDisplay();
 
-        favoriteCheck = new JCheckBox("Favorite", note.isFavorite());
-        southPanel.add(favoriteCheck, BorderLayout.WEST);
+        JButton addTagButton = new JButton("Add Tag");
+        addTagButton.addActionListener(e -> {
+            String tagName = JOptionPane.showInputDialog(mainFrame, "Enter tag name:");
+            if (tagName != null && !tagName.trim().isEmpty()) {
+                controller.addTag(note, new Tag(tagName));
+                updateTagDisplay();
+            }
+        });
 
+        // Alarm Button
+        JButton alarmButton = new JButton("Set Alarm");
+        alarmButton.addActionListener(e -> {
+            String timeStr = JOptionPane.showInputDialog(mainFrame, "Enter alarm time (yyyy-MM-dd HH:mm):");
+            if (timeStr != null && !timeStr.trim().isEmpty()) {
+                try {
+                    LocalDateTime alarmTime = LocalDateTime.parse(timeStr + ":00", java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    controller.setAlarm(note, new Alarm(alarmTime, true, "ONCE"));
+                    JOptionPane.showMessageDialog(mainFrame, "Alarm set for " + alarmTime);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(mainFrame, "Invalid time format!", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        // Save Button
         JButton saveButton = new JButton("Save");
         saveButton.addActionListener(e -> saveNote());
-        southPanel.add(saveButton, BorderLayout.EAST);
 
-        cp.add(southPanel, BorderLayout.SOUTH);
+        // Button Panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.add(alarmButton);
+        buttonPanel.add(addTagButton);
+        buttonPanel.add(saveButton);
+
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.add(tagPanel, BorderLayout.CENTER);
+        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Status Bar
+        JPanel statusPanel = new JPanel(new BorderLayout());
+        wordCountLabel = new JLabel("Words: " + note.getWordCount());
+        wordCountLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+        statusPanel.add(wordCountLabel, BorderLayout.WEST);
+
+        JLabel modifiedLabel = new JLabel("Last modified: " + note.getFormattedModificationDate());
+        modifiedLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
+        statusPanel.add(modifiedLabel, BorderLayout.EAST);
+
+        bottomPanel.add(statusPanel, BorderLayout.NORTH);
+
+        add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    private void updateWordCount() {
+        int count = contentArea.getText().trim().split("\\s+").length;
+        if (contentArea.getText().trim().isEmpty()) count = 0;
+        wordCountLabel.setText("Words: " + count);
+    }
+
+    private void updateTagDisplay() {
+        tagPanel.removeAll();
+        for (Tag tag : note.getTags()) {
+            JPanel tagItem = new JPanel(new BorderLayout());
+            tagItem.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+            tagItem.setBackground(new Color(240, 240, 240));
+
+            JLabel tagLabel = new JLabel(tag.getName());
+            JButton removeButton = new JButton("x");
+            removeButton.setMargin(new Insets(0, 5, 0, 5));
+            removeButton.addActionListener(e -> {
+                controller.removeTag(note, tag);
+                updateTagDisplay();
+            });
+
+            tagItem.add(tagLabel, BorderLayout.CENTER);
+            tagItem.add(removeButton, BorderLayout.EAST);
+            tagPanel.add(tagItem);
+        }
+        tagPanel.revalidate();
+        tagPanel.repaint();
     }
 
     private void saveNote() {
-        note.setTitle(titleField.getText().trim());
-        note.setContent(contentArea.getText().trim());
-        note.setFavorite(favoriteCheck.isSelected());
-        JOptionPane.showMessageDialog(this, "Note saved successfully.");
-        this.dispose(); // đóng cửa sổ sau khi lưu
+        try {
+            String title = titleField.getText().trim();
+            if (title.isEmpty()) {
+                JOptionPane.showMessageDialog(mainFrame, "Title cannot be empty", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            controller.updateNote(note, title, contentArea.getText());
+            if (!controller.getNotes().contains(note)) {
+                controller.addNote(note);
+            }
+            JOptionPane.showMessageDialog(mainFrame, "Note saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            mainFrame.showMainMenuScreen();
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(mainFrame, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }
