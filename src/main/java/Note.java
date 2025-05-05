@@ -11,10 +11,10 @@ public class Note {
     private boolean isFavorite;
     private boolean isMission;
     private boolean isMissionCompleted;
-    private transient Folder folder; // transient để Gson bỏ qua
-    private transient List<Tag> tags; // transient để Gson bỏ qua
+    private String missionContent; // Nội dung mission
+    private transient Folder folder;
+    private transient List<Tag> tags;
     private Alarm alarm;
-    // Trường tạm để deserialize
     String folderName;
     List<String> tagNames;
 
@@ -29,6 +29,7 @@ public class Note {
         this.isFavorite = isFavorite;
         this.isMission = false;
         this.isMissionCompleted = false;
+        this.missionContent = "";
         this.tags = new ArrayList<>();
     }
 
@@ -101,6 +102,15 @@ public class Note {
 
     public void setMissionCompleted(boolean missionCompleted) {
         this.isMissionCompleted = missionCompleted;
+        updateModificationDate();
+    }
+
+    public String getMissionContent() {
+        return missionContent != null ? missionContent : "";
+    }
+
+    public void setMissionContent(String missionContent) {
+        this.missionContent = missionContent != null ? missionContent : "";
         updateModificationDate();
     }
 

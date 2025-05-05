@@ -6,8 +6,9 @@
       "favorite": false,
       "mission": false,
       "missionCompleted": false,
-      "creationDate": "2025-05-04 19:20:12",
-      "modificationDate": "2025-05-04 19:20:12",
+      "missionContent": "",
+      "creationDate": "2025-05-05 18:35:52",
+      "modificationDate": "2025-05-05 18:35:52",
       "folderName": "Personal",
       "tagNames": [
         "groceries"
@@ -17,15 +18,11 @@
       "title": "Project Ideas",
       "content": "1. AI Chatbot\n2. Task Manager",
       "favorite": true,
-      "mission": true,
+      "mission": false,
       "missionCompleted": false,
-      "creationDate": "2025-05-04 19:20:12",
-      "modificationDate": "2025-05-04 19:20:55",
-      "alarm": {
-        "alarmTime": "2025-05-04 19:22:00",
-        "recurring": true,
-        "recurrencePattern": "ONCE"
-      },
+      "missionContent": "",
+      "creationDate": "2025-05-05 18:35:52",
+      "modificationDate": "2025-05-05 18:35:52",
       "folderName": "Work",
       "tagNames": [
         "work"
@@ -33,44 +30,45 @@
     },
     {
       "title": "New Note",
-      "content": "adfasdfasfasdfa",
+      "content": "a\na",
       "favorite": false,
       "mission": false,
       "missionCompleted": false,
-      "creationDate": "2025-05-04 19:21:20",
-      "modificationDate": "2025-05-04 19:21:22",
-      "folderName": "Work",
+      "missionContent": "",
+      "creationDate": "2025-05-05 18:35:56",
+      "modificationDate": "2025-05-05 18:35:59",
+      "folderName": "Personal",
       "tagNames": []
     }
   ],
   "folders": [
     {
       "name": "Root",
-      "subFolders": []
+      "subFolders": [],
+      "favorite": false
     },
     {
       "name": "Work",
-      "subFolders": []
+      "subFolders": [],
+      "favorite": false
     },
     {
       "name": "Personal",
-      "subFolders": []
+      "subFolders": [],
+      "favorite": false
     },
     {
       "name": "Important",
-      "subFolders": []
-    },
-    {
-      "name": "a",
-      "subFolders": []
+      "subFolders": [],
+      "favorite": false
     }
   ],
   "tags": [
     {
-      "name": "groceries"
+      "name": "work"
     },
     {
-      "name": "work"
+      "name": "groceries"
     }
   ]
 }

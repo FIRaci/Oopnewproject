@@ -1,5 +1,4 @@
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -26,7 +25,7 @@ public class DataStorage {
             Data data = new Data();
             data.notes = noteManager.getAllNotes();
             data.folders = noteManager.getAllFolders();
-            data.tags = noteManager.getAllTags();
+            data.tags = new ArrayList<>(new HashSet<>(noteManager.getAllTags())); // Loại bỏ tag trùng lặp
             System.out.println("Saving data to notes.json: " + data.notes.size() + " notes, " + data.folders.size() + " folders, " + data.tags.size() + " tags");
             gson.toJson(data, writer);
         } catch (IOException e) {
@@ -37,10 +36,9 @@ public class DataStorage {
     public void load(NoteManager noteManager) {
         if (!file.exists()) {
             System.out.println("No notes.json file found, using default data.");
-            return; // Không có file, dùng dữ liệu mặc định
+            return;
         }
         try (Reader reader = new FileReader(file)) {
-            // Kiểm tra file JSON có hợp lệ không
             JsonElement jsonElement = JsonParser.parseReader(reader);
             if (!jsonElement.isJsonObject()) {
                 System.err.println("Invalid JSON format in notes.json, using default data.");
@@ -49,14 +47,11 @@ public class DataStorage {
             Data data = gson.fromJson(jsonElement, Data.class);
             if (data != null) {
                 System.out.println("Loaded data from notes.json: " + data.notes.size() + " notes, " + data.folders.size() + " folders, " + data.tags.size() + " tags");
-                // Xóa dữ liệu cũ
                 noteManager.getAllNotes().clear();
                 noteManager.getAllFolders().clear();
                 noteManager.getAllTags().clear();
-                // Thêm dữ liệu mới
                 noteManager.getAllFolders().addAll(data.folders);
                 noteManager.getAllTags().addAll(data.tags);
-                // Ánh xạ lại tham chiếu
                 Map<String, Folder> folderMap = new HashMap<>();
                 for (Folder folder : data.folders) {
                     folderMap.put(folder.getName(), folder);
@@ -66,12 +61,11 @@ public class DataStorage {
                     tagMap.put(tag.getName(), tag);
                 }
                 for (Note note : data.notes) {
-                    // Ánh xạ folder
                     if (note.folderName != null) {
                         Folder folder = folderMap.get(note.folderName);
                         if (folder != null) {
                             note.setFolder(folder);
-                            folder.addNote(note); // Thêm note vào folder
+                            folder.addNote(note);
                         } else {
                             note.setFolder(noteManager.getRootFolder());
                             noteManager.getRootFolder().addNote(note);
@@ -80,7 +74,6 @@ public class DataStorage {
                         note.setFolder(noteManager.getRootFolder());
                         noteManager.getRootFolder().addNote(note);
                     }
-                    // Ánh xạ tags
                     if (note.tagNames != null) {
                         note.tagNames.forEach(tagName -> {
                             Tag tag = tagMap.get(tagName);
@@ -95,7 +88,6 @@ public class DataStorage {
         } catch (IOException | JsonSyntaxException e) {
             System.err.println("Failed to load data from notes.json: " + e.getMessage());
             System.err.println("Using default data instead.");
-            // Xóa file lỗi để tránh lỗi lặp lại
             if (file.exists()) {
                 System.out.println("Deleting invalid notes.json file.");
                 file.delete();
@@ -118,14 +110,13 @@ public class DataStorage {
             json.addProperty("favorite", src.isFavorite());
             json.addProperty("mission", src.isMission());
             json.addProperty("missionCompleted", src.isMissionCompleted());
+            json.addProperty("missionContent", src.getMissionContent());
             json.add("creationDate", context.serialize(src.getCreationDate()));
             json.add("modificationDate", context.serialize(src.getModificationDate()));
             json.add("alarm", context.serialize(src.getAlarm()));
-            // Chỉ lưu tên folder
             if (src.getFolder() != null) {
                 json.addProperty("folderName", src.getFolder().getName());
             }
-            // Chỉ lưu danh sách tên tags
             JsonArray tagNames = new JsonArray();
             src.getTags().forEach(tag -> tagNames.add(tag.getName()));
             json.add("tagNames", tagNames);
@@ -141,6 +132,9 @@ public class DataStorage {
             Note note = new Note(title, content, favorite);
             note.setMission(obj.get("mission").getAsBoolean());
             note.setMissionCompleted(obj.get("missionCompleted").getAsBoolean());
+            if (obj.has("missionContent")) {
+                note.setMissionContent(obj.get("missionContent").getAsString());
+            }
             note.setCreationDate(context.deserialize(obj.get("creationDate"), LocalDateTime.class));
             note.setModificationDate(context.deserialize(obj.get("modificationDate"), LocalDateTime.class));
             if (obj.has("alarm") && !obj.get("alarm").isJsonNull()) {
@@ -166,6 +160,7 @@ public class DataStorage {
             JsonArray subFolders = new JsonArray();
             src.getSubFolders().forEach(subFolder -> subFolders.add(subFolder.getName()));
             json.add("subFolders", subFolders);
+            json.addProperty("favorite", src.isFavorite());
             return json;
         }
 
@@ -177,6 +172,9 @@ public class DataStorage {
             if (obj.has("subFolders")) {
                 JsonArray subFolders = obj.get("subFolders").getAsJsonArray();
                 subFolders.forEach(subFolder -> folder.subFolderNames.add(subFolder.getAsString()));
+            }
+            if (obj.has("favorite")) {
+                folder.setFavorite(obj.get("favorite").getAsBoolean());
             }
             return folder;
         }

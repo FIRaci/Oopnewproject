@@ -3,9 +3,10 @@ import java.util.List;
 
 public class Folder {
     private String name;
-    private transient List<Note> notes; // transient để Gson bỏ qua
-    private transient List<Folder> subFolders; // transient để Gson bỏ qua
-    List<String> subFolderNames; // Trường tạm để deserialize
+    private transient List<Note> notes;
+    private transient List<Folder> subFolders;
+    List<String> subFolderNames;
+    private boolean favorite;
 
     public Folder(String name) {
         if (name == null || name.trim().isEmpty()) {
@@ -15,6 +16,7 @@ public class Folder {
         this.notes = new ArrayList<>();
         this.subFolders = new ArrayList<>();
         this.subFolderNames = new ArrayList<>();
+        this.favorite = false;
     }
 
     public String getName() {
@@ -94,11 +96,10 @@ public class Folder {
     }
 
     public boolean isFavorite() {
-        return getNotes().stream().anyMatch(Note::isFavorite);
+        return favorite;
     }
 
-    public void setFavorite(boolean isFavorite) {
-        getNotes().forEach(note -> note.setFavorite(isFavorite));
-        getSubFolders().forEach(folder -> folder.setFavorite(isFavorite));
+    public void setFavorite(boolean favorite) {
+        this.favorite = favorite;
     }
 }

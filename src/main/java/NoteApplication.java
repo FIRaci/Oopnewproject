@@ -20,14 +20,12 @@ public class NoteApplication {
     }
 
     private static void initializeControllerWithSampleData(NoteController controller) {
-        // Kiểm tra xem dữ liệu đã được tải từ file chưa
-        if (controller.getNotes().isEmpty() && controller.getFolders().size() <= 1) { // Chỉ có Root folder
-            // Thêm thư mục mẫu
+        controller.initializeSampleData();
+        if (controller.getNotes().isEmpty() && controller.getFolders().size() <= 1) {
             controller.addNewFolder("Work");
             controller.addNewFolder("Personal");
             controller.addNewFolder("Important");
 
-            // Thêm ghi chú mẫu
             Note note1 = new Note("Shopping List", "Milk\nEggs\nBread", false);
             controller.addTag(note1, new Tag("groceries"));
             controller.addNote(note1);
