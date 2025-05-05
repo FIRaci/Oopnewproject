@@ -12,12 +12,12 @@ public class NoteManager {
         folders = new ArrayList<>();
         tags = new ArrayList<>();
         dataStorage = new DataStorage("notes.json");
-        // Thêm thư mục gốc mặc định
+
         Folder rootFolder = new Folder("Root");
         folders.add(rootFolder);
-        // Tải dữ liệu từ JSON
+
         dataStorage.load(this);
-        // Ánh xạ lại subfolders
+
         Map<String, Folder> folderMap = new HashMap<>();
         for (Folder folder : folders) {
             folderMap.put(folder.getName(), folder);
@@ -34,7 +34,6 @@ public class NoteManager {
         }
     }
 
-    // Quản lý ghi chú
     public void addNote(Note note) {
         if (note == null) {
             throw new IllegalArgumentException("Note cannot be null");
@@ -72,7 +71,6 @@ public class NoteManager {
         return folder.getNotes().stream().filter(notes::contains).collect(Collectors.toList());
     }
 
-    // Quản lý thư mục
     public void addNewFolder(String name) {
         Folder folder = new Folder(name);
         addFolder(folder);
@@ -117,7 +115,6 @@ public class NoteManager {
         return new ArrayList<>(folders);
     }
 
-    // Quản lý thẻ
     public void addTag(Note note, Tag tag) {
         if (note == null || tag == null) {
             throw new IllegalArgumentException("Note or Tag cannot be null");
@@ -144,7 +141,6 @@ public class NoteManager {
         return new ArrayList<>(tags);
     }
 
-    // Tìm kiếm
     public List<Note> searchNotes(String query) {
         if (query == null || query.trim().isEmpty()) {
             return getAllNotes();
@@ -166,7 +162,6 @@ public class NoteManager {
                 .collect(Collectors.toList());
     }
 
-    // Di chuyển ghi chú
     public void moveNoteToFolder(Note note, Folder folder) {
         if (note != null && note.getFolder() != null) {
             note.getFolder().removeNote(note);
@@ -181,7 +176,6 @@ public class NoteManager {
         saveData();
     }
 
-    // Sắp xếp ghi chú
     public List<Note> getSortedNotes() {
         return notes.stream()
                 .sorted(Comparator.comparing(Note::isFavorite, Comparator.reverseOrder())
@@ -190,7 +184,6 @@ public class NoteManager {
                 .collect(Collectors.toList());
     }
 
-    // Thống kê
     public int getTotalNotesCount() {
         return notes.size();
     }

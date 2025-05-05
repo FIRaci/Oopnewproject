@@ -16,16 +16,13 @@ public class MainFrame extends JFrame {
         this.noteController = noteController;
         this.alarmController = new AlarmController(noteController.getNoteManager(), this);
 
-        // Apply theme
         applyTheme(noteController.getCurrentTheme());
 
-        // Setup JFrame
         setTitle("My Notes");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setSize(800, 600);
         setLocationRelativeTo(null);
 
-        // Window close listener
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
@@ -34,21 +31,17 @@ public class MainFrame extends JFrame {
             }
         });
 
-        // Initialize CardLayout
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
 
-        // Initialize screens
         mainMenuScreen = new MainMenuScreen(noteController, this);
         noteEditorScreen = new NoteEditorScreen(this, noteController, new Note("New Note", "", false));
         canvasPanel = new CanvasPanel(noteController, this);
 
-        // Add screens to CardLayout
         mainPanel.add(mainMenuScreen, "MainMenu");
         mainPanel.add(noteEditorScreen, "NoteEditor");
         mainPanel.add(canvasPanel, "CanvasPanel");
 
-        // Menu bar
         JMenuBar menuBar = new JMenuBar();
         JMenu settingsMenu = new JMenu("Settings");
         JMenuItem switchThemeItem = new JMenuItem("Switch Theme");
@@ -61,7 +54,6 @@ public class MainFrame extends JFrame {
         menuBar.add(settingsMenu);
         setJMenuBar(menuBar);
 
-        // Add mainPanel to frame
         add(mainPanel);
         cardLayout.show(mainPanel, "MainMenu");
     }

@@ -3,6 +3,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.util.List;
+import java.util.Comparator;
 
 public class MainMenuScreen extends JPanel {
     private static final String[] NOTE_COLUMNS = {"Title", "Favorite", "Mission", "Alarm", "Modified"};
@@ -11,6 +12,7 @@ public class MainMenuScreen extends JPanel {
     private static final String ADD_FOLDER_LABEL = "Add Folder";
     private static final String ADD_NOTE_LABEL = "Add Note";
     private static final String SHOW_STATS_LABEL = "Show Stats";
+    private static final String REFRESH_LABEL = "Refresh";
 
     private final NoteController controller;
     private final MainFrame mainFrame;
@@ -43,9 +45,25 @@ public class MainMenuScreen extends JPanel {
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 if (value instanceof Folder) {
-                    setText(((Folder) value).getName() + (isSelected ? " (Selected)" : ""));
+                    Folder folder = (Folder) value;
+                    StringBuilder displayText = new StringBuilder(folder.getName());
+                    if (folder.isFavorite()) displayText.append(" ★");
+                    if (folder.isMission()) displayText.append(" ✔");
+                    if (isSelected) displayText.append(" (Selected)");
+                    setText(displayText.toString());
                 }
                 return c;
+            }
+        });
+        folderList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) showFolderPopupMenu(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) showFolderPopupMenu(e);
             }
         });
         folderList.addListSelectionListener(e -> {
@@ -61,6 +79,47 @@ public class MainMenuScreen extends JPanel {
 
         refreshFolderPanel();
         return folderPanel;
+    }
+
+    private void showFolderPopupMenu(MouseEvent e) {
+        int index = folderList.locationToIndex(e.getPoint());
+        if (index >= 0) {
+            folderList.setSelectedIndex(index);
+            Folder folder = folderList.getSelectedValue();
+            if (folder != null && !folder.getName().equals("Root")) {
+                JPopupMenu popup = new JPopupMenu();
+                JMenuItem renameItem = new JMenuItem("Rename");
+                renameItem.addActionListener(ev -> {
+                    String newName = JOptionPane.showInputDialog(mainFrame, "Enter new folder name:", folder.getName());
+                    if (newName != null && !newName.trim().isEmpty()) {
+                        controller.renameFolder(folder, newName);
+                        refreshFolderPanel();
+                    }
+                });
+                popup.add(renameItem);
+
+                JCheckBoxMenuItem favoriteItem = new JCheckBoxMenuItem("Favorite", folder.isFavorite());
+                favoriteItem.addActionListener(ev -> {
+                    controller.setFolderFavorite(folder, !folder.isFavorite());
+                    refreshFolderPanel();
+                });
+                popup.add(favoriteItem);
+
+                JMenuItem deleteItem = new JMenuItem("Delete");
+                deleteItem.addActionListener(ev -> {
+                    int confirm = JOptionPane.showConfirmDialog(mainFrame,
+                            "Delete folder " + folder.getName() + " and its notes?", "Confirm", JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        controller.deleteFolder(folder);
+                        refreshFolderPanel();
+                        populateNoteTableModel();
+                    }
+                });
+                popup.add(deleteItem);
+
+                popup.show(e.getComponent(), e.getX(), e.getY());
+            }
+        }
     }
 
     private JButton createAddFolderButton() {
@@ -96,16 +155,35 @@ public class MainMenuScreen extends JPanel {
         };
         JTable table = new JTable(model);
         table.setRowHeight(25);
-        table.getColumnModel().getColumn(0).setPreferredWidth(150); // Title
-        table.getColumnModel().getColumn(1).setMaxWidth(60); // Favorite
-        table.getColumnModel().getColumn(2).setMaxWidth(60); // Mission
-        table.getColumnModel().getColumn(3).setMaxWidth(60); // Alarm
-        table.getColumnModel().getColumn(4).setPreferredWidth(180); // Modified
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        table.getColumnModel().getColumn(0).setPreferredWidth(250);
+        table.getColumnModel().getColumn(1).setMaxWidth(60);
+        table.getColumnModel().getColumn(2).setPreferredWidth(300);
+        table.getColumnModel().getColumn(3).setMaxWidth(60);
+        table.getColumnModel().getColumn(4).setPreferredWidth(150);
+        table.getColumnModel().getColumn(4).setMinWidth(130);
 
         table.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) handleNoteDoubleClick(table);
+                if (e.getClickCount() == 2) {
+                    int row = table.rowAtPoint(e.getPoint());
+                    int column = table.columnAtPoint(e.getPoint());
+                    if (row >= 0 && column == 2) {
+                        Note selectedNote = controller.getSortedNotes().get(row);
+                        MissionDialog dialog = new MissionDialog(mainFrame);
+                        dialog.setMission(selectedNote.getMissionContent());
+                        dialog.setVisible(true);
+                        String result = dialog.getResult();
+                        if (result != null) {
+                            selectedNote.setMissionContent(result);
+                            selectedNote.setMission(!result.isEmpty());
+                            populateNoteTableModel();
+                        }
+                    } else if (row >= 0) {
+                        handleNoteDoubleClick(table);
+                    }
+                }
             }
 
             @Override
@@ -138,6 +216,13 @@ public class MainMenuScreen extends JPanel {
         statsButton.addActionListener(e -> mainFrame.openCanvasPanel());
         panel.add(statsButton);
 
+        JButton refreshButton = new JButton(REFRESH_LABEL);
+        refreshButton.addActionListener(e -> {
+            populateNoteTableModel();
+            refreshFolderPanel();
+        });
+        panel.add(refreshButton);
+
         return panel;
     }
 
@@ -159,8 +244,8 @@ public class MainMenuScreen extends JPanel {
             model.addRow(new Object[]{
                     note.getTitle(),
                     note.isFavorite() ? "★" : "",
-                    note.isMission() ? "✔" : "",
-                    note.getAlarm() != null ? "⏰" : "",
+                    note.getMissionContent(),
+                    note.getAlarm() != null ? "^" : "",
                     note.getFormattedModificationDate()
             });
         }
@@ -245,10 +330,13 @@ public class MainMenuScreen extends JPanel {
         }
     }
 
-    private void refreshFolderPanel() {
+    public void refreshFolderPanel() {
         DefaultListModel<Folder> model = (DefaultListModel<Folder>) folderList.getModel();
         model.clear();
-        for (Folder folder : controller.getFolders()) {
+        List<Folder> folders = controller.getFolders();
+        folders.sort(Comparator.comparing(Folder::isFavorite).reversed()
+                .thenComparing(Folder::getName));
+        for (Folder folder : folders) {
             model.addElement(folder);
         }
         folderList.repaint();

@@ -11,8 +11,11 @@ public class TagDialog extends JDialog {
         setSize(300, 150);
         setLocationRelativeTo(owner);
 
+        JPanel inputPanel = new JPanel(new BorderLayout(5, 0));
+        inputPanel.add(new JLabel("#"), BorderLayout.WEST);
         tagField = new JTextField(20);
-        add(tagField, BorderLayout.CENTER);
+        inputPanel.add(tagField, BorderLayout.CENTER);
+        add(inputPanel, BorderLayout.CENTER);
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
         JButton okButton = new JButton("OK");

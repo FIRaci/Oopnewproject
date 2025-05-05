@@ -1,5 +1,6 @@
 import javax.sound.sampled.*;
 import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.util.concurrent.Executors;
@@ -37,12 +38,8 @@ public class AlarmController {
     }
 
     private void triggerAlarm(Note note) {
-        JOptionPane.showMessageDialog(
-                mainFrame,
-                "Alarm for note: " + note.getTitle(),
-                "Alarm",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        AlarmDialog dialog = new AlarmDialog(mainFrame, note);
+        dialog.setVisible(true);
         playSound();
     }
 
@@ -84,5 +81,34 @@ public class AlarmController {
 
     public void stop() {
         scheduler.shutdown();
+    }
+
+    private static class AlarmDialog extends JDialog {
+        public AlarmDialog(Frame owner, Note note) {
+            super(owner, "Alarm Notification", true);
+            setLayout(new BorderLayout(10, 10));
+            setSize(300, 200);
+            setLocationRelativeTo(owner);
+
+            JPanel messagePanel = new JPanel(new BorderLayout());
+            JLabel titleLabel = new JLabel("Alarm for note: " + note.getTitle(), SwingConstants.CENTER);
+            messagePanel.add(titleLabel, BorderLayout.NORTH);
+
+            String missionText = note.getMissionContent().isEmpty() ? "No mission set" :
+                    "Mission: " + note.getMissionContent() + (note.isMissionCompleted() ? " (Completed)" : " (Unfinished)");
+            JTextArea missionLabel = new JTextArea(missionText);
+            missionLabel.setLineWrap(true);
+            missionLabel.setWrapStyleWord(true);
+            missionLabel.setEditable(false);
+            messagePanel.add(missionLabel, BorderLayout.CENTER);
+
+            add(messagePanel, BorderLayout.CENTER);
+
+            JButton okButton = new JButton("OK");
+            okButton.addActionListener(e -> dispose());
+            JPanel buttonPanel = new JPanel(new FlowLayout());
+            buttonPanel.add(okButton);
+            add(buttonPanel, BorderLayout.SOUTH);
+        }
     }
 }

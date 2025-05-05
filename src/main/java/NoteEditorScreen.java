@@ -30,7 +30,6 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private void initUI() {
-        // Title Panel
         JPanel topPanel = new JPanel(new FlowLayout());
         titleField = new JTextField(note.getTitle());
         titleField.setFont(new Font("Segoe UI", Font.BOLD, 16));
@@ -40,7 +39,6 @@ public class NoteEditorScreen extends JPanel {
         topPanel.add(backButton);
         add(topPanel, BorderLayout.NORTH);
 
-        // Content Area
         contentArea = new JTextArea(note.getContent());
         contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         contentArea.setLineWrap(true);
@@ -55,7 +53,6 @@ public class NoteEditorScreen extends JPanel {
         JScrollPane scrollPane = new JScrollPane(contentArea);
         add(scrollPane, BorderLayout.CENTER);
 
-        // Tag Panel
         tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         updateTagDisplay();
 
@@ -68,7 +65,6 @@ public class NoteEditorScreen extends JPanel {
             }
         });
 
-        // Alarm Button
         JButton alarmButton = new JButton("Set Alarm");
         alarmButton.addActionListener(e -> {
             String timeStr = JOptionPane.showInputDialog(mainFrame, "Enter alarm time (yyyy-MM-dd HH:mm):");
@@ -83,11 +79,9 @@ public class NoteEditorScreen extends JPanel {
             }
         });
 
-        // Save Button
         JButton saveButton = new JButton("Save");
         saveButton.addActionListener(e -> saveNote());
 
-        // Button Panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.add(alarmButton);
         buttonPanel.add(addTagButton);
