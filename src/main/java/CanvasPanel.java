@@ -1,22 +1,25 @@
 import javax.swing.*;
 import java.awt.*;
+import java.util.HashMap;
 import java.util.Map;
 
 public class CanvasPanel extends JPanel {
     private final NoteController controller;
     private final MainFrame mainFrame;
-    private final JTextArea scriptArea;
+    private Map<String, Integer> folderCounts;
+    private Map<String, Integer> tagCounts;
+    private JPanel chartPanel;
+    private JPanel buttonPanel;
 
     public CanvasPanel(NoteController controller, MainFrame mainFrame) {
         this.controller = controller;
         this.mainFrame = mainFrame;
         setLayout(new BorderLayout());
 
-        scriptArea = new JTextArea();
-        scriptArea.setText(getDefaultScript());
-        add(new JScrollPane(scriptArea), BorderLayout.CENTER);
+        chartPanel = new JPanel(new GridLayout(2, 1));
+        add(chartPanel, BorderLayout.CENTER);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton backButton = new JButton("Back");
         backButton.addActionListener(e -> mainFrame.showMainMenuScreen());
         buttonPanel.add(backButton);
@@ -26,68 +29,90 @@ public class CanvasPanel extends JPanel {
         buttonPanel.add(runButton);
 
         add(buttonPanel, BorderLayout.SOUTH);
-    }
 
-    private String getDefaultScript() {
-        return "function drawChart() {\n" +
-                "  const canvas = document.createElement('canvas');\n" +
-                "  document.body.appendChild(canvas);\n" +
-                "  const ctx = canvas.getContext('2d');\n" +
-                "  canvas.width = 300;\n" +
-                "  canvas.height = 200;\n" +
-                "\n" +
-                "  const folders = ['Work', 'Personal', 'Important', 'Root'];\n" +
-                "  const counts = " + getFolderCounts() + ";\n" +
-                "  const total = counts.reduce((a, b) => a + b, 0);\n" +
-                "  let startAngle = 0;\n" +
-                "\n" +
-                "  ctx.fillStyle = 'lightgray';\n" +
-                "  ctx.fillRect(0, 0, canvas.width, canvas.height);\n" +
-                "\n" +
-                "  for (let i = 0; i < folders.length; i++) {\n" +
-                "    if (counts[i] > 0) {\n" +
-                "      const angle = (counts[i] / total) * 2 * Math.PI;\n" +
-                "      ctx.beginPath();\n" +
-                "      ctx.moveTo(150, 100);\n" +
-                "      ctx.arc(150, 100, 80, startAngle, startAngle + angle);\n" +
-                "      ctx.fillStyle = `hsl(${i * 90}, 70%, 50%)`;\n" +
-                "      ctx.fill();\n" +
-                "      startAngle += angle;\n" +
-                "\n" +
-                "      const labelX = 150 + 100 * Math.cos(startAngle - angle / 2);\n" +
-                "      const labelY = 100 + 100 * Math.sin(startAngle - angle / 2);\n" +
-                "      ctx.fillStyle = 'black';\n" +
-                "      ctx.font = '12px Arial';\n" +
-                "      ctx.fillText(folders[i] + ' (' + counts[i] + ')', labelX, labelY);\n" +
-                "    }\n" +
-                "  }\n" +
-                "}\n" +
-                "drawChart();";
-    }
-
-    private String getFolderCounts() {
-        Map<String, Integer> counts = controller.getNoteManager().getFolderNoteCounts();
-        String[] folders = {"Work", "Personal", "Important", "Root"};
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < folders.length; i++) {
-            sb.append(counts.getOrDefault(folders[i], 0));
-            if (i < folders.length - 1) sb.append(", ");
-        }
-        sb.append("]");
-        return sb.toString();
+        updateChart();
     }
 
     public void updateChart() {
-        scriptArea.setText(getDefaultScript());
-        repaint();
+        // Tính số note theo folder (loại trừ Root nếu không có note)
+        folderCounts = new HashMap<>();
+        Map<String, Integer> rawCounts = controller.getNoteManager().getFolderNoteCounts();
+        for (Map.Entry<String, Integer> entry : rawCounts.entrySet()) {
+            if (entry.getValue() > 0 && !entry.getKey().equals("Root")) {
+                folderCounts.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        // Tính số note theo tag
+        tagCounts = new HashMap<>();
+        for (Note note : controller.getNotes()) {
+            for (Tag tag : note.getTags()) {
+                tagCounts.put(tag.getName(), tagCounts.getOrDefault(tag.getName(), 0) + 1);
+            }
+        }
+
+        // Vẽ lại biểu đồ
+        chartPanel.removeAll();
+        chartPanel.add(new PieChartPanel("Note Distribution by Folder", folderCounts));
+        chartPanel.add(new PieChartPanel("Tag Usage Distribution", tagCounts));
+        chartPanel.revalidate();
+        chartPanel.repaint();
     }
 
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setColor(Color.BLACK);
-        g2d.drawString("Note distribution by folder (click Run to update)", 10, 20);
+    private class PieChartPanel extends JPanel {
+        private final String title;
+        private final Map<String, Integer> data;
+
+        public PieChartPanel(String title, Map<String, Integer> data) {
+            this.title = title;
+            this.data = data;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            if (data.isEmpty()) {
+                g2d.setColor(Color.BLACK);
+                g2d.drawString("No data to display", 10, 20);
+                return;
+            }
+
+            int width = getWidth();
+            int height = getHeight();
+            int centerX = width / 2;
+            int centerY = height / 2;
+            int radius = Math.min(width, height) / 4;
+
+            g2d.setColor(Color.LIGHT_GRAY);
+            g2d.fillRect(0, 0, width, height);
+
+            double total = data.values().stream().mapToInt(Integer::intValue).sum();
+            double startAngle = 0;
+            int colorIndex = 0;
+            Color[] colors = {Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE, Color.MAGENTA};
+
+            for (Map.Entry<String, Integer> entry : data.entrySet()) {
+                if (entry.getValue() > 0) {
+                    double angle = (entry.getValue() / total) * 360;
+                    g2d.setColor(colors[colorIndex % colors.length]);
+                    g2d.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2, (int) startAngle, (int) angle);
+
+                    double labelAngle = Math.toRadians(startAngle + angle / 2);
+                    int labelX = centerX + (int) (radius * 1.3 * Math.cos(labelAngle));
+                    int labelY = centerY - (int) (radius * 1.3 * Math.sin(labelAngle));
+                    g2d.setColor(Color.BLACK);
+                    g2d.drawString(entry.getKey() + " (" + entry.getValue() + ")", labelX, labelY);
+
+                    startAngle += angle;
+                    colorIndex++;
+                }
+            }
+
+            g2d.setColor(Color.BLACK);
+            g2d.drawString(title, 10, 20);
+        }
     }
 }

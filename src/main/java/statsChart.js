@@ -6,7 +6,7 @@ function drawChart() {
   canvas.height = 200;
 
   const folders = ['Work', 'Personal', 'Important'];
-  const counts = [5, 3, 2]; // Example data, replace with real counts
+  const counts = [5, 3, 2];
   const total = counts.reduce((a, b) => a + b, 0);
   let startAngle = 0;
 
@@ -22,7 +22,6 @@ function drawChart() {
     ctx.fill();
     startAngle += angle;
 
-    // Add label
     const labelX = 150 + 100 * Math.cos(startAngle - angle / 2);
     const labelY = 100 + 100 * Math.sin(startAngle - angle / 2);
     ctx.fillStyle = 'black';
