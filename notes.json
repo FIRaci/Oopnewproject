@@ -7,8 +7,8 @@
       "mission": false,
       "missionCompleted": false,
       "missionContent": "",
-      "creationDate": "2025-05-05 18:35:52",
-      "modificationDate": "2025-05-05 18:35:52",
+      "creationDate": "2025-05-06 14:58:42",
+      "modificationDate": "2025-05-06 14:58:42",
       "folderName": "Personal",
       "tagNames": [
         "groceries"
@@ -21,24 +21,12 @@
       "mission": false,
       "missionCompleted": false,
       "missionContent": "",
-      "creationDate": "2025-05-05 18:35:52",
-      "modificationDate": "2025-05-05 18:35:52",
+      "creationDate": "2025-05-06 14:58:42",
+      "modificationDate": "2025-05-06 14:58:42",
       "folderName": "Work",
       "tagNames": [
         "work"
       ]
-    },
-    {
-      "title": "New Note",
-      "content": "a\na",
-      "favorite": false,
-      "mission": false,
-      "missionCompleted": false,
-      "missionContent": "",
-      "creationDate": "2025-05-05 18:35:56",
-      "modificationDate": "2025-05-05 18:35:59",
-      "folderName": "Personal",
-      "tagNames": []
     }
   ],
   "folders": [
