@@ -56,6 +56,11 @@ public class NoteEditorScreen extends JPanel {
         tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         updateTagDisplay();
 
+        JButton autoTagButton = new JButton("Auto Tag");
+        autoTagButton.addActionListener(e -> {
+            System.out.println("Auto Tag Placeholder");
+        });
+
         JButton addTagButton = new JButton("Add Tag");
         addTagButton.addActionListener(e -> {
             String tagName = JOptionPane.showInputDialog(mainFrame, "Enter tag name:");
@@ -85,6 +90,7 @@ public class NoteEditorScreen extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.add(alarmButton);
         buttonPanel.add(addTagButton);
+        buttonPanel.add(autoTagButton);
         buttonPanel.add(saveButton);
 
         JPanel bottomPanel = new JPanel(new BorderLayout());
