@@ -1,0 +1,19 @@
+
+
+Version:	3.50
+CmdLine:	C:\Users\Admin\OneDrive - Hanoi University of Science and Technology\Desktop\Just New\Oopnewproject\XiNoClo.exe --l4j-debug
+JNI:		No
+WOW64:		Yes
+Working dir:	C:\Users\Admin\OneDrive - Hanoi University of Science and Technology\Desktop\Just New\Oopnewproject\.
+Requires JDK:	No
+Requires 64-Bit: No
+Java min ver:	1.011.000
+Java max ver:	1.017.000
+Substitute:	EXEDIR = C:\Users\Admin\OneDrive - Hanoi University of Science and Technology\Desktop\Just New\Oopnewproject
+JRE paths:	C:\Users\Admin\OneDrive - Hanoi University of Science and Technology\Desktop\Just New\Oopnewproject\jre
+Check launcher:	C:\Users\Admin\OneDrive - Hanoi University of Science and Technology\Desktop\Just New\Oopnewproject\jre\bin\javaw.exe (OK)
+Version string: 1.011.000_027 / 64-Bit (OK)
+Launcher:	C:\Users\Admin\OneDrive - Hanoi University of Science and Technology\Desktop\Just New\Oopnewproject\jre\bin\javaw.exe
+Launcher args:	-Xmx512m -jar "C:\Users\Admin\OneDrive - Hanoi University of Science and Technology\Desktop\Just New\Oopnewproject\XiNoClo.exe"
+Args length:	127/32768 chars
+Exit code:	0
