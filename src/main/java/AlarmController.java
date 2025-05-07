@@ -11,6 +11,7 @@ public class AlarmController {
     private final NoteManager noteManager;
     private final MainFrame mainFrame;
     private final ScheduledExecutorService scheduler;
+    private Clip clip;
 
     public AlarmController(NoteManager noteManager, MainFrame mainFrame) {
         this.noteManager = noteManager;
@@ -27,12 +28,13 @@ public class AlarmController {
         LocalDateTime now = LocalDateTime.now();
         for (Note note : noteManager.getAllNotes()) {
             Alarm alarm = note.getAlarm();
-            if (alarm != null && alarm.isActive()) {
-                LocalDateTime alarmTime = alarm.getAlarmTime();
-                if (alarmTime.isBefore(now) || alarmTime.equals(now)) {
-                    SwingUtilities.invokeLater(() -> triggerAlarm(note));
-                    updateAlarmTime(note, alarm);
-                }
+            if (alarm != null && (alarm.getAlarmTime().isBefore(now) || alarm.getAlarmTime().equals(now))) {
+                SwingUtilities.invokeLater(() -> {
+                    triggerAlarm(note);
+                    note.setAlarm(null); // Xóa alarm sau khi chạy
+                    mainFrame.showMainMenuScreen(); // Làm mới giao diện
+                });
+                updateAlarmTime(note, alarm);
             }
         }
     }
@@ -46,10 +48,19 @@ public class AlarmController {
     private void playSound() {
         try {
             File soundFile = new File("src/main/resources/sound/alarm.wav");
+            if (!soundFile.exists()) {
+                System.err.println("Alarm sound file not found: " + soundFile.getAbsolutePath());
+                return;
+            }
             AudioInputStream audioInput = AudioSystem.getAudioInputStream(soundFile);
-            Clip clip = AudioSystem.getClip();
+            clip = AudioSystem.getClip();
             clip.open(audioInput);
             clip.start();
+            clip.addLineListener(event -> {
+                if (event.getType() == LineEvent.Type.STOP) {
+                    clip.close();
+                }
+            });
         } catch (Exception e) {
             System.err.println("Could not play sound: " + e.getMessage());
         }
@@ -80,6 +91,10 @@ public class AlarmController {
     }
 
     public void stop() {
+        if (clip != null && clip.isRunning()) {
+            clip.stop();
+            clip.close();
+        }
         scheduler.shutdown();
     }
 

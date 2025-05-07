@@ -34,8 +34,8 @@ public class NoteController {
 
     public List<Note> getSortedNotes() {
         return noteManager.getNotesInFolder(currentFolder).stream()
-                .sorted(Comparator.comparing(Note::isFavorite).reversed()
-                        .thenComparing(Note::getModificationDate).reversed())
+                .sorted(Comparator.comparing(Note::isFavorite, Comparator.reverseOrder())
+                        .thenComparing(Note::getModificationDate, Comparator.reverseOrder()))
                 .collect(Collectors.toList());
     }
 

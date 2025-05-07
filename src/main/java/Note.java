@@ -158,7 +158,7 @@ public class Note {
         return words.length;
     }
 
-    private void updateModificationDate() {
+    void updateModificationDate() {
         this.modificationDate = LocalDateTime.now();
     }
 
@@ -174,5 +174,9 @@ public class Note {
     @Override
     public int hashCode() {
         return title.hashCode() + creationDate.hashCode();
+    }
+
+    public void setTags(List<Tag> tags) {
+        this.tags = tags;
     }
 }

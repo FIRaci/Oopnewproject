@@ -5,111 +5,37 @@ import java.awt.event.KeyEvent;
 import java.time.LocalDateTime;
 
 public class NoteEditorScreen extends JPanel {
+    private static final String SAVE_LABEL = "Save";
+    private static final String BACK_LABEL = "Back";
+    private static final String ADD_TAG_LABEL = "Add Tag";
+    private static final String ADD_ALARM_LABEL = "Add Alarm";
+    private static final String ADD_MISSION_LABEL = "Add Mission";
+    private static final String TRANSLATE_LABEL = "Translate";
+    private static final String AUTO_TAG_LABEL = "Auto Tag";
+
     private final MainFrame mainFrame;
     private final NoteController controller;
     private Note note;
-    private JTextArea contentArea;
     private JTextField titleField;
-    private JLabel wordCountLabel;
+    private JTextArea contentField;
     private JPanel tagPanel;
+    private JLabel wordCountLabel;
+    private JLabel modifiedLabel;
 
     public NoteEditorScreen(MainFrame mainFrame, NoteController controller, Note note) {
         this.mainFrame = mainFrame;
         this.controller = controller;
-        this.note = note;
-        setLayout(new BorderLayout(10, 10));
-        initUI();
+        this.note = note != null ? note : new Note("New Note", "", false);
+        initializeUI();
     }
 
     public void setNote(Note note) {
-        this.note = note;
-        titleField.setText(note.getTitle());
-        contentArea.setText(note.getContent());
+        this.note = note != null ? note : new Note("New Note", "", false);
+        titleField.setText(this.note.getTitle());
+        contentField.setText(this.note.getContent());
         updateTagDisplay();
         updateWordCount();
-    }
-
-    private void initUI() {
-        JPanel topPanel = new JPanel(new FlowLayout());
-        titleField = new JTextField(note.getTitle());
-        titleField.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        topPanel.add(titleField);
-        JButton backButton = new JButton("Back");
-        backButton.addActionListener(e -> mainFrame.showMainMenuScreen());
-        topPanel.add(backButton);
-        add(topPanel, BorderLayout.NORTH);
-
-        contentArea = new JTextArea(note.getContent());
-        contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        contentArea.setLineWrap(true);
-        contentArea.setWrapStyleWord(true);
-        contentArea.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                note.setContent(contentArea.getText());
-                updateWordCount();
-            }
-        });
-        JScrollPane scrollPane = new JScrollPane(contentArea);
-        add(scrollPane, BorderLayout.CENTER);
-
-        tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        updateTagDisplay();
-
-        JButton addTagButton = new JButton("Add Tag");
-        addTagButton.addActionListener(e -> {
-            String tagName = JOptionPane.showInputDialog(mainFrame, "Enter tag name:");
-            if (tagName != null && !tagName.trim().isEmpty()) {
-                controller.addTag(note, new Tag(tagName));
-                updateTagDisplay();
-            }
-        });
-
-        JButton alarmButton = new JButton("Set Alarm");
-        alarmButton.addActionListener(e -> {
-            String timeStr = JOptionPane.showInputDialog(mainFrame, "Enter alarm time (yyyy-MM-dd HH:mm):");
-            if (timeStr != null && !timeStr.trim().isEmpty()) {
-                try {
-                    LocalDateTime alarmTime = LocalDateTime.parse(timeStr + ":00", java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                    controller.setAlarm(note, new Alarm(alarmTime, true, "ONCE"));
-                    JOptionPane.showMessageDialog(mainFrame, "Alarm set for " + alarmTime);
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(mainFrame, "Invalid time format!", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
-
-        JButton saveButton = new JButton("Save");
-        saveButton.addActionListener(e -> saveNote());
-
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.add(alarmButton);
-        buttonPanel.add(addTagButton);
-        buttonPanel.add(saveButton);
-
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(tagPanel, BorderLayout.CENTER);
-        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        // Status Bar
-        JPanel statusPanel = new JPanel(new BorderLayout());
-        wordCountLabel = new JLabel("Words: " + note.getWordCount());
-        wordCountLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
-        statusPanel.add(wordCountLabel, BorderLayout.WEST);
-
-        JLabel modifiedLabel = new JLabel("Last modified: " + note.getFormattedModificationDate());
-        modifiedLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
-        statusPanel.add(modifiedLabel, BorderLayout.EAST);
-
-        bottomPanel.add(statusPanel, BorderLayout.NORTH);
-
-        add(bottomPanel, BorderLayout.SOUTH);
-    }
-
-    private void updateWordCount() {
-        int count = contentArea.getText().trim().split("\\s+").length;
-        if (contentArea.getText().trim().isEmpty()) count = 0;
-        wordCountLabel.setText("Words: " + count);
+        updateModifiedTime();
     }
 
     private void updateTagDisplay() {
@@ -135,17 +61,151 @@ public class NoteEditorScreen extends JPanel {
         tagPanel.repaint();
     }
 
+    private void updateWordCount() {
+        int count = contentField.getText().trim().split("\\s+").length;
+        if (contentField.getText().trim().isEmpty()) count = 0;
+        wordCountLabel.setText("Words: " + count);
+    }
+
+    private void updateModifiedTime() {
+        modifiedLabel.setText("Last modified: " + note.getFormattedModificationDate());
+    }
+
+    private void initializeUI() {
+        setLayout(new BorderLayout(10, 10));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Top panel with title field and back button
+        JPanel topPanel = new JPanel(new BorderLayout());
+        titleField = new JTextField(note.getTitle());
+        titleField.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        topPanel.add(new JLabel("Title:"), BorderLayout.WEST);
+        topPanel.add(titleField, BorderLayout.CENTER);
+
+        JButton backButton = new JButton(BACK_LABEL);
+        backButton.addActionListener(e -> mainFrame.showMainMenuScreen());
+        topPanel.add(backButton, BorderLayout.EAST);
+
+        add(topPanel, BorderLayout.NORTH);
+
+        // Content area
+        contentField = new JTextArea(note.getContent());
+        contentField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        contentField.setLineWrap(true);
+        contentField.setWrapStyleWord(true);
+        contentField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                updateWordCount();
+            }
+        });
+        add(new JScrollPane(contentField), BorderLayout.CENTER);
+
+        // Tag panel
+        tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        tagPanel.setBorder(BorderFactory.createTitledBorder("Tags"));
+        updateTagDisplay();
+
+        // Status bar
+        JPanel statusPanel = new JPanel(new BorderLayout());
+        wordCountLabel = new JLabel("Words: " + note.getWordCount());
+        wordCountLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+        statusPanel.add(wordCountLabel, BorderLayout.WEST);
+
+        modifiedLabel = new JLabel("Last modified: " + note.getFormattedModificationDate());
+        modifiedLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
+        statusPanel.add(modifiedLabel, BorderLayout.EAST);
+
+        // Bottom panel with tags and buttons
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.add(tagPanel, BorderLayout.CENTER);
+        bottomPanel.add(statusPanel, BorderLayout.NORTH);
+        bottomPanel.add(createButtonPanel(), BorderLayout.SOUTH);
+
+        add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    private JPanel createButtonPanel() {
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        // Auto Tag button
+        JButton autoTagButton = new JButton(AUTO_TAG_LABEL);
+        autoTagButton.addActionListener(e -> {
+            System.out.println("Auto Tag Placeholder");
+        });
+        buttonPanel.add(autoTagButton);
+
+        // Add Tag button
+        JButton addTagButton = new JButton(ADD_TAG_LABEL);
+        addTagButton.addActionListener(e -> {
+            String tagName = JOptionPane.showInputDialog(mainFrame, "Enter tag name:");
+            if (tagName != null && !tagName.trim().isEmpty()) {
+                controller.addTag(note, new Tag(tagName));
+                updateTagDisplay();
+            }
+        });
+        buttonPanel.add(addTagButton);
+
+        // Add Alarm button
+        JButton addAlarmButton = new JButton(ADD_ALARM_LABEL);
+        addAlarmButton.addActionListener(e -> {
+            String timeStr = JOptionPane.showInputDialog(mainFrame, "Enter alarm time (yyyy-MM-dd HH:mm):");
+            if (timeStr != null && !timeStr.trim().isEmpty()) {
+                try {
+                    LocalDateTime alarmTime = LocalDateTime.parse(timeStr + ":00",
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    controller.setAlarm(note, new Alarm(alarmTime, true, "ONCE"));
+                    JOptionPane.showMessageDialog(mainFrame, "Alarm set for " + alarmTime);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(mainFrame, "Invalid time format!", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        buttonPanel.add(addAlarmButton);
+
+        // Add Mission button
+        JButton addMissionButton = new JButton(ADD_MISSION_LABEL);
+        addMissionButton.addActionListener(e -> {
+            MissionDialog dialog = new MissionDialog(mainFrame);
+            dialog.setMission(note != null ? note.getMissionContent() : "");
+            dialog.setVisible(true);
+            String result = dialog.getResult();
+            if (result != null && note != null) {
+                note.setMissionContent(result);
+                note.setMission(!result.isEmpty());
+            }
+        });
+        buttonPanel.add(addMissionButton);
+
+        // Translate button (disabled for now)
+        JButton translateButton = new JButton(TRANSLATE_LABEL);
+        translateButton.setEnabled(false);
+        buttonPanel.add(translateButton);
+
+        // Save button
+        JButton saveButton = new JButton(SAVE_LABEL);
+        saveButton.addActionListener(e -> saveNote());
+        buttonPanel.add(saveButton);
+
+        return buttonPanel;
+    }
+
     private void saveNote() {
         try {
-            String title = titleField.getText().trim();
-            if (title.isEmpty()) {
-                JOptionPane.showMessageDialog(mainFrame, "Title cannot be empty", "Error", JOptionPane.ERROR_MESSAGE);
+            String newTitle = titleField.getText().trim();
+            String newContent = contentField.getText().trim();
+            if (newTitle.isEmpty()) {
+                JOptionPane.showMessageDialog(mainFrame, "Title cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            controller.updateNote(note, title, contentArea.getText());
+            note.setTitle(newTitle);
+            note.setContent(newContent);
+            note.updateModificationDate();
+            controller.updateNote(note, newTitle, newContent);
             if (!controller.getNotes().contains(note)) {
                 controller.addNote(note);
             }
+            updateModifiedTime();
             JOptionPane.showMessageDialog(mainFrame, "Note saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
             mainFrame.showMainMenuScreen();
         } catch (IllegalArgumentException e) {

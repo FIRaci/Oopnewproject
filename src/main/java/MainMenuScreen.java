@@ -4,11 +4,11 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Comparator;
+import java.util.stream.Collectors;
 
 public class MainMenuScreen extends JPanel {
     private static final String[] NOTE_COLUMNS = {"Title", "Favorite", "Mission", "Alarm", "Modified"};
     private static final String FOLDERS_TITLE = "Folders";
-    private static final String NOTES_TITLE = "Notes";
     private static final String ADD_FOLDER_LABEL = "Add Folder";
     private static final String ADD_NOTE_LABEL = "Add Note";
     private static final String SHOW_STATS_LABEL = "Show Stats";
@@ -37,7 +37,6 @@ public class MainMenuScreen extends JPanel {
         folderPanel = new JPanel();
         folderPanel.setLayout(new BoxLayout(folderPanel, BoxLayout.Y_AXIS));
         folderPanel.setBorder(BorderFactory.createTitledBorder(FOLDERS_TITLE));
-        folderPanel.add(new JLabel(FOLDERS_TITLE));
 
         folderList = new JList<>(new DefaultListModel<>());
         folderList.setCellRenderer(new DefaultListCellRenderer() {
@@ -60,7 +59,6 @@ public class MainMenuScreen extends JPanel {
             public void mousePressed(MouseEvent e) {
                 if (e.isPopupTrigger()) showFolderPopupMenu(e);
             }
-
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (e.isPopupTrigger()) showFolderPopupMenu(e);
@@ -136,7 +134,7 @@ public class MainMenuScreen extends JPanel {
 
     private JPanel buildNotesPanel() {
         JPanel notesPanel = new JPanel(new BorderLayout());
-        notesPanel.setBorder(BorderFactory.createTitledBorder(NOTES_TITLE));
+        notesPanel.setBorder(BorderFactory.createTitledBorder("Notes"));
 
         noteTable = createNoteTable();
         notesPanel.add(new JScrollPane(noteTable), BorderLayout.CENTER);
@@ -244,8 +242,8 @@ public class MainMenuScreen extends JPanel {
             model.addRow(new Object[]{
                     note.getTitle(),
                     note.isFavorite() ? "★" : "",
-                    note.getMissionContent(),
-                    note.getAlarm() != null ? "^" : "",
+                    note.getMissionContent().isEmpty() ? "" : "✔ " + note.getMissionContent(),
+                    note.getAlarm() != null ? "⏰" : "",
                     note.getFormattedModificationDate()
             });
         }
@@ -279,9 +277,6 @@ public class MainMenuScreen extends JPanel {
 
     private void showNotePopup(MouseEvent e, Note note) {
         JPopupMenu popup = new JPopupMenu();
-        JMenuItem deleteItem = new JMenuItem("Delete");
-        deleteItem.addActionListener(ev -> handleNoteDeletion(note));
-        popup.add(deleteItem);
 
         JMenuItem renameItem = new JMenuItem("Rename");
         renameItem.addActionListener(ev -> {
@@ -302,10 +297,30 @@ public class MainMenuScreen extends JPanel {
 
         JCheckBoxMenuItem missionItem = new JCheckBoxMenuItem("Mission", note.isMission());
         missionItem.addActionListener(ev -> {
-            controller.setNoteMission(note, !note.isMission());
-            populateNoteTableModel();
+            MissionDialog dialog = new MissionDialog(mainFrame);
+            dialog.setMission(note.getMissionContent());
+            dialog.setVisible(true);
+            String result = dialog.getResult();
+            if (result != null) {
+                note.setMissionContent(result);
+                note.setMission(!result.isEmpty());
+                populateNoteTableModel();
+            }
         });
         popup.add(missionItem);
+
+        JMenuItem alarmItem = new JMenuItem("Set Alarm");
+        alarmItem.setIcon(new ImageIcon("src/main/resources/icons/alarm.png"));
+        alarmItem.addActionListener(ev -> {
+            AlarmDialog dialog = new AlarmDialog(mainFrame);
+            dialog.setVisible(true);
+            Alarm alarm = dialog.getResult();
+            if (alarm != null) {
+                controller.setAlarm(note, alarm);
+                populateNoteTableModel();
+            }
+        });
+        popup.add(alarmItem);
 
         JMenuItem moveItem = new JMenuItem("Move");
         moveItem.addActionListener(ev -> {
@@ -317,6 +332,10 @@ public class MainMenuScreen extends JPanel {
             }
         });
         popup.add(moveItem);
+
+        JMenuItem deleteItem = new JMenuItem("Delete");
+        deleteItem.addActionListener(ev -> handleNoteDeletion(note));
+        popup.add(deleteItem);
 
         popup.show(e.getComponent(), e.getX(), e.getY());
     }
@@ -334,9 +353,24 @@ public class MainMenuScreen extends JPanel {
         DefaultListModel<Folder> model = (DefaultListModel<Folder>) folderList.getModel();
         model.clear();
         List<Folder> folders = controller.getFolders();
-        folders.sort(Comparator.comparing(Folder::isFavorite).reversed()
-                .thenComparing(Folder::getName));
-        for (Folder folder : folders) {
+
+        // Đảm bảo Root ở đầu
+        Folder rootFolder = folders.stream()
+                .filter(f -> f.getName().equals("Root"))
+                .findFirst()
+                .orElse(null);
+        if (rootFolder != null) {
+            model.addElement(rootFolder);
+        }
+
+        // Sắp xếp các folder còn lại: favorite và mission lên trên
+        List<Folder> otherFolders = folders.stream()
+                .filter(f -> !f.getName().equals("Root"))
+                .sorted(Comparator.comparing(Folder::isFavorite, Comparator.reverseOrder())
+                        .thenComparing(Folder::isMission, Comparator.reverseOrder())
+                        .thenComparing(Folder::getName))
+                .collect(Collectors.toList());
+        for (Folder folder : otherFolders) {
             model.addElement(folder);
         }
         folderList.repaint();

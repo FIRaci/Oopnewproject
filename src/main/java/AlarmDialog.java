@@ -22,6 +22,7 @@ public class AlarmDialog extends JDialog {
         timeSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor editor = new JSpinner.DateEditor(timeSpinner, "yyyy-MM-dd HH:mm");
         timeSpinner.setEditor(editor);
+        timeSpinner.setValue(new Date());
         gbc.gridx = 0; gbc.gridy = 0; add(timeLabel, gbc);
         gbc.gridx = 1; add(timeSpinner, gbc);
 
@@ -34,6 +35,7 @@ public class AlarmDialog extends JDialog {
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout());
         JButton okButton = new JButton("OK");
+        okButton.setIcon(new ImageIcon("src/main/resources/icons/check.png"));
         okButton.addActionListener(e -> {
             Date date = (Date) timeSpinner.getValue();
             String pattern = (String) recurrenceCombo.getSelectedItem();
@@ -42,6 +44,7 @@ public class AlarmDialog extends JDialog {
             dispose();
         });
         JButton cancelButton = new JButton("Cancel");
+        cancelButton.setIcon(new ImageIcon("src/main/resources/icons/cancel.png"));
         cancelButton.addActionListener(e -> dispose());
         buttonPanel.add(okButton);
         buttonPanel.add(cancelButton);

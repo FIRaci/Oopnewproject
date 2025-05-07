@@ -1,4 +1,5 @@
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 public class Alarm {
@@ -48,8 +49,9 @@ public class Alarm {
         this.recurrencePattern = recurrencePattern != null ? recurrencePattern.trim() : null;
     }
 
-    public boolean isActive() {
-        return alarmTime.isAfter(LocalDateTime.now()) || recurring;
+    public boolean shouldTrigger(LocalDateTime now) {
+        if (alarmTime == null || now == null) return false;
+        return now.isAfter(alarmTime) || now.isEqual(alarmTime);
     }
 
     @Override

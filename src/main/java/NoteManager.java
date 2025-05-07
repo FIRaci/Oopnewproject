@@ -68,6 +68,9 @@ public class NoteManager {
 
     public List<Note> getNotesInFolder(Folder folder) {
         if (folder == null) return new ArrayList<>();
+        if (folder.getName().equals("Root")) {
+            return notes.stream().filter(n -> !n.getFolder().getName().equals("Root")).collect(Collectors.toList());
+        }
         return folder.getNotes().stream().filter(notes::contains).collect(Collectors.toList());
     }
 
@@ -173,6 +176,7 @@ public class NoteManager {
             note.setFolder(getRootFolder());
             getRootFolder().addNote(note);
         }
+        note.setFolder(folder); // Đảm bảo folder được cập nhật
         saveData();
     }
 
