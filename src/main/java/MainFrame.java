@@ -2,6 +2,7 @@ import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import javax.swing.*;
 import java.awt.*;
+import java.util.Objects;
 
 public class MainFrame extends JFrame {
     private JPanel mainPanel;
@@ -18,10 +19,19 @@ public class MainFrame extends JFrame {
 
         applyTheme(noteController.getCurrentTheme());
 
-        setTitle("My Notes");
+        setTitle("XiNoClo");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setSize(800, 600);
         setLocationRelativeTo(null);
+
+        // Đặt icon cho cửa sổ
+        try {
+            ImageIcon icon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/images/5048557ff0fc302e6cc0d419e2fc0219.jpg")));
+            setIconImage(icon.getImage());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Failed to load icon: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
 
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
