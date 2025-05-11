@@ -1,6 +1,9 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Comparator;
@@ -13,18 +16,23 @@ public class MainMenuScreen extends JPanel {
     private static final String ADD_NOTE_LABEL = "Add Note";
     private static final String SHOW_STATS_LABEL = "Show Stats";
     private static final String REFRESH_LABEL = "Refresh";
+    private static final String TITLE_SEARCH_PLACEHOLDER = "Search by title...";
+    private static final String TAG_SEARCH_PLACEHOLDER = "Search by tag (e.g., work)";
 
     private final NoteController controller;
     private final MainFrame mainFrame;
     private JPanel folderPanel;
     private JTable noteTable;
-    private JTextField searchField;
+    private JTextField titleSearchField;
+    private JTextField tagSearchField;
     private JList<Folder> folderList;
+    private List<Note> filteredNotes;
 
     public MainMenuScreen(NoteController controller, MainFrame mainFrame) {
         this.controller = controller;
         this.mainFrame = mainFrame;
         initializeUI();
+        setupShortcuts();
     }
 
     private void initializeUI() {
@@ -168,7 +176,7 @@ public class MainMenuScreen extends JPanel {
                     int row = table.rowAtPoint(e.getPoint());
                     int column = table.columnAtPoint(e.getPoint());
                     if (row >= 0 && column == 2) {
-                        Note selectedNote = controller.getSortedNotes().get(row);
+                        Note selectedNote = filteredNotes.get(row);
                         MissionDialog dialog = new MissionDialog(mainFrame);
                         dialog.setMission(selectedNote.getMissionContent());
                         dialog.setVisible(true);
@@ -205,10 +213,51 @@ public class MainMenuScreen extends JPanel {
         addNoteButton.addActionListener(e -> mainFrame.showAddNoteScreen());
         panel.add(addNoteButton);
 
-        searchField = new JTextField(15);
-        searchField.setToolTipText("Search by title or #tagname");
-        addSearchFieldListener();
-        panel.add(searchField);
+        titleSearchField = new JTextField(15);
+        titleSearchField.setText(TITLE_SEARCH_PLACEHOLDER);
+        titleSearchField.setForeground(Color.GRAY);
+        titleSearchField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (titleSearchField.getText().equals(TITLE_SEARCH_PLACEHOLDER)) {
+                    titleSearchField.setText("");
+                    titleSearchField.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (titleSearchField.getText().isEmpty()) {
+                    titleSearchField.setText(TITLE_SEARCH_PLACEHOLDER);
+                    titleSearchField.setForeground(Color.GRAY);
+                }
+            }
+        });
+        addSearchFieldListener(titleSearchField);
+        panel.add(titleSearchField);
+
+        tagSearchField = new JTextField(15);
+        tagSearchField.setText(TAG_SEARCH_PLACEHOLDER);
+        tagSearchField.setForeground(Color.GRAY);
+        tagSearchField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (tagSearchField.getText().equals(TAG_SEARCH_PLACEHOLDER)) {
+                    tagSearchField.setText("");
+                    tagSearchField.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (tagSearchField.getText().isEmpty()) {
+                    tagSearchField.setText(TAG_SEARCH_PLACEHOLDER);
+                    tagSearchField.setForeground(Color.GRAY);
+                }
+            }
+        });
+        addSearchFieldListener(tagSearchField);
+        panel.add(tagSearchField);
 
         JButton statsButton = new JButton(SHOW_STATS_LABEL);
         statsButton.addActionListener(e -> mainFrame.openCanvasPanel());
@@ -224,7 +273,7 @@ public class MainMenuScreen extends JPanel {
         return panel;
     }
 
-    private void addSearchFieldListener() {
+    private void addSearchFieldListener(JTextField searchField) {
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e) { populateNoteTableModel(); }
             public void removeUpdate(javax.swing.event.DocumentEvent e) { populateNoteTableModel(); }
@@ -237,8 +286,11 @@ public class MainMenuScreen extends JPanel {
         DefaultTableModel model = (DefaultTableModel) noteTable.getModel();
         model.setRowCount(0);
 
-        List<Note> notes = filterNotes(controller.getSortedNotes(), searchField.getText().trim());
-        for (Note note : notes) {
+        String titleQuery = titleSearchField.getText().equals(TITLE_SEARCH_PLACEHOLDER) ? "" : titleSearchField.getText().trim();
+        String tagQuery = tagSearchField.getText().equals(TAG_SEARCH_PLACEHOLDER) ? "" : tagSearchField.getText().trim();
+
+        filteredNotes = filterNotes(controller.getSortedNotes(), titleQuery, tagQuery);
+        for (Note note : filteredNotes) {
             model.addRow(new Object[]{
                     note.getTitle(),
                     note.isFavorite() ? "★" : "",
@@ -249,20 +301,30 @@ public class MainMenuScreen extends JPanel {
         }
     }
 
-    private List<Note> filterNotes(List<Note> notes, String query) {
-        if (query.isEmpty()) return notes;
+    private List<Note> filterNotes(List<Note> notes, String titleQuery, String tagQuery) {
+        List<Note> filtered = notes;
 
-        if (query.startsWith("#")) {
-            Tag tag = new Tag(query.substring(1));
-            return controller.getNoteManager().searchNotesByTag(tag);
+        if (!titleQuery.isEmpty() && !tagQuery.isEmpty()) {
+            Tag tag = new Tag(tagQuery);
+            filtered = controller.getNoteManager().searchNotesByTag(tag).stream()
+                    .filter(note -> note.getTitle().toLowerCase().contains(titleQuery.toLowerCase()))
+                    .collect(Collectors.toList());
+        } else if (!titleQuery.isEmpty()) {
+            filtered = filtered.stream()
+                    .filter(note -> note.getTitle().toLowerCase().contains(titleQuery.toLowerCase()))
+                    .collect(Collectors.toList());
+        } else if (!tagQuery.isEmpty()) {
+            Tag tag = new Tag(tagQuery);
+            filtered = controller.getNoteManager().searchNotesByTag(tag);
         }
-        return controller.searchNotes(query);
+
+        return filtered;
     }
 
     private void handleNoteDoubleClick(JTable table) {
         int row = table.getSelectedRow();
-        if (row >= 0) {
-            Note selectedNote = controller.getSortedNotes().get(row);
+        if (row >= 0 && row < filteredNotes.size()) {
+            Note selectedNote = filteredNotes.get(row);
             mainFrame.showNoteDetailScreen(selectedNote);
         }
     }
@@ -271,7 +333,7 @@ public class MainMenuScreen extends JPanel {
         int row = noteTable.rowAtPoint(e.getPoint());
         if (row >= 0 && row < noteTable.getRowCount()) {
             noteTable.setRowSelectionInterval(row, row);
-            showNotePopup(e, controller.getSortedNotes().get(row));
+            showNotePopup(e, filteredNotes.get(row));
         }
     }
 
@@ -310,7 +372,6 @@ public class MainMenuScreen extends JPanel {
         popup.add(missionItem);
 
         JMenuItem alarmItem = new JMenuItem("Set Alarm");
-        alarmItem.setIcon(new ImageIcon("src/main/resources/icons/alarm.png"));
         alarmItem.addActionListener(ev -> {
             AlarmDialog dialog = new AlarmDialog(mainFrame);
             dialog.setVisible(true);
@@ -354,7 +415,6 @@ public class MainMenuScreen extends JPanel {
         model.clear();
         List<Folder> folders = controller.getFolders();
 
-        // Đảm bảo Root ở đầu
         Folder rootFolder = folders.stream()
                 .filter(f -> f.getName().equals("Root"))
                 .findFirst()
@@ -363,7 +423,6 @@ public class MainMenuScreen extends JPanel {
             model.addElement(rootFolder);
         }
 
-        // Sắp xếp các folder còn lại: favorite và mission lên trên
         List<Folder> otherFolders = folders.stream()
                 .filter(f -> !f.getName().equals("Root"))
                 .sorted(Comparator.comparing(Folder::isFavorite, Comparator.reverseOrder())
@@ -374,5 +433,42 @@ public class MainMenuScreen extends JPanel {
             model.addElement(folder);
         }
         folderList.repaint();
+    }
+
+    private void setupShortcuts() {
+        InputMap inputMap = getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        ActionMap actionMap = getActionMap();
+
+        // Ctrl + N: Tạo ghi chú mới
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, KeyEvent.CTRL_DOWN_MASK), "addNote");
+        actionMap.put("addNote", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                mainFrame.showAddNoteScreen();
+            }
+        });
+
+        // Ctrl + R: Làm mới giao diện
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_R, KeyEvent.CTRL_DOWN_MASK), "refresh");
+        actionMap.put("refresh", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                populateNoteTableModel();
+                refreshFolderPanel();
+            }
+        });
+
+        // Ctrl + F: Tạo thư mục mới
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, KeyEvent.CTRL_DOWN_MASK), "addFolder");
+        actionMap.put("addFolder", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                String name = JOptionPane.showInputDialog(mainFrame, "Enter folder name:");
+                if (name != null && !name.trim().isEmpty()) {
+                    controller.addNewFolder(name);
+                    refreshFolderPanel();
+                }
+            }
+        });
     }
 }

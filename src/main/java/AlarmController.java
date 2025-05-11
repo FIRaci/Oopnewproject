@@ -28,10 +28,12 @@ public class AlarmController {
         LocalDateTime now = LocalDateTime.now();
         for (Note note : noteManager.getAllNotes()) {
             Alarm alarm = note.getAlarm();
-            if (alarm != null && (alarm.getAlarmTime().isBefore(now) || alarm.getAlarmTime().equals(now))) {
+            if (alarm != null && alarm.shouldTrigger(now)) {
                 SwingUtilities.invokeLater(() -> {
                     triggerAlarm(note);
-                    note.setAlarm(null); // Xóa alarm sau khi chạy
+                    if (!alarm.isRecurring()) {
+                        note.setAlarm(null); // Xóa alarm nếu không lặp lại
+                    }
                     mainFrame.showMainMenuScreen(); // Làm mới giao diện
                 });
                 updateAlarmTime(note, alarm);
@@ -49,7 +51,7 @@ public class AlarmController {
         try {
             File soundFile = new File("src/main/resources/sound/alarm.wav");
             if (!soundFile.exists()) {
-                System.err.println("Alarm sound file not found: " + soundFile.getAbsolutePath());
+                JOptionPane.showMessageDialog(mainFrame, "Alarm sound file not found!", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             AudioInputStream audioInput = AudioSystem.getAudioInputStream(soundFile);
@@ -62,7 +64,7 @@ public class AlarmController {
                 }
             });
         } catch (Exception e) {
-            System.err.println("Could not play sound: " + e.getMessage());
+            JOptionPane.showMessageDialog(mainFrame, "Could not play sound: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -80,13 +82,16 @@ public class AlarmController {
                 case "MONTHLY":
                     newTime = alarm.getAlarmTime().plusMonths(1);
                     break;
+                case "YEARLY":
+                    newTime = alarm.getAlarmTime().plusYears(1);
+                    break;
                 default:
                     note.setAlarm(null);
                     return;
             }
             alarm.setAlarmTime(newTime);
         } else {
-            note.setAlarm(null);
+            note.setAlarm(null); // Đảm bảo xóa alarm cho kiểu không lặp lại
         }
     }
 

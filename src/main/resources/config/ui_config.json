@@ -1,0 +1,60 @@
+
+{
+"theme": {
+"dark": {
+"background": "#2B2B2B",
+"foreground": "#FFFFFF",
+"accent": "#A3BFFA",
+"buttonBackground": "#3C3F41",
+"buttonForeground": "#FFFFFF",
+"borderColor": "#555555"
+},
+"light": {
+"background": "#F5F7FA",
+"foreground": "#333333",
+"accent": "#4A90E2",
+"buttonBackground": "#E6ECF9",
+"buttonForeground": "#FFFFFF",
+"borderColor": "#D3DCE6"
+}
+},
+"fonts": {
+"title": {
+"family": "Segoe UI",
+"size": 18,
+"style": "bold"
+},
+"content": {
+"family": "Segoe UI",
+"size": 14,
+"style": "plain"
+},
+"button": {
+"family": "Segoe UI",
+"size": 12,
+"style": "plain"
+}
+},
+"components": {
+"panel": {
+"borderWidth": 1,
+"padding": 10
+},
+"button": {
+"cornerRadius": 5,
+"padding": {
+"top": 5,
+"left": 10,
+"bottom": 5,
+"right": 10
+}
+},
+"table": {
+"rowHeight": 30,
+"columnWidths": [250, 60, 300, 60, 150]
+}
+},
+"icons": {
+"appIcon": "/images/5048557ff0fc302e6cc0d419e2fc0219.png"
+}
+}

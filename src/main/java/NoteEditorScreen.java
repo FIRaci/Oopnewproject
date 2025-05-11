@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.undo.UndoManager;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -21,12 +22,14 @@ public class NoteEditorScreen extends JPanel {
     private JPanel tagPanel;
     private JLabel wordCountLabel;
     private JLabel modifiedLabel;
+    private UndoManager undoManager;
 
     public NoteEditorScreen(MainFrame mainFrame, NoteController controller, Note note) {
         this.mainFrame = mainFrame;
         this.controller = controller;
         this.note = note != null ? note : new Note("New Note", "", false);
         initializeUI();
+        setupShortcuts();
     }
 
     public void setNote(Note note) {
@@ -99,6 +102,11 @@ public class NoteEditorScreen extends JPanel {
                 updateWordCount();
             }
         });
+
+        // Khởi tạo UndoManager cho contentField
+        undoManager = new UndoManager();
+        contentField.getDocument().addUndoableEditListener(undoManager);
+
         add(new JScrollPane(contentField), BorderLayout.CENTER);
 
         // Tag panel
@@ -149,16 +157,12 @@ public class NoteEditorScreen extends JPanel {
         // Add Alarm button
         JButton addAlarmButton = new JButton(ADD_ALARM_LABEL);
         addAlarmButton.addActionListener(e -> {
-            String timeStr = JOptionPane.showInputDialog(mainFrame, "Enter alarm time (yyyy-MM-dd HH:mm):");
-            if (timeStr != null && !timeStr.trim().isEmpty()) {
-                try {
-                    LocalDateTime alarmTime = LocalDateTime.parse(timeStr + ":00",
-                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                    controller.setAlarm(note, new Alarm(alarmTime, true, "ONCE"));
-                    JOptionPane.showMessageDialog(mainFrame, "Alarm set for " + alarmTime);
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(mainFrame, "Invalid time format!", "Error", JOptionPane.ERROR_MESSAGE);
-                }
+            AlarmDialog dialog = new AlarmDialog(mainFrame);
+            dialog.setVisible(true);
+            Alarm alarm = dialog.getResult();
+            if (alarm != null) {
+                controller.setAlarm(note, alarm);
+                JOptionPane.showMessageDialog(mainFrame, "Alarm set successfully!");
             }
         });
         buttonPanel.add(addAlarmButton);
@@ -211,5 +215,67 @@ public class NoteEditorScreen extends JPanel {
         } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(mainFrame, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void setupShortcuts() {
+        InputMap inputMap = getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        ActionMap actionMap = getActionMap();
+
+        // Ctrl + S: Lưu ghi chú
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK), "saveNote");
+        actionMap.put("saveNote", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                saveNote();
+            }
+        });
+
+        // Ctrl + T: Mở dialog thêm tag
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_T, KeyEvent.CTRL_DOWN_MASK), "addTag");
+        actionMap.put("addTag", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                String tagName = JOptionPane.showInputDialog(mainFrame, "Enter tag name:");
+                if (tagName != null && !tagName.trim().isEmpty()) {
+                    controller.addTag(note, new Tag(tagName));
+                    updateTagDisplay();
+                }
+            }
+        });
+
+        // Esc: Quay lại MainMenuScreen
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "goBack");
+        actionMap.put("goBack", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                mainFrame.showMainMenuScreen();
+            }
+        });
+
+        // Ctrl + Z: Hoàn tác trong contentField
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, KeyEvent.CTRL_DOWN_MASK), "undo");
+        actionMap.put("undo", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (undoManager.canUndo()) {
+                    undoManager.undo();
+                }
+            }
+        });
+
+        // Ctrl + A: Mở dialog đặt báo thức
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_G, KeyEvent.CTRL_DOWN_MASK), "addAlarm");
+        actionMap.put("addAlarm", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                AlarmDialog dialog = new AlarmDialog(mainFrame);
+                dialog.setVisible(true);
+                Alarm alarm = dialog.getResult();
+                if (alarm != null) {
+                    controller.setAlarm(note, alarm);
+                    JOptionPane.showMessageDialog(mainFrame, "Alarm set successfully!");
+                }
+            }
+        });
     }
 }

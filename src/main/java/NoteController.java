@@ -1,8 +1,8 @@
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 
 import javax.swing.*;
 
@@ -153,5 +153,32 @@ public class NoteController {
 
     public NoteManager getNoteManager() {
         return noteManager;
+    }
+
+    // Thêm cho MissionScreen
+    public List<Note> getMissions() {
+        return noteManager.getAllNotes().stream()
+                .filter(note -> !note.getMissionContent().isEmpty())
+                .sorted((n1, n2) -> {
+                    boolean n1Grayed = n1.getAlarm() != null && n1.getAlarm().getAlarmTime().isBefore(LocalDateTime.now()) && !n1.getAlarm().isRecurring();
+                    boolean n2Grayed = n2.getAlarm() != null && n2.getAlarm().getAlarmTime().isBefore(LocalDateTime.now()) && !n2.getAlarm().isRecurring();
+                    if (n1Grayed && !n2Grayed) return 1;
+                    if (!n1Grayed && n2Grayed) return -1;
+                    return n1.getModificationDate().compareTo(n2.getModificationDate());
+                })
+                .collect(Collectors.toList());
+    }
+
+    public void updateMission(Note note, String missionContent) {
+        note.setMissionContent(missionContent);
+        note.setMission(!missionContent.isEmpty());
+        note.setModificationDate(LocalDateTime.now());
+    }
+
+    public void completeMission(Note note, boolean completed) {
+        note.setMissionCompleted(completed);
+        if (completed) {
+            note.setAlarm(null); // Xóa alarm khi hoàn thành
+        }
     }
 }
