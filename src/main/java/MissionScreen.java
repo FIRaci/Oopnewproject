@@ -23,7 +23,7 @@ public class MissionScreen extends JPanel {
     private void initializeUI() {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        setPreferredSize(new Dimension(800, 500)); // Tăng kích thước khung gấp đôi
+        setPreferredSize(new Dimension(800, 500)); // Giữ nguyên kích thước khung
         setMinimumSize(new Dimension(800, 500));
         setMaximumSize(new Dimension(800, 500));
 
@@ -42,12 +42,12 @@ public class MissionScreen extends JPanel {
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
         // Tăng tốc độ cuộn
-        scrollPane.getVerticalScrollBar().setUnitIncrement(20); // Tăng tốc độ cuộn từng bước (mặc định là 10)
-        scrollPane.getVerticalScrollBar().setBlockIncrement(100); // Tăng tốc độ cuộn khi kéo thanh hoặc dùng Page Up/Down (mặc định nhỏ hơn)
+        scrollPane.getVerticalScrollBar().setUnitIncrement(20);
+        scrollPane.getVerticalScrollBar().setBlockIncrement(100);
 
         // Bọc scrollPane trong fixedPanel
         JPanel fixedPanel = new JPanel(new BorderLayout());
-        fixedPanel.setPreferredSize(new Dimension(800, 500)); // Khung cố định gấp đôi
+        fixedPanel.setPreferredSize(new Dimension(800, 500));
         fixedPanel.setMinimumSize(new Dimension(800, 500));
         fixedPanel.setMaximumSize(new Dimension(800, 500));
         fixedPanel.add(scrollPane, BorderLayout.CENTER);
@@ -75,9 +75,9 @@ public class MissionScreen extends JPanel {
         // Add "Add Mission" panel
         JPanel addMissionPanel = new JPanel(new BorderLayout());
         addMissionPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        addMissionPanel.setPreferredSize(new Dimension(120, 80));
+        addMissionPanel.setPreferredSize(new Dimension(350, 180)); // Tăng gấp đôi
         JButton addButton = new JButton("+");
-        addButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        addButton.setFont(new Font("Segoe UI", Font.BOLD, 32)); // Tăng font để khớp kích thước
         addButton.addActionListener(e -> {
             MissionDialog dialog = new MissionDialog(mainFrame);
             dialog.setVisible(true);
@@ -100,7 +100,7 @@ public class MissionScreen extends JPanel {
     private JPanel createMissionPanel(Note note) {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        panel.setPreferredSize(new Dimension(120, 80));
+        panel.setPreferredSize(new Dimension(350, 180)); // Tăng gấp đôi kích thước panel
 
         // Kiểm tra trạng thái xám
         boolean isGrayed = note.getAlarm() != null && note.getAlarm().getAlarmTime().isBefore(LocalDateTime.now()) && !note.getAlarm().isRecurring();
@@ -110,7 +110,7 @@ public class MissionScreen extends JPanel {
 
         // Checkbox hoàn thành
         JCheckBox completeCheckbox = new JCheckBox("Done");
-        completeCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 8));
+        completeCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 16)); // Tăng font để khớp kích thước
         completeCheckbox.setSelected(note.isMissionCompleted());
         completeCheckbox.addActionListener(e -> {
             controller.completeMission(note, completeCheckbox.isSelected());
@@ -121,18 +121,18 @@ public class MissionScreen extends JPanel {
         // Nội dung mission
         JPanel contentPanel = new JPanel(new BorderLayout());
         JLabel titleLabel = new JLabel(note.getTitle());
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20)); // Tăng font để khớp kích thước
         contentPanel.add(titleLabel, BorderLayout.NORTH);
 
-        JLabel contentLabel = new JLabel("<html>" + truncateText(note.getMissionContent(), 50) + "</html>");
-        contentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 8));
+        JLabel contentLabel = new JLabel("<html>" + truncateText(note.getMissionContent(), 100) + "</html>"); // Tăng giới hạn ký tự
+        contentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16)); // Tăng font để khớp kích thước
         contentPanel.add(contentLabel, BorderLayout.CENTER);
 
         JPanel infoPanel = new JPanel(new GridLayout(2, 1));
         infoPanel.add(new JLabel("Created: " + note.getFormattedModificationDate()));
         String alarmText = note.getAlarm() != null ? note.getAlarm().toString() : "No Alarm";
-        JLabel alarmLabel = new JLabel("Alarm: " + truncateText(alarmText, 20));
-        alarmLabel.setFont(new Font("Segoe UI", Font.PLAIN, 8));
+        JLabel alarmLabel = new JLabel("Alarm: " + truncateText(alarmText, 40)); // Tăng giới hạn ký tự
+        alarmLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16)); // Tăng font để khớp kích thước
         infoPanel.add(alarmLabel);
         contentPanel.add(infoPanel, BorderLayout.SOUTH);
 
@@ -141,7 +141,7 @@ public class MissionScreen extends JPanel {
         // Checkbox xóa (chỉ hiển thị ở delete mode)
         if (deleteMode) {
             JCheckBox deleteCheckbox = new JCheckBox("Delete");
-            deleteCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 8));
+            deleteCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 16)); // Tăng font để khớp kích thước
             deleteCheckboxes.add(deleteCheckbox);
             panel.add(deleteCheckbox, BorderLayout.SOUTH);
             deleteCheckbox.addActionListener(e -> {
@@ -172,7 +172,7 @@ public class MissionScreen extends JPanel {
         return panel;
     }
 
-    // Hàm cắt ngắn nội dung để vừa khung nhỏ
+    // Hàm cắt ngắn nội dung để vừa khung lớn hơn
     private String truncateText(String text, int maxLength) {
         if (text.length() <= maxLength) return text;
         return text.substring(0, maxLength - 3) + "...";

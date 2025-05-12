@@ -126,11 +126,11 @@ public class NoteEditorScreen extends JPanel {
 
         // Bottom panel with tags and buttons
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(tagPanel, BorderLayout.CENTER);
         bottomPanel.add(statusPanel, BorderLayout.NORTH);
+        bottomPanel.add(tagPanel, BorderLayout.CENTER);
         bottomPanel.add(createButtonPanel(), BorderLayout.SOUTH);
 
-        add(bottomPanel, BorderLayout.SOUTH);
+        add(bottomPanel, BorderLayout.SOUTH); // Sửa lỗi: Thay customPanel bằng bottomPanel
     }
 
     private JPanel createButtonPanel() {
@@ -205,20 +205,22 @@ public class NoteEditorScreen extends JPanel {
             note.setTitle(newTitle);
             note.setContent(newContent);
             note.updateModificationDate();
-            controller.updateNote(note, newTitle, newContent);
             if (!controller.getNotes().contains(note)) {
                 controller.addNote(note);
+            } else {
+                controller.updateNote(note, newTitle, newContent);
             }
             updateModifiedTime();
             JOptionPane.showMessageDialog(mainFrame, "Note saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
             mainFrame.showMainMenuScreen();
-        } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(mainFrame, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(mainFrame, "Error saving note: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void setupShortcuts() {
-        InputMap inputMap = getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        // Sử dụng WHEN_IN_FOCUSED_WINDOW để phím tắt hoạt động trên toàn bộ panel
+        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap actionMap = getActionMap();
 
         // Ctrl + S: Lưu ghi chú
@@ -263,7 +265,7 @@ public class NoteEditorScreen extends JPanel {
             }
         });
 
-        // Ctrl + A: Mở dialog đặt báo thức
+        // Ctrl + G: Mở dialog đặt báo thức
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_G, KeyEvent.CTRL_DOWN_MASK), "addAlarm");
         actionMap.put("addAlarm", new AbstractAction() {
             @Override

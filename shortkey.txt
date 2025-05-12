@@ -8,3 +8,5 @@ Ctrl + Z: Undo
 Ctrl + G: "Add Alarm"
 Ctrl + Q: Thoát ứng dụng
 Ctrl + W: Đổi theme
+Ctrl + 1: Notes
+Ctrl + 2: Missions

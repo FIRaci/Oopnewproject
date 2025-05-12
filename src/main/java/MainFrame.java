@@ -4,13 +4,18 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.Objects;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.DefaultCategoryDataset;
 
 public class MainFrame extends JFrame {
     private final NoteController controller;
     private MainMenuScreen mainMenuScreen;
     private MissionScreen missionScreen;
     private NoteEditorScreen noteEditorScreen;
-    private JTabbedPane tabbedPane;
+    private JPanel contentPanel;
+    private CardLayout cardLayout;
     private boolean isDarkTheme = false;
 
     public MainFrame(NoteController controller) {
@@ -22,20 +27,40 @@ public class MainFrame extends JFrame {
     private void initializeUI() {
         setTitle("XiNoClo - Note App");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(850, 600); // Tăng kích thước cửa sổ để chứa khung lớn hơn
+        setSize(850, 600);
         setLocationRelativeTo(null);
 
-        tabbedPane = new JTabbedPane();
+        JPanel tabPanel = new JPanel(new BorderLayout());
+
+        JButton notesButton = new JButton("📝 Notes");
+        notesButton.setFocusPainted(false);
+        notesButton.addActionListener(e -> showScreenWithTransition("Notes"));
+
+        JButton missionsButton = new JButton("🎯 Missions");
+        missionsButton.setFocusPainted(false);
+        missionsButton.addActionListener(e -> showScreenWithTransition("Missions"));
+
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        leftPanel.add(notesButton);
+
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        rightPanel.add(missionsButton);
+
+        tabPanel.add(leftPanel, BorderLayout.WEST);
+        tabPanel.add(rightPanel, BorderLayout.EAST);
+
+        cardLayout = new CardLayout();
+        contentPanel = new JPanel(cardLayout);
+        contentPanel.setOpaque(false);
+
         mainMenuScreen = new MainMenuScreen(controller, this);
         missionScreen = new MissionScreen(controller, this);
-        tabbedPane.addTab("Notes", mainMenuScreen);
-        tabbedPane.addTab("Missions", missionScreen);
-        add(tabbedPane, BorderLayout.CENTER);
 
-        // Đảm bảo kích thước tab phù hợp với MissionScreen
-        tabbedPane.setPreferredSize(new Dimension(820, 550)); // Thêm padding nhẹ quanh 800x500
-        tabbedPane.setMinimumSize(new Dimension(820, 550));
-        tabbedPane.setMaximumSize(new Dimension(820, 550));
+        contentPanel.add(mainMenuScreen, "Notes");
+        contentPanel.add(missionScreen, "Missions");
+
+        add(tabPanel, BorderLayout.NORTH);
+        add(contentPanel, BorderLayout.CENTER);
 
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
@@ -52,36 +77,74 @@ public class MainFrame extends JFrame {
         }
     }
 
-    public void showMainMenuScreen() {
-        tabbedPane.setSelectedIndex(0);
+    private void showScreenWithTransition(String screenName) {
+        float[] opacity = {0f};
+        Timer timer = new Timer(15, e -> {
+            opacity[0] += 0.05f;
+            if (opacity[0] >= 1f) {
+                opacity[0] = 1f;
+                ((Timer) e.getSource()).stop();
+            }
+            contentPanel.setOpaque(false);
+            contentPanel.repaint();
+        });
+        cardLayout.show(contentPanel, screenName);
+        timer.start();
     }
 
     public void showAddNoteScreen() {
-        getContentPane().removeAll();
         noteEditorScreen = new NoteEditorScreen(this, controller, null);
-        add(noteEditorScreen, BorderLayout.CENTER);
-        revalidate();
-        repaint();
+        contentPanel.add(noteEditorScreen, "NoteEditor");
+        showScreenWithTransition("NoteEditor");
     }
 
     public void showNoteDetailScreen(Note note) {
-        getContentPane().removeAll();
         noteEditorScreen = new NoteEditorScreen(this, controller, note);
         noteEditorScreen.setNote(note);
-        add(noteEditorScreen, BorderLayout.CENTER);
-        revalidate();
-        repaint();
+        contentPanel.add(noteEditorScreen, "NoteEditor");
+        showScreenWithTransition("NoteEditor");
+    }
+
+    public void showMainMenuScreen() {
+        showScreenWithTransition("Notes");
+        mainMenuScreen.refresh();
     }
 
     public void openCanvasPanel() {
-        JOptionPane.showMessageDialog(this, "Canvas Panel Placeholder", "Stats", JOptionPane.INFORMATION_MESSAGE);
+        // Tạo dữ liệu cho biểu đồ: số lượng note theo folder
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        for (Folder folder : controller.getFolders()) {
+            long noteCount = controller.getSortedNotes().stream()
+                    .filter(note -> note.getFolder() != null && note.getFolder().getName().equals(folder.getName()))
+                    .count();
+            dataset.addValue(noteCount, "Notes", folder.getName());
+        }
+
+        // Tạo biểu đồ cột
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Note Count by Folder",
+                "Folder",
+                "Number of Notes",
+                dataset
+        );
+
+        // Tạo panel cho biểu đồ
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setPreferredSize(new Dimension(600, 400));
+
+        // Hiển thị trong dialog
+        JDialog dialog = new JDialog(this, "Statistics", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.add(chartPanel, BorderLayout.CENTER);
+        dialog.setSize(650, 450);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 
     private void setupShortcuts() {
         InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap actionMap = getRootPane().getActionMap();
 
-        // Ctrl + Q: Thoát ứng dụng
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Q, KeyEvent.CTRL_DOWN_MASK), "exit");
         actionMap.put("exit", new AbstractAction() {
             @Override
@@ -94,7 +157,6 @@ public class MainFrame extends JFrame {
             }
         });
 
-        // Ctrl + W: Đổi theme
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_W, KeyEvent.CTRL_DOWN_MASK), "toggleTheme");
         actionMap.put("toggleTheme", new AbstractAction() {
             @Override
@@ -110,6 +172,22 @@ public class MainFrame extends JFrame {
                 } catch (UnsupportedLookAndFeelException ex) {
                     JOptionPane.showMessageDialog(MainFrame.this, "Failed to change theme!", "Error", JOptionPane.ERROR_MESSAGE);
                 }
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_1, KeyEvent.CTRL_DOWN_MASK), "showNotes");
+        actionMap.put("showNotes", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                showScreenWithTransition("Notes");
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_2, KeyEvent.CTRL_DOWN_MASK), "showMissions");
+        actionMap.put("showMissions", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                showScreenWithTransition("Missions");
             }
         });
     }

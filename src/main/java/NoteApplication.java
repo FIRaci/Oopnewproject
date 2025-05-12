@@ -25,7 +25,7 @@ public class NoteApplication {
             controller.addNewFolder("Work");
             controller.addNewFolder("Personal");
             controller.addNewFolder("Important");
-
+    
             Note note1 = new Note("Shopping List", "Milk\nEggs\nBread", false);
             controller.addTag(note1, new Tag("groceries"));
             controller.addNote(note1);

@@ -5,6 +5,7 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
 import java.util.stream.Collectors;
@@ -16,8 +17,8 @@ public class MainMenuScreen extends JPanel {
     private static final String ADD_NOTE_LABEL = "Add Note";
     private static final String SHOW_STATS_LABEL = "Show Stats";
     private static final String REFRESH_LABEL = "Refresh";
-    private static final String TITLE_SEARCH_PLACEHOLDER = "Search by title...";
-    private static final String TAG_SEARCH_PLACEHOLDER = "Search by tag (e.g., work)";
+    private static final String TITLE_SEARCH_PLACEHOLDER = "Search by title";
+    private static final String TAG_SEARCH_PLACEHOLDER = "Search by tag";
 
     private final NoteController controller;
     private final MainFrame mainFrame;
@@ -175,19 +176,20 @@ public class MainMenuScreen extends JPanel {
                 if (e.getClickCount() == 2) {
                     int row = table.rowAtPoint(e.getPoint());
                     int column = table.columnAtPoint(e.getPoint());
-                    if (row >= 0 && column == 2) {
+                    if (row >= 0 && row < filteredNotes.size()) {
                         Note selectedNote = filteredNotes.get(row);
-                        MissionDialog dialog = new MissionDialog(mainFrame);
-                        dialog.setMission(selectedNote.getMissionContent());
-                        dialog.setVisible(true);
-                        String result = dialog.getResult();
-                        if (result != null) {
-                            selectedNote.setMissionContent(result);
-                            selectedNote.setMission(!result.isEmpty());
-                            populateNoteTableModel();
+                        if (column == 2) { // Cột "Mission"
+                            MissionDialog dialog = new MissionDialog(mainFrame);
+                            dialog.setMission(selectedNote.getMissionContent());
+                            dialog.setVisible(true);
+                            String result = dialog.getResult();
+                            if (result != null) {
+                                controller.updateMission(selectedNote, result); // Cập nhật qua controller
+                                populateNoteTableModel();
+                            }
+                        } else {
+                            handleNoteDoubleClick(table);
                         }
-                    } else if (row >= 0) {
-                        handleNoteDoubleClick(table);
                     }
                 }
             }
@@ -275,9 +277,16 @@ public class MainMenuScreen extends JPanel {
 
     private void addSearchFieldListener(JTextField searchField) {
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { populateNoteTableModel(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { populateNoteTableModel(); }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { populateNoteTableModel(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { debouncePopulate(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { debouncePopulate(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { debouncePopulate(); }
+            private void debouncePopulate() {
+                if (debounceTimer != null && debounceTimer.isRunning()) debounceTimer.stop();
+                debounceTimer = new Timer(300, evt -> populateNoteTableModel());
+                debounceTimer.setRepeats(false);
+                debounceTimer.start();
+            }
+            private Timer debounceTimer;
         });
     }
 
@@ -286,8 +295,8 @@ public class MainMenuScreen extends JPanel {
         DefaultTableModel model = (DefaultTableModel) noteTable.getModel();
         model.setRowCount(0);
 
-        String titleQuery = titleSearchField.getText().equals(TITLE_SEARCH_PLACEHOLDER) ? "" : titleSearchField.getText().trim();
-        String tagQuery = tagSearchField.getText().equals(TAG_SEARCH_PLACEHOLDER) ? "" : tagSearchField.getText().trim();
+        String titleQuery = titleSearchField.getText().equals(TITLE_SEARCH_PLACEHOLDER) ? "" : titleSearchField.getText().trim().toLowerCase();
+        String tagQuery = tagSearchField.getText().equals(TAG_SEARCH_PLACEHOLDER) ? "" : tagSearchField.getText().trim().toLowerCase();
 
         filteredNotes = filterNotes(controller.getSortedNotes(), titleQuery, tagQuery);
         for (Note note : filteredNotes) {
@@ -302,20 +311,21 @@ public class MainMenuScreen extends JPanel {
     }
 
     private List<Note> filterNotes(List<Note> notes, String titleQuery, String tagQuery) {
-        List<Note> filtered = notes;
+        List<Note> filtered = new ArrayList<>(notes); // Sao chép để giữ nguyên thứ tự đã sắp xếp
 
         if (!titleQuery.isEmpty() && !tagQuery.isEmpty()) {
-            Tag tag = new Tag(tagQuery);
-            filtered = controller.getNoteManager().searchNotesByTag(tag).stream()
-                    .filter(note -> note.getTitle().toLowerCase().contains(titleQuery.toLowerCase()))
+            filtered = filtered.stream()
+                    .filter(note -> note.getTitle().toLowerCase().contains(titleQuery) &&
+                            note.getTags().stream().anyMatch(tag -> tag.getName().toLowerCase().contains(tagQuery)))
                     .collect(Collectors.toList());
         } else if (!titleQuery.isEmpty()) {
             filtered = filtered.stream()
-                    .filter(note -> note.getTitle().toLowerCase().contains(titleQuery.toLowerCase()))
+                    .filter(note -> note.getTitle().toLowerCase().contains(titleQuery))
                     .collect(Collectors.toList());
         } else if (!tagQuery.isEmpty()) {
-            Tag tag = new Tag(tagQuery);
-            filtered = controller.getNoteManager().searchNotesByTag(tag);
+            filtered = filtered.stream()
+                    .filter(note -> note.getTags().stream().anyMatch(tag -> tag.getName().toLowerCase().contains(tagQuery)))
+                    .collect(Collectors.toList());
         }
 
         return filtered;
@@ -364,8 +374,7 @@ public class MainMenuScreen extends JPanel {
             dialog.setVisible(true);
             String result = dialog.getResult();
             if (result != null) {
-                note.setMissionContent(result);
-                note.setMission(!result.isEmpty());
+                controller.updateMission(note, result); // Cập nhật qua controller
                 populateNoteTableModel();
             }
         });
@@ -410,6 +419,11 @@ public class MainMenuScreen extends JPanel {
         }
     }
 
+    public void refresh() {
+        populateNoteTableModel();
+        refreshFolderPanel();
+    }
+
     public void refreshFolderPanel() {
         DefaultListModel<Folder> model = (DefaultListModel<Folder>) folderList.getModel();
         model.clear();
@@ -436,7 +450,7 @@ public class MainMenuScreen extends JPanel {
     }
 
     private void setupShortcuts() {
-        InputMap inputMap = getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW); // Sử dụng WHEN_IN_FOCUSED_WINDOW
         ActionMap actionMap = getActionMap();
 
         // Ctrl + N: Tạo ghi chú mới
@@ -453,8 +467,7 @@ public class MainMenuScreen extends JPanel {
         actionMap.put("refresh", new AbstractAction() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
-                populateNoteTableModel();
-                refreshFolderPanel();
+                refresh();
             }
         });
 

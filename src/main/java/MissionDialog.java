@@ -7,32 +7,31 @@ public class MissionDialog extends JDialog {
 
     public MissionDialog(Frame owner) {
         super(owner, "Mission", true);
-        initializeUI();
-    }
-
-    private void initializeUI() {
         setLayout(new BorderLayout(10, 10));
-        setSize(400, 300);
-        setLocationRelativeTo(getOwner());
+        setSize(400, 250);
+        setLocationRelativeTo(owner);
 
         missionArea = new JTextArea();
         missionArea.setLineWrap(true);
         missionArea.setWrapStyleWord(true);
+        missionArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
         add(new JScrollPane(missionArea), BorderLayout.CENTER);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton saveButton = new JButton("Save");
+        JButton saveButton = new JButton("✅ Save");
+        JButton cancelButton = new JButton("❌ Cancel");
+
         saveButton.addActionListener(e -> {
             result = missionArea.getText().trim();
             dispose();
         });
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(e -> {
-            result = null;
-            dispose();
-        });
+
+        cancelButton.addActionListener(e -> dispose());
+
         buttonPanel.add(saveButton);
         buttonPanel.add(cancelButton);
+
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
