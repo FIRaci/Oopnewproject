@@ -7,8 +7,8 @@
       "mission": false,
       "missionCompleted": false,
       "missionContent": "",
-      "creationDate": "2025-05-12 16:53:28",
-      "modificationDate": "2025-05-12 16:53:28",
+      "creationDate": "2025-05-13 19:58:37",
+      "modificationDate": "2025-05-13 19:58:37",
       "folderName": "Personal",
       "tagNames": [
         "groceries"
@@ -21,12 +21,53 @@
       "mission": false,
       "missionCompleted": false,
       "missionContent": "",
-      "creationDate": "2025-05-12 16:53:28",
-      "modificationDate": "2025-05-12 16:53:28",
+      "creationDate": "2025-05-13 19:58:37",
+      "modificationDate": "2025-05-13 19:58:37",
       "folderName": "Work",
       "tagNames": [
         "work"
       ]
+    },
+    {
+      "title": "Meeting Notes",
+      "content": "Discuss project timeline",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Prepare presentation",
+      "creationDate": "2025-05-13 19:58:37",
+      "modificationDate": "2025-05-13 19:58:37",
+      "alarm": {
+        "alarmTime": "2025-05-13 19:59:37",
+        "recurring": true,
+        "recurrencePattern": "DAILY"
+      },
+      "folderName": "Important",
+      "tagNames": []
+    },
+    {
+      "title": "Study Plan",
+      "content": "Review Java concepts",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete Chapter 5 by tonight",
+      "creationDate": "2025-05-13 19:58:37",
+      "modificationDate": "2025-05-13 19:58:37",
+      "folderName": "Personal",
+      "tagNames": []
+    },
+    {
+      "title": "Team Sync",
+      "content": "Sync with team on project progress",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Schedule meeting and send agenda",
+      "creationDate": "2025-05-13 19:58:37",
+      "modificationDate": "2025-05-13 19:58:37",
+      "folderName": "Work",
+      "tagNames": []
     }
   ],
   "folders": [

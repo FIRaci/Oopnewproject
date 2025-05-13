@@ -25,8 +25,9 @@ public class DataStorage {
             Data data = new Data();
             data.notes = noteManager.getAllNotes();
             data.folders = noteManager.getAllFolders();
-            data.tags = new ArrayList<>(new HashSet<>(noteManager.getAllTags())); // Loại bỏ tag trùng lặp
+            data.tags = new ArrayList<>(new HashSet<>(noteManager.getAllTags()));
             System.out.println("Saving data to notes.json: " + data.notes.size() + " notes, " + data.folders.size() + " folders, " + data.tags.size() + " tags");
+            data.notes.forEach(note -> System.out.println("Saving note: " + note.getTitle() + ", Mission Content: " + note.getMissionContent()));
             gson.toJson(data, writer);
         } catch (IOException e) {
             throw new RuntimeException("Failed to save data: " + e.getMessage(), e);
@@ -47,6 +48,7 @@ public class DataStorage {
             Data data = gson.fromJson(jsonElement, Data.class);
             if (data != null) {
                 System.out.println("Loaded data from notes.json: " + data.notes.size() + " notes, " + data.folders.size() + " folders, " + data.tags.size() + " tags");
+                data.notes.forEach(note -> System.out.println("Loaded note: " + note.getTitle() + ", Mission Content: " + note.getMissionContent()));
                 noteManager.getAllNotes().clear();
                 noteManager.getAllFolders().clear();
                 noteManager.getAllTags().clear();
@@ -55,6 +57,17 @@ public class DataStorage {
                 Map<String, Folder> folderMap = new HashMap<>();
                 for (Folder folder : data.folders) {
                     folderMap.put(folder.getName(), folder);
+                }
+                for (Folder folder : data.folders) {
+                    if (folder.subFolderNames != null) {
+                        folder.getSubFolders().clear();
+                        for (String subFolderName : folder.subFolderNames) {
+                            Folder subFolder = folderMap.get(subFolderName);
+                            if (subFolder != null) {
+                                folder.addSubFolder(subFolder);
+                            }
+                        }
+                    }
                 }
                 Map<String, Tag> tagMap = new HashMap<>();
                 for (Tag tag : data.tags) {
@@ -171,6 +184,7 @@ public class DataStorage {
             Folder folder = new Folder(name);
             if (obj.has("subFolders")) {
                 JsonArray subFolders = obj.get("subFolders").getAsJsonArray();
+                folder.subFolderNames = new ArrayList<>();
                 subFolders.forEach(subFolder -> folder.subFolderNames.add(subFolder.getAsString()));
             }
             if (obj.has("favorite")) {

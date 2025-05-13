@@ -75,4 +75,8 @@ public class Alarm {
                 ", recurring=" + recurring +
                 ", pattern='" + recurrencePattern + "'}";
     }
+
+    public String getFrequency() {
+        return recurrencePattern != null ? recurrencePattern : "";
+    }
 }

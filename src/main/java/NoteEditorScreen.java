@@ -10,7 +10,7 @@ public class NoteEditorScreen extends JPanel {
     private static final String BACK_LABEL = "Back";
     private static final String ADD_TAG_LABEL = "Add Tag";
     private static final String ADD_ALARM_LABEL = "Add Alarm";
-    private static final String ADD_MISSION_LABEL = "Add Mission";
+    private static final String EDIT_MISSION_LABEL = "Edit Mission"; // Thay Add Mission
     private static final String TRANSLATE_LABEL = "Translate";
     private static final String AUTO_TAG_LABEL = "Auto Tag";
 
@@ -130,7 +130,7 @@ public class NoteEditorScreen extends JPanel {
         bottomPanel.add(tagPanel, BorderLayout.CENTER);
         bottomPanel.add(createButtonPanel(), BorderLayout.SOUTH);
 
-        add(bottomPanel, BorderLayout.SOUTH); // Sửa lỗi: Thay customPanel bằng bottomPanel
+        add(bottomPanel, BorderLayout.SOUTH);
     }
 
     private JPanel createButtonPanel() {
@@ -167,19 +167,18 @@ public class NoteEditorScreen extends JPanel {
         });
         buttonPanel.add(addAlarmButton);
 
-        // Add Mission button
-        JButton addMissionButton = new JButton(ADD_MISSION_LABEL);
-        addMissionButton.addActionListener(e -> {
+        // Edit Mission button (thay thế Add Mission)
+        JButton editMissionButton = new JButton(EDIT_MISSION_LABEL);
+        editMissionButton.addActionListener(e -> {
             MissionDialog dialog = new MissionDialog(mainFrame);
             dialog.setMission(note != null ? note.getMissionContent() : "");
             dialog.setVisible(true);
             String result = dialog.getResult();
             if (result != null && note != null) {
-                note.setMissionContent(result);
-                note.setMission(!result.isEmpty());
+                controller.updateMission(note, result);
             }
         });
-        buttonPanel.add(addMissionButton);
+        buttonPanel.add(editMissionButton);
 
         // Translate button (disabled for now)
         JButton translateButton = new JButton(TRANSLATE_LABEL);
@@ -219,7 +218,6 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private void setupShortcuts() {
-        // Sử dụng WHEN_IN_FOCUSED_WINDOW để phím tắt hoạt động trên toàn bộ panel
         InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap actionMap = getActionMap();
 

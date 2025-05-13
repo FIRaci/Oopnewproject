@@ -13,23 +13,6 @@ public class NoteController {
     public NoteController() {
         noteManager = new NoteManager();
         currentFolder = noteManager.getRootFolder();
-        initializeSampleData();
-    }
-
-    public void initializeSampleData() {
-        if (noteManager.getAllNotes().isEmpty() && noteManager.getAllFolders().size() <= 1) {
-            noteManager.addNewFolder("Work");
-            noteManager.addNewFolder("Personal");
-            noteManager.addNewFolder("Important");
-            Note note1 = new Note("Shopping List", "Milk\nEggs\nBread", false);
-            noteManager.addTag(note1, new Tag("groceries"));
-            noteManager.addNote(note1);
-            noteManager.moveNoteToFolder(note1, noteManager.getFolderByName("Personal").orElse(null));
-            Note note2 = new Note("Project Ideas", "1. AI Chatbot\n2. Task Manager", true);
-            noteManager.addTag(note2, new Tag("work"));
-            noteManager.addNote(note2);
-            noteManager.moveNoteToFolder(note2, noteManager.getFolderByName("Work").orElse(null));
-        }
     }
 
     public List<Note> getSortedNotes() {
@@ -113,7 +96,17 @@ public class NoteController {
     }
 
     public void moveNoteToFolder(Note note, Folder folder) {
-        noteManager.moveNoteToFolder(note, folder);
+        if (note != null && note.getFolder() != null) {
+            note.getFolder().removeNote(note);
+        }
+        if (folder != null) {
+            note.setFolder(folder);
+            folder.addNote(note);
+        } else {
+            note.setFolder(noteManager.getRootFolder());
+            noteManager.getRootFolder().addNote(note);
+        }
+        noteManager.saveData(); // Đảm bảo lưu thay đổi
     }
 
     public void setAlarm(Note note, Alarm alarm) {
@@ -155,9 +148,8 @@ public class NoteController {
         return noteManager;
     }
 
-    // Thêm cho MissionScreen
     public List<Note> getMissions() {
-        return noteManager.getAllNotes().stream()
+        List<Note> missions = noteManager.getAllNotes().stream()
                 .filter(note -> !note.getMissionContent().isEmpty())
                 .sorted((n1, n2) -> {
                     boolean n1Grayed = n1.getAlarm() != null && n1.getAlarm().getAlarmTime().isBefore(LocalDateTime.now()) && !n1.getAlarm().isRecurring();
@@ -167,6 +159,9 @@ public class NoteController {
                     return n1.getModificationDate().compareTo(n2.getModificationDate());
                 })
                 .collect(Collectors.toList());
+        System.out.println("Total missions found: " + missions.size());
+        missions.forEach(note -> System.out.println("Mission: " + note.getTitle() + ", Content: " + note.getMissionContent()));
+        return missions;
     }
 
     public void updateMission(Note note, String missionContent) {
@@ -178,7 +173,7 @@ public class NoteController {
     public void completeMission(Note note, boolean completed) {
         note.setMissionCompleted(completed);
         if (completed) {
-            note.setAlarm(null); // Xóa alarm khi hoàn thành
+            note.setAlarm(null);
         }
     }
 }

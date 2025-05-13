@@ -1,10 +1,13 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
@@ -170,6 +173,19 @@ public class MainMenuScreen extends JPanel {
         table.getColumnModel().getColumn(4).setPreferredWidth(150);
         table.getColumnModel().getColumn(4).setMinWidth(130);
 
+        // Renderer cho cột Alarm để có thể nhấn được
+        table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (value != null && !value.toString().isEmpty()) {
+                    label.setForeground(Color.BLUE);
+                    label.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                }
+                return label;
+            }
+        });
+
         table.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -184,9 +200,11 @@ public class MainMenuScreen extends JPanel {
                             dialog.setVisible(true);
                             String result = dialog.getResult();
                             if (result != null) {
-                                controller.updateMission(selectedNote, result); // Cập nhật qua controller
+                                controller.updateMission(selectedNote, result);
                                 populateNoteTableModel();
                             }
+                        } else if (column == 3) { // Cột "Alarm"
+                            showAlarmDialog(selectedNote);
                         } else {
                             handleNoteDoubleClick(table);
                         }
@@ -206,6 +224,125 @@ public class MainMenuScreen extends JPanel {
         });
 
         return table;
+    }
+
+    private void showAlarmDialog(Note note) {
+        JDialog dialog = new JDialog(mainFrame, "Alarm Details", true);
+        dialog.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        Alarm alarm = note.getAlarm();
+        DateTimeFormatter formatterFull = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String alarmTimeStr = alarm != null ? alarm.getAlarmTime().format(formatterFull) : LocalDateTime.now().format(formatterFull);
+        String alarmType = alarm != null && alarm.isRecurring() ? alarm.getFrequency() : "ONCE";
+
+        // Hiển thị thông tin alarm (chỉ dòng Alarm Time)
+        JLabel alarmLabel = new JLabel("Alarm Time: " + alarmTimeStr);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        dialog.add(alarmLabel, gbc);
+
+        // Tùy chọn chỉnh sửa loại alarm
+        String[] alarmTypes = {"ONCE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"};
+        JComboBox<String> typeComboBox = new JComboBox<>(alarmTypes);
+        typeComboBox.setSelectedItem(alarmType);
+        gbc.gridy = 1;
+        dialog.add(new JLabel("Alarm Type:"), gbc);
+        gbc.gridy = 2;
+        dialog.add(typeComboBox, gbc);
+
+        // Panel động để chứa các trường nhập ngày và giờ
+        JPanel dateTimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JTextField dateField = new JTextField(alarm != null ? alarm.getAlarmTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) : LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), 10);
+        SpinnerModel hourModel = new SpinnerNumberModel(alarm != null ? alarm.getAlarmTime().getHour() : LocalDateTime.now().getHour(), 0, 23, 1);
+        SpinnerModel minuteModel = new SpinnerNumberModel(alarm != null ? alarm.getAlarmTime().getMinute() : LocalDateTime.now().getMinute(), 0, 59, 1);
+        JSpinner hourSpinner = new JSpinner(hourModel);
+        JSpinner minuteSpinner = new JSpinner(minuteModel);
+
+        // Logic hiển thị động dựa trên loại alarm
+        typeComboBox.addActionListener(e -> {
+            String selectedType = (String) typeComboBox.getSelectedItem();
+            dateTimePanel.removeAll();
+            if ("ONCE".equals(selectedType)) {
+                dateTimePanel.add(new JLabel("Date (yyyy-MM-dd):"));
+                dateTimePanel.add(dateField);
+            }
+            dateTimePanel.add(new JLabel("Hour:"));
+            dateTimePanel.add(hourSpinner);
+            dateTimePanel.add(new JLabel("Minute:"));
+            dateTimePanel.add(minuteSpinner);
+            dateTimePanel.revalidate();
+            dateTimePanel.repaint();
+        });
+
+        // Khởi tạo giao diện ban đầu dựa trên loại alarm hiện tại
+        if ("ONCE".equals(alarmType)) {
+            dateTimePanel.add(new JLabel("Date (yyyy-MM-dd):"));
+            dateTimePanel.add(dateField);
+        }
+        dateTimePanel.add(new JLabel("Hour:"));
+        dateTimePanel.add(hourSpinner);
+        dateTimePanel.add(new JLabel("Minute:"));
+        dateTimePanel.add(minuteSpinner);
+
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        dialog.add(dateTimePanel, gbc);
+
+        // Nút cập nhật alarm
+        JButton updateButton = new JButton("Update Alarm");
+        updateButton.addActionListener(e -> {
+            try {
+                String selectedType = (String) typeComboBox.getSelectedItem();
+                boolean isRecurring = !"ONCE".equals(selectedType);
+                LocalDateTime newTime;
+
+                int hour = (int) hourSpinner.getValue();
+                int minute = (int) minuteSpinner.getValue();
+                if ("ONCE".equals(selectedType)) {
+                    // Lấy ngày từ dateField và kết hợp với giờ/phút
+                    LocalDateTime date = LocalDateTime.parse(dateField.getText() + " 00:00:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    newTime = date.withHour(hour).withMinute(minute).withSecond(0);
+                } else {
+                    // Lấy ngày hiện tại (hoặc ngày của alarm cũ) và chỉ cập nhật giờ/phút
+                    LocalDateTime baseDate = alarm != null ? alarm.getAlarmTime() : LocalDateTime.now();
+                    newTime = baseDate.withHour(hour).withMinute(minute).withSecond(0);
+                }
+
+                Alarm newAlarm = new Alarm(newTime, isRecurring, selectedType);
+                controller.setAlarm(note, newAlarm);
+                populateNoteTableModel();
+                dialog.dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Invalid date format! Use yyyy-MM-dd", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        gbc.gridy = 4;
+        dialog.add(updateButton, gbc);
+
+        // Nút xóa alarm
+        JButton deleteButton = new JButton("Delete Alarm");
+        deleteButton.setEnabled(alarm != null); // Chỉ bật khi có alarm
+        deleteButton.addActionListener(e -> {
+            controller.setAlarm(note, null);
+            populateNoteTableModel();
+            dialog.dispose();
+        });
+        gbc.gridy = 5;
+        dialog.add(deleteButton, gbc);
+
+        // Nút hủy
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> dialog.dispose());
+        gbc.gridy = 6;
+        dialog.add(cancelButton, gbc);
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(mainFrame);
+        dialog.setVisible(true);
     }
 
     private JPanel createNoteControlPanel() {
@@ -311,7 +448,7 @@ public class MainMenuScreen extends JPanel {
     }
 
     private List<Note> filterNotes(List<Note> notes, String titleQuery, String tagQuery) {
-        List<Note> filtered = new ArrayList<>(notes); // Sao chép để giữ nguyên thứ tự đã sắp xếp
+        List<Note> filtered = new ArrayList<>(notes);
 
         if (!titleQuery.isEmpty() && !tagQuery.isEmpty()) {
             filtered = filtered.stream()
@@ -374,7 +511,7 @@ public class MainMenuScreen extends JPanel {
             dialog.setVisible(true);
             String result = dialog.getResult();
             if (result != null) {
-                controller.updateMission(note, result); // Cập nhật qua controller
+                controller.updateMission(note, result);
                 populateNoteTableModel();
             }
         });
@@ -395,6 +532,17 @@ public class MainMenuScreen extends JPanel {
         JMenuItem moveItem = new JMenuItem("Move");
         moveItem.addActionListener(ev -> {
             JComboBox<Folder> folderCombo = new JComboBox<>(controller.getFolders().toArray(new Folder[0]));
+            folderCombo.setRenderer(new DefaultListCellRenderer() {
+                @Override
+                public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                    Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                    if (value instanceof Folder) {
+                        Folder folder = (Folder) value;
+                        setText(folder.getName());
+                    }
+                    return c;
+                }
+            });
             int result = JOptionPane.showConfirmDialog(mainFrame, folderCombo, "Move to Folder", JOptionPane.OK_CANCEL_OPTION);
             if (result == JOptionPane.OK_OPTION) {
                 controller.moveNoteToFolder(note, (Folder) folderCombo.getSelectedItem());
@@ -450,7 +598,7 @@ public class MainMenuScreen extends JPanel {
     }
 
     private void setupShortcuts() {
-        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW); // Sử dụng WHEN_IN_FOCUSED_WINDOW
+        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap actionMap = getActionMap();
 
         // Ctrl + N: Tạo ghi chú mới
