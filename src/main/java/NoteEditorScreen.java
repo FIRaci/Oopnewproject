@@ -10,9 +10,8 @@ public class NoteEditorScreen extends JPanel {
     private static final String BACK_LABEL = "Back";
     private static final String ADD_TAG_LABEL = "Add Tag";
     private static final String ADD_ALARM_LABEL = "Add Alarm";
-    private static final String EDIT_MISSION_LABEL = "Edit Mission"; // Thay Add Mission
+    private static final String EDIT_MISSION_LABEL = "Edit Mission";
     private static final String TRANSLATE_LABEL = "Translate";
-    private static final String AUTO_TAG_LABEL = "Auto Tag";
 
     private final MainFrame mainFrame;
     private final NoteController controller;
@@ -136,13 +135,6 @@ public class NoteEditorScreen extends JPanel {
     private JPanel createButtonPanel() {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
-        // Auto Tag button
-        JButton autoTagButton = new JButton(AUTO_TAG_LABEL);
-        autoTagButton.addActionListener(e -> {
-            System.out.println("Auto Tag Placeholder");
-        });
-        buttonPanel.add(autoTagButton);
-
         // Add Tag button
         JButton addTagButton = new JButton(ADD_TAG_LABEL);
         addTagButton.addActionListener(e -> {
@@ -167,7 +159,7 @@ public class NoteEditorScreen extends JPanel {
         });
         buttonPanel.add(addAlarmButton);
 
-        // Edit Mission button (thay thế Add Mission)
+        // Edit Mission button
         JButton editMissionButton = new JButton(EDIT_MISSION_LABEL);
         editMissionButton.addActionListener(e -> {
             MissionDialog dialog = new MissionDialog(mainFrame);
@@ -180,9 +172,18 @@ public class NoteEditorScreen extends JPanel {
         });
         buttonPanel.add(editMissionButton);
 
-        // Translate button (disabled for now)
+        // Translate button
         JButton translateButton = new JButton(TRANSLATE_LABEL);
-        translateButton.setEnabled(false);
+        translateButton.addActionListener(e -> {
+            TranslateDialog dialog = new TranslateDialog(mainFrame);
+            dialog.setTranslation(""); // Ban đầu để trống
+            dialog.setVisible(true);
+            String result = dialog.getResult();
+            if (result != null) {
+                // Hiện tại chỉ hiển thị kết quả, bạn có thể xử lý thêm
+                JOptionPane.showMessageDialog(mainFrame, "Translated text: " + result, "Translation Result", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
         buttonPanel.add(translateButton);
 
         // Save button
