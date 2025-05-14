@@ -4,6 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.Objects;
+import java.util.Random;
+
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -69,7 +71,20 @@ public class MainFrame extends JFrame {
         }
 
         try {
-            ImageIcon icon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/images/5048557ff0fc302e6cc0d419e2fc0219.jpg")));
+            // Mảng chứa tên các file icon
+            String[] iconNames = {
+                    "Acheron.jpg", "Aglaea.jpg", "BlackSwan.jpg", "Bronya.jpg", "Castroice.jpg", "Clara.jpg",
+                    "Feixiao.jpg", "Firefly.jpg", "Fugue.jpg", "FuXuan.jpg", "Hanabi.jpg", "Herta.jpg",
+                    "Himeko.jpg", "HuoHuo.jpg", "Jade.jpg", "Jingliu.jpg", "Kafka.jpg", "Lingsha.jpg",
+                    "Robin.jpg", "RuanMei.jpg", "Seele.jpg", "SilverWolf.jpg", "Tribbie.jpg", "Yunli.jpg"
+            };
+
+            // Chọn ngẫu nhiên một tên file từ mảng
+            Random random = new Random();
+            String randomIcon = iconNames[random.nextInt(iconNames.length)];
+
+            // Đặt icon cho ứng dụng với tên file được chọn
+            ImageIcon icon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/images/" + randomIcon)));
             setIconImage(icon.getImage());
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Failed to load icon: " + e.getMessage(),

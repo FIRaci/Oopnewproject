@@ -1,71 +1,410 @@
 {
   "notes": [
     {
-      "title": "Shopping List",
-      "content": "Milk\nEggs\nBread",
-      "favorite": false,
-      "mission": false,
-      "missionCompleted": false,
-      "missionContent": "",
-      "creationDate": "2025-05-13 19:58:37",
-      "modificationDate": "2025-05-13 19:58:37",
-      "folderName": "Personal",
-      "tagNames": [
-        "groceries"
-      ]
-    },
-    {
-      "title": "Project Ideas",
-      "content": "1. AI Chatbot\n2. Task Manager",
-      "favorite": true,
-      "mission": false,
-      "missionCompleted": false,
-      "missionContent": "",
-      "creationDate": "2025-05-13 19:58:37",
-      "modificationDate": "2025-05-13 19:58:37",
-      "folderName": "Work",
-      "tagNames": [
-        "work"
-      ]
-    },
-    {
-      "title": "Meeting Notes",
-      "content": "Discuss project timeline",
+      "title": "Task 0 AM/PM",
+      "content": "This is a reminder for task 0",
       "favorite": false,
       "mission": true,
       "missionCompleted": false,
-      "missionContent": "Prepare presentation",
-      "creationDate": "2025-05-13 19:58:37",
-      "modificationDate": "2025-05-13 19:58:37",
+      "missionContent": "Complete task for hour 0",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
       "alarm": {
-        "alarmTime": "2025-05-13 19:59:37",
-        "recurring": true,
-        "recurrencePattern": "DAILY"
+        "alarmTime": "2025-05-14 00:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
       },
-      "folderName": "Important",
+      "folderName": "Work",
       "tagNames": []
     },
     {
-      "title": "Study Plan",
-      "content": "Review Java concepts",
+      "title": "Task 1 AM/PM",
+      "content": "This is a reminder for task 1",
       "favorite": false,
       "mission": true,
       "missionCompleted": false,
-      "missionContent": "Complete Chapter 5 by tonight",
-      "creationDate": "2025-05-13 19:58:37",
-      "modificationDate": "2025-05-13 19:58:37",
-      "folderName": "Personal",
+      "missionContent": "Complete task for hour 1",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 01:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
       "tagNames": []
     },
     {
-      "title": "Team Sync",
-      "content": "Sync with team on project progress",
+      "title": "Task 2 AM/PM",
+      "content": "This is a reminder for task 2",
       "favorite": false,
       "mission": true,
       "missionCompleted": false,
-      "missionContent": "Schedule meeting and send agenda",
-      "creationDate": "2025-05-13 19:58:37",
-      "modificationDate": "2025-05-13 19:58:37",
+      "missionContent": "Complete task for hour 2",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 02:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 3 AM/PM",
+      "content": "This is a reminder for task 3",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 3",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 03:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 4 AM/PM",
+      "content": "This is a reminder for task 4",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 4",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 04:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 5 AM/PM",
+      "content": "This is a reminder for task 5",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 5",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 05:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 6 AM/PM",
+      "content": "This is a reminder for task 6",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 6",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 06:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 7 AM/PM",
+      "content": "This is a reminder for task 7",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 7",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 07:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 8 AM/PM",
+      "content": "This is a reminder for task 8",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 8",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 08:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 9 AM/PM",
+      "content": "This is a reminder for task 9",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 9",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 09:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 10 AM/PM",
+      "content": "This is a reminder for task 10",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 10",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 10:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 11 AM/PM",
+      "content": "This is a reminder for task 11",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 11",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 11:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 12 AM/PM",
+      "content": "This is a reminder for task 12",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 12",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 12:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 13 AM/PM",
+      "content": "This is a reminder for task 13",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 13",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 13:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 14 AM/PM",
+      "content": "This is a reminder for task 14",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 14",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 14:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 15 AM/PM",
+      "content": "This is a reminder for task 15",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 15",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 15:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 16 AM/PM",
+      "content": "This is a reminder for task 16",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 16",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 16:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 17 AM/PM",
+      "content": "This is a reminder for task 17",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 17",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 17:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 18 AM/PM",
+      "content": "This is a reminder for task 18",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 18",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 18:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 19 AM/PM",
+      "content": "This is a reminder for task 19",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 19",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 19:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 20 AM/PM",
+      "content": "This is a reminder for task 20",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 20",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 20:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 21 AM/PM",
+      "content": "This is a reminder for task 21",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 21",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 21:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 22 AM/PM",
+      "content": "This is a reminder for task 22",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 22",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 22:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
+      "folderName": "Work",
+      "tagNames": []
+    },
+    {
+      "title": "Task 23 AM/PM",
+      "content": "This is a reminder for task 23",
+      "favorite": false,
+      "mission": true,
+      "missionCompleted": false,
+      "missionContent": "Complete task for hour 23",
+      "creationDate": "2025-05-14 20:49:18",
+      "modificationDate": "2025-05-14 20:49:18",
+      "alarm": {
+        "alarmTime": "2025-05-14 23:00:00",
+        "recurring": false,
+        "recurrencePattern": "ONCE"
+      },
       "folderName": "Work",
       "tagNames": []
     }
@@ -92,12 +431,5 @@
       "favorite": false
     }
   ],
-  "tags": [
-    {
-      "name": "work"
-    },
-    {
-      "name": "groceries"
-    }
-  ]
+  "tags": []
 }

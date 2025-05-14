@@ -31,12 +31,30 @@ public class MainMenuScreen extends JPanel {
     private JTextField tagSearchField;
     private JList<Folder> folderList;
     private List<Note> filteredNotes;
+    private ImageIcon[] hourIcons; // Mảng lưu 24 biểu tượng giờ
 
     public MainMenuScreen(NoteController controller, MainFrame mainFrame) {
         this.controller = controller;
         this.mainFrame = mainFrame;
+        loadHourIcons(); // Tải biểu tượng
         initializeUI();
         setupShortcuts();
+    }
+
+    // Tải 24 biểu tượng giờ từ file hour_0.jpg đến hour_23.jpg
+    private void loadHourIcons() {
+        hourIcons = new ImageIcon[24];
+        for (int i = 0; i < 24; i++) {
+            try {
+                hourIcons[i] = new ImageIcon(getClass().getResource("/icons/hour_" + i + ".jpg"));
+                // Điều chỉnh kích thước biểu tượng nếu cần
+                Image img = hourIcons[i].getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH);
+                hourIcons[i] = new ImageIcon(img);
+            } catch (Exception e) {
+                System.err.println("Không thể tải biểu tượng hour_" + i + ".jpg: " + e.getMessage());
+                hourIcons[i] = null; // Biểu tượng mặc định nếu lỗi
+            }
+        }
     }
 
     private void initializeUI() {
@@ -173,15 +191,38 @@ public class MainMenuScreen extends JPanel {
         table.getColumnModel().getColumn(4).setPreferredWidth(150);
         table.getColumnModel().getColumn(4).setMinWidth(130);
 
-        // Renderer cho cột Alarm để có thể nhấn được
+        // Renderer tùy chỉnh để căn giữa tất cả các cột
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                setHorizontalAlignment(JLabel.CENTER);
+                return c;
+            }
+        };
+
+        // Áp dụng renderer cho tất cả các cột
+        for (int i = 0; i < table.getColumnModel().getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+
+        // Renderer đặc biệt cho cột Alarm để hiển thị biểu tượng
         table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (value != null && !value.toString().isEmpty()) {
-                    label.setForeground(Color.BLUE);
-                    label.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                label.setText(""); // Xóa text mặc định
+                if (value instanceof Integer) { // Giá trị là giờ (0-23)
+                    int hour = (int) value;
+                    if (hour >= 0 && hour < 24 && hourIcons[hour] != null) {
+                        label.setIcon(hourIcons[hour]); // Hiển thị biểu tượng tương ứng với giờ
+                        label.setHorizontalAlignment(JLabel.CENTER);
+                    }
+                } else {
+                    label.setIcon(null); // Không có alarm, xóa biểu tượng
                 }
+                label.setForeground(Color.BLUE);
+                label.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 return label;
             }
         });
@@ -228,41 +269,71 @@ public class MainMenuScreen extends JPanel {
 
     private void showAlarmDialog(Note note) {
         JDialog dialog = new JDialog(mainFrame, "Alarm Details", true);
+        dialog.setSize(300, 250); // Kích thước cố định
+        dialog.setResizable(false); // Không cho thay đổi kích thước
         dialog.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(10, 10, 10, 10); // Thêm padding
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
 
         Alarm alarm = note.getAlarm();
         DateTimeFormatter formatterFull = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String alarmTimeStr = alarm != null ? alarm.getAlarmTime().format(formatterFull) : LocalDateTime.now().format(formatterFull);
         String alarmType = alarm != null && alarm.isRecurring() ? alarm.getFrequency() : "ONCE";
 
-        // Hiển thị thông tin alarm (chỉ dòng Alarm Time)
+        // Hiển thị thông tin alarm
         JLabel alarmLabel = new JLabel("Alarm Time: " + alarmTimeStr);
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 2;
         dialog.add(alarmLabel, gbc);
 
-        // Tùy chọn chỉnh sửa loại alarm
+        // Tùy chọn loại alarm
         String[] alarmTypes = {"ONCE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"};
         JComboBox<String> typeComboBox = new JComboBox<>(alarmTypes);
         typeComboBox.setSelectedItem(alarmType);
         gbc.gridy = 1;
+        gbc.gridwidth = 1;
         dialog.add(new JLabel("Alarm Type:"), gbc);
-        gbc.gridy = 2;
+        gbc.gridx = 1;
         dialog.add(typeComboBox, gbc);
 
-        // Panel động để chứa các trường nhập ngày và giờ
+        // Panel chứa các trường ngày giờ với kích thước cố định
         JPanel dateTimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JTextField dateField = new JTextField(alarm != null ? alarm.getAlarmTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) : LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), 10);
-        SpinnerModel hourModel = new SpinnerNumberModel(alarm != null ? alarm.getAlarmTime().getHour() : LocalDateTime.now().getHour(), 0, 23, 1);
-        SpinnerModel minuteModel = new SpinnerNumberModel(alarm != null ? alarm.getAlarmTime().getMinute() : LocalDateTime.now().getMinute(), 0, 59, 1);
-        JSpinner hourSpinner = new JSpinner(hourModel);
-        JSpinner minuteSpinner = new JSpinner(minuteModel);
+        dateTimePanel.setPreferredSize(new Dimension(250, 30)); // Giới hạn kích thước panel
+        JTextField dateField = new JTextField(10);
+        JSpinner hourSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 23, 1));
+        JSpinner minuteSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 59, 1));
 
-        // Logic hiển thị động dựa trên loại alarm
+        // Đặt giá trị ban đầu
+        if (alarm != null) {
+            dateField.setText(alarm.getAlarmTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            hourSpinner.setValue(alarm.getAlarmTime().getHour());
+            minuteSpinner.setValue(alarm.getAlarmTime().getMinute());
+        } else {
+            LocalDateTime now = LocalDateTime.now();
+            dateField.setText(now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            hourSpinner.setValue(now.getHour());
+            minuteSpinner.setValue(now.getMinute());
+        }
+
+        // Thêm thành phần ban đầu
+        if ("ONCE".equals(alarmType)) {
+            dateTimePanel.add(new JLabel("Date (yyyy-MM-dd):"));
+            dateTimePanel.add(dateField);
+        }
+        dateTimePanel.add(new JLabel("Hour:"));
+        dateTimePanel.add(hourSpinner);
+        dateTimePanel.add(new JLabel("Minute:"));
+        dateTimePanel.add(minuteSpinner);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        dialog.add(dateTimePanel, gbc);
+
+        // Xử lý thay đổi loại alarm
         typeComboBox.addActionListener(e -> {
             String selectedType = (String) typeComboBox.getSelectedItem();
             dateTimePanel.removeAll();
@@ -278,20 +349,6 @@ public class MainMenuScreen extends JPanel {
             dateTimePanel.repaint();
         });
 
-        // Khởi tạo giao diện ban đầu dựa trên loại alarm hiện tại
-        if ("ONCE".equals(alarmType)) {
-            dateTimePanel.add(new JLabel("Date (yyyy-MM-dd):"));
-            dateTimePanel.add(dateField);
-        }
-        dateTimePanel.add(new JLabel("Hour:"));
-        dateTimePanel.add(hourSpinner);
-        dateTimePanel.add(new JLabel("Minute:"));
-        dateTimePanel.add(minuteSpinner);
-
-        gbc.gridy = 3;
-        gbc.gridwidth = 2;
-        dialog.add(dateTimePanel, gbc);
-
         // Nút cập nhật alarm
         JButton updateButton = new JButton("Update Alarm");
         updateButton.addActionListener(e -> {
@@ -303,11 +360,9 @@ public class MainMenuScreen extends JPanel {
                 int hour = (int) hourSpinner.getValue();
                 int minute = (int) minuteSpinner.getValue();
                 if ("ONCE".equals(selectedType)) {
-                    // Lấy ngày từ dateField và kết hợp với giờ/phút
                     LocalDateTime date = LocalDateTime.parse(dateField.getText() + " 00:00:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                     newTime = date.withHour(hour).withMinute(minute).withSecond(0);
                 } else {
-                    // Lấy ngày hiện tại (hoặc ngày của alarm cũ) và chỉ cập nhật giờ/phút
                     LocalDateTime baseDate = alarm != null ? alarm.getAlarmTime() : LocalDateTime.now();
                     newTime = baseDate.withHour(hour).withMinute(minute).withSecond(0);
                 }
@@ -320,26 +375,30 @@ public class MainMenuScreen extends JPanel {
                 JOptionPane.showMessageDialog(dialog, "Invalid date format! Use yyyy-MM-dd", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
-        gbc.gridy = 4;
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
         dialog.add(updateButton, gbc);
 
         // Nút xóa alarm
         JButton deleteButton = new JButton("Delete Alarm");
-        deleteButton.setEnabled(alarm != null); // Chỉ bật khi có alarm
+        deleteButton.setEnabled(alarm != null);
         deleteButton.addActionListener(e -> {
             controller.setAlarm(note, null);
             populateNoteTableModel();
             dialog.dispose();
         });
-        gbc.gridy = 5;
+        gbc.gridy = 4;
         dialog.add(deleteButton, gbc);
 
         // Nút hủy
         JButton cancelButton = new JButton("Cancel");
         cancelButton.addActionListener(e -> dialog.dispose());
-        gbc.gridy = 6;
+        gbc.gridy = 5;
         dialog.add(cancelButton, gbc);
 
+        // Đặt kích thước tối thiểu để tránh co rút
+        dialog.setMinimumSize(new Dimension(300, 250));
         dialog.pack();
         dialog.setLocationRelativeTo(mainFrame);
         dialog.setVisible(true);
@@ -437,11 +496,12 @@ public class MainMenuScreen extends JPanel {
 
         filteredNotes = filterNotes(controller.getSortedNotes(), titleQuery, tagQuery);
         for (Note note : filteredNotes) {
+            Object alarmValue = note.getAlarm() != null ? note.getAlarm().getAlarmTime().getHour() : null;
             model.addRow(new Object[]{
                     note.getTitle(),
                     note.isFavorite() ? "★" : "",
                     note.getMissionContent().isEmpty() ? "" : "✔ " + note.getMissionContent(),
-                    note.getAlarm() != null ? "⏰" : "",
+                    alarmValue, // Truyền giờ của alarm (0-23) hoặc null nếu không có alarm
                     note.getFormattedModificationDate()
             });
         }
