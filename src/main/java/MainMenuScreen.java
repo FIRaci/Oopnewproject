@@ -269,11 +269,11 @@ public class MainMenuScreen extends JPanel {
 
     private void showAlarmDialog(Note note) {
         JDialog dialog = new JDialog(mainFrame, "Alarm Details", true);
-        dialog.setSize(300, 250); // Kích thước cố định
-        dialog.setResizable(false); // Không cho thay đổi kích thước
+        dialog.setSize(300, 280); // Tăng kích thước để giao diện rõ ràng hơn
+        dialog.setResizable(false);
         dialog.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10); // Thêm padding
+        gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
@@ -299,54 +299,36 @@ public class MainMenuScreen extends JPanel {
         gbc.gridx = 1;
         dialog.add(typeComboBox, gbc);
 
-        // Panel chứa các trường ngày giờ với kích thước cố định
-        JPanel dateTimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        dateTimePanel.setPreferredSize(new Dimension(250, 30)); // Giới hạn kích thước panel
+        // Panel chứa trường ngày
+        JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JTextField dateField = new JTextField(10);
+
+        // Panel chứa trường giờ và phút
+        JPanel timePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JSpinner hourSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 23, 1));
         JSpinner minuteSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 59, 1));
 
         // Đặt giá trị ban đầu
-        if (alarm != null) {
-            dateField.setText(alarm.getAlarmTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-            hourSpinner.setValue(alarm.getAlarmTime().getHour());
-            minuteSpinner.setValue(alarm.getAlarmTime().getMinute());
-        } else {
-            LocalDateTime now = LocalDateTime.now();
-            dateField.setText(now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-            hourSpinner.setValue(now.getHour());
-            minuteSpinner.setValue(now.getMinute());
-        }
+        LocalDateTime initialTime = alarm != null ? alarm.getAlarmTime() : LocalDateTime.now();
+        dateField.setText(initialTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        hourSpinner.setValue(initialTime.getHour());
+        minuteSpinner.setValue(initialTime.getMinute());
 
         // Thêm thành phần ban đầu
-        if ("ONCE".equals(alarmType)) {
-            dateTimePanel.add(new JLabel("Date (yyyy-MM-dd):"));
-            dateTimePanel.add(dateField);
-        }
-        dateTimePanel.add(new JLabel("Hour:"));
-        dateTimePanel.add(hourSpinner);
-        dateTimePanel.add(new JLabel("Minute:"));
-        dateTimePanel.add(minuteSpinner);
-
+        updateAlarmPanels(datePanel, timePanel, dateField, hourSpinner, minuteSpinner, alarmType);
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.gridwidth = 2;
-        dialog.add(dateTimePanel, gbc);
+        dialog.add(datePanel, gbc);
+        gbc.gridy = 3;
+        dialog.add(timePanel, gbc);
 
         // Xử lý thay đổi loại alarm
         typeComboBox.addActionListener(e -> {
             String selectedType = (String) typeComboBox.getSelectedItem();
-            dateTimePanel.removeAll();
-            if ("ONCE".equals(selectedType)) {
-                dateTimePanel.add(new JLabel("Date (yyyy-MM-dd):"));
-                dateTimePanel.add(dateField);
-            }
-            dateTimePanel.add(new JLabel("Hour:"));
-            dateTimePanel.add(hourSpinner);
-            dateTimePanel.add(new JLabel("Minute:"));
-            dateTimePanel.add(minuteSpinner);
-            dateTimePanel.revalidate();
-            dateTimePanel.repaint();
+            updateAlarmPanels(datePanel, timePanel, dateField, hourSpinner, minuteSpinner, selectedType);
+            dialog.revalidate();
+            dialog.repaint();
         });
 
         // Nút cập nhật alarm
@@ -376,7 +358,7 @@ public class MainMenuScreen extends JPanel {
             }
         });
         gbc.gridx = 0;
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         gbc.gridwidth = 2;
         dialog.add(updateButton, gbc);
 
@@ -388,20 +370,35 @@ public class MainMenuScreen extends JPanel {
             populateNoteTableModel();
             dialog.dispose();
         });
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         dialog.add(deleteButton, gbc);
 
         // Nút hủy
         JButton cancelButton = new JButton("Cancel");
         cancelButton.addActionListener(e -> dialog.dispose());
-        gbc.gridy = 5;
+        gbc.gridy = 6;
         dialog.add(cancelButton, gbc);
 
-        // Đặt kích thước tối thiểu để tránh co rút
-        dialog.setMinimumSize(new Dimension(300, 250));
+        dialog.setMinimumSize(new Dimension(300, 280));
         dialog.pack();
         dialog.setLocationRelativeTo(mainFrame);
         dialog.setVisible(true);
+    }
+
+    private void updateAlarmPanels(JPanel datePanel, JPanel timePanel, JTextField dateField, JSpinner hourSpinner, JSpinner minuteSpinner, String alarmType) {
+        // Cập nhật panel ngày
+        datePanel.removeAll();
+        if ("ONCE".equals(alarmType)) {
+            datePanel.add(new JLabel("Date (yyyy-MM-dd):"));
+            datePanel.add(dateField);
+        }
+
+        // Cập nhật panel giờ/phút
+        timePanel.removeAll();
+        timePanel.add(new JLabel("Time (HH:mm):"));
+        timePanel.add(hourSpinner);
+        timePanel.add(new JLabel(":"));
+        timePanel.add(minuteSpinner);
     }
 
     private JPanel createNoteControlPanel() {
