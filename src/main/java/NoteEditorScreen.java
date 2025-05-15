@@ -4,6 +4,9 @@ import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.time.LocalDateTime;
+// Đảm bảo import TranslationService nếu nó nằm ở package khác
+// Ví dụ: import hust.soict.hedspi.noteapp.service.TranslationService;
+// Nếu TranslationService cùng package thì không cần import tường minh
 
 public class NoteEditorScreen extends JPanel {
     private static final String SAVE_LABEL = "Save";
@@ -38,6 +41,9 @@ public class NoteEditorScreen extends JPanel {
         updateTagDisplay();
         updateWordCount();
         updateModifiedTime();
+        if (undoManager != null) { // Reset undo manager for new note
+            undoManager.discardAllEdits();
+        }
     }
 
     private void updateTagDisplay() {
@@ -64,8 +70,8 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private void updateWordCount() {
-        int count = contentField.getText().trim().split("\\s+").length;
-        if (contentField.getText().trim().isEmpty()) count = 0;
+        String text = contentField.getText();
+        int count = text.trim().isEmpty() ? 0 : text.trim().split("\\s+").length;
         wordCountLabel.setText("Words: " + count);
     }
 
@@ -130,6 +136,8 @@ public class NoteEditorScreen extends JPanel {
         bottomPanel.add(createButtonPanel(), BorderLayout.SOUTH);
 
         add(bottomPanel, BorderLayout.SOUTH);
+        updateWordCount(); // Initial word count
+        updateModifiedTime(); // Initial modified time
     }
 
     private JPanel createButtonPanel() {
@@ -172,17 +180,71 @@ public class NoteEditorScreen extends JPanel {
         });
         buttonPanel.add(editMissionButton);
 
-        // Translate button
+        // Translate button - MODIFIED
         JButton translateButton = new JButton(TRANSLATE_LABEL);
         translateButton.addActionListener(e -> {
-            TranslateDialog dialog = new TranslateDialog(mainFrame);
-            dialog.setTranslation(""); // Ban đầu để trống
-            dialog.setVisible(true);
-            String result = dialog.getResult();
-            if (result != null) {
-                // Hiện tại chỉ hiển thị kết quả, bạn có thể xử lý thêm
-                JOptionPane.showMessageDialog(mainFrame, "Translated text: " + result, "Translation Result", JOptionPane.INFORMATION_MESSAGE);
+            String contentToTranslate = contentField.getText();
+            if (contentToTranslate == null || contentToTranslate.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(mainFrame, "Không có nội dung để dịch.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                return;
             }
+
+            // Danh sách ngôn ngữ để chọn
+            String[] languages = {"Vietnamese", "English", "French", "Spanish", "German", "Japanese", "Chinese", "Korean"};
+            String targetLanguage = (String) JOptionPane.showInputDialog(
+                    mainFrame,
+                    "Chọn ngôn ngữ đích:",
+                    "Dịch ngôn ngữ",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    languages,
+                    languages[0] // Ngôn ngữ mặc định là Vietnamese
+            );
+
+            if (targetLanguage != null) { // Người dùng đã chọn một ngôn ngữ
+                translateButton.setEnabled(false);
+                translateButton.setText("Đang dịch...");
+
+                TranslationService.translate(contentToTranslate, targetLanguage, new TranslationService.TranslationCallback() {
+                    @Override
+                    public void onSuccess(String translatedText) {
+                        SwingUtilities.invokeLater(() -> {
+                            translateButton.setEnabled(true);
+                            translateButton.setText(TRANSLATE_LABEL);
+
+                            JTextArea resultArea = new JTextArea(translatedText);
+                            resultArea.setWrapStyleWord(true);
+                            resultArea.setLineWrap(true);
+                            resultArea.setEditable(false);
+                            resultArea.setBackground(mainFrame.getBackground());
+                            JScrollPane scrollPane = new JScrollPane(resultArea);
+                            scrollPane.setPreferredSize(new Dimension(400, 200));
+
+                            JOptionPane.showMessageDialog(
+                                    mainFrame,
+                                    scrollPane,
+                                    "Translation Result (" + targetLanguage + ")",
+                                    JOptionPane.INFORMATION_MESSAGE
+                            );
+                        });
+                    }
+
+                    @Override
+                    public void onError(String errorMessage) {
+                        SwingUtilities.invokeLater(() -> {
+                            translateButton.setEnabled(true);
+                            translateButton.setText(TRANSLATE_LABEL);
+                            JOptionPane.showMessageDialog(
+                                    mainFrame,
+                                    "Lỗi dịch: " + errorMessage,
+                                    "Lỗi",
+                                    JOptionPane.ERROR_MESSAGE
+                            );
+                        });
+                    }
+                });
+            }
+            // Nếu người dùng nhấn Cancel (targetLanguage == null), không làm gì thêm
         });
         buttonPanel.add(translateButton);
 
@@ -197,7 +259,7 @@ public class NoteEditorScreen extends JPanel {
     private void saveNote() {
         try {
             String newTitle = titleField.getText().trim();
-            String newContent = contentField.getText().trim();
+            String newContent = contentField.getText(); // Không trim() content ở đây để giữ nguyên định dạng
             if (newTitle.isEmpty()) {
                 JOptionPane.showMessageDialog(mainFrame, "Title cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
                 return;

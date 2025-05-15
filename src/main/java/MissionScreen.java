@@ -24,36 +24,32 @@ public class MissionScreen extends JPanel {
     private void initializeUI() {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        setPreferredSize(new Dimension(800, 500));
-        setMinimumSize(new Dimension(800, 500));
-        setMaximumSize(new Dimension(800, 500));
 
         // Top panel with delete button
         JPanel topPanel = new JPanel(new BorderLayout());
         deleteButton = new JButton("🗑");
-        deleteButton.setToolTipText("Toggle Delete Mode");
         deleteButton.addActionListener(e -> toggleDeleteMode());
         topPanel.add(deleteButton, BorderLayout.EAST);
         add(topPanel, BorderLayout.NORTH);
 
-        // Mission container with FlowLayout
-        missionContainer = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 20));
-        missionContainer.setPreferredSize(new Dimension(800, 500));
+        // Mission container with GridLayout (3 columns)
+        missionContainer = new JPanel(new GridLayout(0, 3, 20, 20)); // 0 hàng để tự động, 3 cột, khoảng cách 20px
+        missionContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         JScrollPane scrollPane = new JScrollPane(missionContainer);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED); // Cho phép scroll ngang
 
         // Tăng tốc độ cuộn
         scrollPane.getVerticalScrollBar().setUnitIncrement(20);
         scrollPane.getVerticalScrollBar().setBlockIncrement(100);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(20);
+        scrollPane.getHorizontalScrollBar().setBlockIncrement(100);
 
-        // Bọc scrollPane trong fixedPanel
-        JPanel fixedPanel = new JPanel(new BorderLayout());
-        fixedPanel.setPreferredSize(new Dimension(800, 500));
-        fixedPanel.setMinimumSize(new Dimension(800, 500));
-        fixedPanel.setMaximumSize(new Dimension(800, 500));
-        fixedPanel.add(scrollPane, BorderLayout.CENTER);
+        // Loại bỏ giới hạn chiều rộng tối đa để scroll ngang hoạt động
+        // missionContainer.setMaximumSize(new Dimension(1110, Integer.MAX_VALUE)); // Đã bỏ
 
-        add(fixedPanel, BorderLayout.CENTER);
+        add(scrollPane, BorderLayout.CENTER);
 
         refreshMissions();
     }
@@ -72,7 +68,8 @@ public class MissionScreen extends JPanel {
         List<Note> missions = controller.getMissions();
         System.out.println("Refreshing missions in MissionScreen: " + missions.size() + " missions found.");
         for (Note note : missions) {
-            missionContainer.add(createMissionPanel(note));
+            JPanel missionPanel = createMissionPanel(note);
+            missionContainer.add(missionPanel);
         }
 
         missionContainer.revalidate();
@@ -83,6 +80,7 @@ public class MissionScreen extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
         panel.setPreferredSize(new Dimension(350, 180));
+        panel.setMaximumSize(new Dimension(350, 180)); // Giới hạn kích thước tối đa
 
         // Kiểm tra trạng thái xám
         boolean isGrayed = note.getAlarm() != null && note.getAlarm().getAlarmTime().isBefore(LocalDateTime.now()) && !note.getAlarm().isRecurring();
@@ -177,77 +175,137 @@ public class MissionScreen extends JPanel {
 
     private void showAlarmDialog(Note note) {
         JDialog dialog = new JDialog(mainFrame, "Alarm Details", true);
+        dialog.setSize(300, 250);
+        dialog.setResizable(false);
         dialog.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
 
         Alarm alarm = note.getAlarm();
         DateTimeFormatter formatterFull = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String alarmTimeStr = alarm.getAlarmTime().format(formatterFull);
-        String alarmType = alarm.isRecurring() ? alarm.getFrequency() : "ONCE";
+        String alarmTimeStr = alarm != null ? alarm.getAlarmTime().format(formatterFull) : LocalDateTime.now().format(formatterFull);
+        String alarmType = alarm != null && alarm.isRecurring() ? alarm.getFrequency() : "ONCE";
 
         // Hiển thị thông tin alarm
-        JLabel alarmLabel = new JLabel("Alarm Time: " + alarmTimeStr + " (" + alarmType + ")");
+        JLabel alarmLabel = new JLabel("Alarm Time: " + alarmTimeStr);
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 2;
         dialog.add(alarmLabel, gbc);
 
-        JLabel typeLabel = new JLabel("Type: " + alarmType);
-        gbc.gridy = 1;
-        dialog.add(typeLabel, gbc);
-
-        // Ô nhập để chỉnh sửa thời gian alarm
-        JTextField timeField = new JTextField(alarmTimeStr, 20);
-        gbc.gridy = 2;
-        dialog.add(new JLabel("New Alarm Time (yyyy-MM-dd HH:mm:ss):"), gbc);
-        gbc.gridy = 3;
-        dialog.add(timeField, gbc);
-
-        // Tùy chọn để chỉnh sửa loại alarm
+        // Tùy chọn loại alarm
         String[] alarmTypes = {"ONCE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"};
         JComboBox<String> typeComboBox = new JComboBox<>(alarmTypes);
         typeComboBox.setSelectedItem(alarmType);
-        gbc.gridy = 4;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
         dialog.add(new JLabel("Alarm Type:"), gbc);
-        gbc.gridy = 5;
+        gbc.gridx = 1;
         dialog.add(typeComboBox, gbc);
+
+        // Panel chứa các trường ngày giờ với kích thước cố định
+        JPanel dateTimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        dateTimePanel.setPreferredSize(new Dimension(250, 30));
+        JTextField dateField = new JTextField(10);
+        JSpinner hourSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 23, 1));
+        JSpinner minuteSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 59, 1));
+
+        // Đặt giá trị ban đầu
+        if (alarm != null) {
+            dateField.setText(alarm.getAlarmTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            hourSpinner.setValue(alarm.getAlarmTime().getHour());
+            minuteSpinner.setValue(alarm.getAlarmTime().getMinute());
+        } else {
+            LocalDateTime now = LocalDateTime.now();
+            dateField.setText(now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            hourSpinner.setValue(now.getHour());
+            minuteSpinner.setValue(now.getMinute());
+        }
+
+        // Thêm thành phần ban đầu
+        if ("ONCE".equals(alarmType)) {
+            dateField.setText(alarm != null ? alarm.getAlarmTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) : LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            dateTimePanel.add(new JLabel("Date (yyyy-MM-dd):"));
+            dateTimePanel.add(dateField);
+        }
+        dateTimePanel.add(new JLabel("Hour:"));
+        dateTimePanel.add(hourSpinner);
+        dateTimePanel.add(new JLabel("Minute:"));
+        dateTimePanel.add(minuteSpinner);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        dialog.add(dateTimePanel, gbc);
+
+        // Xử lý thay đổi loại alarm
+        typeComboBox.addActionListener(e -> {
+            String selectedType = (String) typeComboBox.getSelectedItem();
+            dateTimePanel.removeAll();
+            if ("ONCE".equals(selectedType)) {
+                dateField.setText(alarm != null ? alarm.getAlarmTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) : LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                dateTimePanel.add(new JLabel("Date (yyyy-MM-dd):"));
+                dateTimePanel.add(dateField);
+            }
+            dateTimePanel.add(new JLabel("Hour:"));
+            dateTimePanel.add(hourSpinner);
+            dateTimePanel.add(new JLabel("Minute:"));
+            dateTimePanel.add(minuteSpinner);
+            dateTimePanel.revalidate();
+            dateTimePanel.repaint();
+        });
 
         // Nút cập nhật alarm
         JButton updateButton = new JButton("Update Alarm");
         updateButton.addActionListener(e -> {
             try {
-                LocalDateTime newTime = LocalDateTime.parse(timeField.getText(), formatterFull);
-                String newType = (String) typeComboBox.getSelectedItem();
-                boolean isRecurring = !"ONCE".equals(newType);
-                Alarm newAlarm = new Alarm(newTime, isRecurring, newType);
+                String selectedType = (String) typeComboBox.getSelectedItem();
+                boolean isRecurring = !"ONCE".equals(selectedType);
+                LocalDateTime newTime;
+
+                int hour = (int) hourSpinner.getValue();
+                int minute = (int) minuteSpinner.getValue();
+                if ("ONCE".equals(selectedType)) {
+                    LocalDateTime date = LocalDateTime.parse(dateField.getText() + " 00:00:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    newTime = date.withHour(hour).withMinute(minute).withSecond(0);
+                } else {
+                    LocalDateTime baseDate = alarm != null ? alarm.getAlarmTime() : LocalDateTime.now();
+                    newTime = baseDate.withHour(hour).withMinute(minute).withSecond(0);
+                }
+
+                Alarm newAlarm = new Alarm(newTime, isRecurring, selectedType);
                 controller.setAlarm(note, newAlarm);
                 refreshMissions();
                 dialog.dispose();
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Invalid date format! Use yyyy-MM-dd HH:mm:ss", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialog, "Invalid date format! Use yyyy-MM-dd", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
-        gbc.gridy = 6;
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
         dialog.add(updateButton, gbc);
 
         // Nút xóa alarm
         JButton deleteButton = new JButton("Delete Alarm");
+        deleteButton.setEnabled(alarm != null);
         deleteButton.addActionListener(e -> {
             controller.setAlarm(note, null);
             refreshMissions();
             dialog.dispose();
         });
-        gbc.gridy = 7;
+        gbc.gridy = 4;
         dialog.add(deleteButton, gbc);
 
         // Nút hủy
         JButton cancelButton = new JButton("Cancel");
         cancelButton.addActionListener(e -> dialog.dispose());
-        gbc.gridy = 8;
+        gbc.gridy = 5;
         dialog.add(cancelButton, gbc);
 
+        dialog.setMinimumSize(new Dimension(300, 250));
         dialog.pack();
         dialog.setLocationRelativeTo(mainFrame);
         dialog.setVisible(true);
@@ -267,15 +325,6 @@ public class MissionScreen extends JPanel {
     // Hàm cắt ngắn nội dung để vừa khung lớn hơn
     private String truncateText(String text, int maxLength) {
         if (text.length() <= maxLength) return text;
-        return text.substring(0, maxLength - 3) + "...";
-    }
-
-    @Override
-    public void setVisible(boolean visible) {
-        super.setVisible(visible);
-        if (visible) {
-            System.out.println("MissionScreen is now visible. Refreshing missions...");
-            refreshMissions();
-        }
+        return text.substring(0, maxLength) + "...";
     }
 }
