@@ -30,7 +30,7 @@ public class TranslationService {
             @Override
             protected String doInBackground() throws Exception {
                 // Xây dựng prompt tương tự như trong TranslationApp
-                String prompt = "translate to " + targetLanguage + ": " + textToTranslate;
+                String prompt = "translate to " + targetLanguage + "without any comment: " + textToTranslate;
                 return sendPostRequest(API_URL, MODEL, prompt);
             }
 
