@@ -3,10 +3,11 @@ Esc: quay lại
 Ctrl + S: lưu
 Ctrl + N: "Add Note"
 Ctrl + F: "Add Folder"
-Ctrl + R: "Refresh"
 Ctrl + Z: Undo
 Ctrl + G: "Add Alarm"
 Ctrl + Q: Thoát ứng dụng
 Ctrl + W: Đổi theme
 Ctrl + 1: Notes
 Ctrl + 2: Missions
+Ctrl + D: Dịch
+Ctrl + M: "Add Mission"
