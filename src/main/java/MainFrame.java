@@ -2,95 +2,208 @@ import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.util.Objects;
+import java.util.Random;
+
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.DefaultCategoryDataset;
 
 public class MainFrame extends JFrame {
-    private JPanel mainPanel;
-    private CardLayout cardLayout;
+    private final NoteController controller;
     private MainMenuScreen mainMenuScreen;
+    private MissionScreen missionScreen;
     private NoteEditorScreen noteEditorScreen;
-    private CanvasPanel canvasPanel;
-    private final NoteController noteController;
-    private final AlarmController alarmController;
+    private JPanel contentPanel;
+    private CardLayout cardLayout;
+    private boolean isDarkTheme = false;
 
-    public MainFrame(NoteController noteController) {
-        this.noteController = noteController;
-        this.alarmController = new AlarmController(noteController.getNoteManager(), this);
-
-        applyTheme(noteController.getCurrentTheme());
-
-        setTitle("My Notes");
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        setSize(800, 600);
-        setLocationRelativeTo(null);
-
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent e) {
-                alarmController.stop();
-                System.exit(0);
-            }
-        });
-
-        cardLayout = new CardLayout();
-        mainPanel = new JPanel(cardLayout);
-
-        mainMenuScreen = new MainMenuScreen(noteController, this);
-        noteEditorScreen = new NoteEditorScreen(this, noteController, new Note("New Note", "", false));
-        canvasPanel = new CanvasPanel(noteController, this);
-
-        mainPanel.add(mainMenuScreen, "MainMenu");
-        mainPanel.add(noteEditorScreen, "NoteEditor");
-        mainPanel.add(canvasPanel, "CanvasPanel");
-
-        JMenuBar menuBar = new JMenuBar();
-        JMenu settingsMenu = new JMenu("Settings");
-        JMenuItem switchThemeItem = new JMenuItem("Switch Theme");
-        switchThemeItem.addActionListener(e -> {
-            String newTheme = noteController.getCurrentTheme().equalsIgnoreCase("Dark") ? "Light" : "Dark";
-            noteController.changeTheme(newTheme);
-            applyTheme(newTheme);
-        });
-        settingsMenu.add(switchThemeItem);
-        menuBar.add(settingsMenu);
-        setJMenuBar(menuBar);
-
-        add(mainPanel);
-        cardLayout.show(mainPanel, "MainMenu");
+    public MainFrame(NoteController controller) {
+        this.controller = controller;
+        initializeUI();
+        setupShortcuts();
     }
 
-    private void applyTheme(String newTheme) {
+    private void initializeUI() {
+        setTitle("XiNoClo - Note App");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(850, 600);
+        setLocationRelativeTo(null);
+
+        JPanel tabPanel = new JPanel(new BorderLayout());
+
+        JButton notesButton = new JButton("📝 Notes");
+        notesButton.setFocusPainted(false);
+        notesButton.addActionListener(e -> showScreenWithTransition("Notes"));
+
+        JButton missionsButton = new JButton("🎯 Missions");
+        missionsButton.setFocusPainted(false);
+        missionsButton.addActionListener(e -> showScreenWithTransition("Missions"));
+
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        leftPanel.add(notesButton);
+
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        rightPanel.add(missionsButton);
+
+        tabPanel.add(leftPanel, BorderLayout.WEST);
+        tabPanel.add(rightPanel, BorderLayout.EAST);
+
+        cardLayout = new CardLayout();
+        contentPanel = new JPanel(cardLayout);
+        contentPanel.setOpaque(false);
+
+        mainMenuScreen = new MainMenuScreen(controller, this);
+        missionScreen = new MissionScreen(controller, this);
+
+        contentPanel.add(mainMenuScreen, "Notes");
+        contentPanel.add(missionScreen, "Missions");
+
+        add(tabPanel, BorderLayout.NORTH);
+        add(contentPanel, BorderLayout.CENTER);
+
         try {
-            if ("Dark".equalsIgnoreCase(newTheme)) {
-                UIManager.setLookAndFeel(new FlatDarkLaf());
-            } else {
-                UIManager.setLookAndFeel(new FlatLightLaf());
-            }
-            SwingUtilities.updateComponentTreeUI(this);
+            UIManager.setLookAndFeel(new FlatLightLaf());
+        } catch (UnsupportedLookAndFeelException e) {
+            JOptionPane.showMessageDialog(this, "Failed to set default theme!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+
+        try {
+            // Mảng chứa tên các file icon
+            String[] iconNames = {
+                    "Acheron.jpg", "Aglaea.jpg", "BlackSwan.jpg", "Bronya.jpg", "Castroice.jpg", "Clara.jpg",
+                    "Feixiao.jpg", "Firefly.jpg", "Fugue.jpg", "FuXuan.jpg", "Hanabi.jpg", "Herta.jpg",
+                    "Himeko.jpg", "HuoHuo.jpg", "Jade.jpg", "Jingliu.jpg", "Kafka.jpg", "Lingsha.jpg",
+                    "Robin.jpg", "RuanMei.jpg", "Seele.jpg", "SilverWolf.jpg", "Tribbie.jpg", "Yunli.jpg"
+            };
+
+            // Chọn ngẫu nhiên một tên file từ mảng
+            Random random = new Random();
+            String randomIcon = iconNames[random.nextInt(iconNames.length)];
+
+            // Đặt icon cho ứng dụng với tên file được chọn
+            ImageIcon icon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/images/" + randomIcon)));
+            setIconImage(icon.getImage());
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Failed to apply theme: " + e.getMessage(),
+            JOptionPane.showMessageDialog(this, "Failed to load icon: " + e.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    public void showNoteDetailScreen(Note selectedNote) {
-        if (selectedNote == null) {
-            JOptionPane.showMessageDialog(this, "No note selected.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        noteEditorScreen.setNote(selectedNote);
-        cardLayout.show(mainPanel, "NoteEditor");
+    private void showScreenWithTransition(String screenName) {
+        float[] opacity = {0f};
+        Timer timer = new Timer(15, e -> {
+            opacity[0] += 0.05f;
+            if (opacity[0] >= 1f) {
+                opacity[0] = 1f;
+                ((Timer) e.getSource()).stop();
+            }
+            contentPanel.setOpaque(false);
+            contentPanel.repaint();
+        });
+        cardLayout.show(contentPanel, screenName);
+        timer.start();
     }
 
     public void showAddNoteScreen() {
-        noteEditorScreen.setNote(new Note("New Note", "", false));
-        cardLayout.show(mainPanel, "NoteEditor");
+        noteEditorScreen = new NoteEditorScreen(this, controller, null);
+        contentPanel.add(noteEditorScreen, "NoteEditor");
+        showScreenWithTransition("NoteEditor");
     }
 
-    public void openCanvasPanel() {
-        cardLayout.show(mainPanel, "CanvasPanel");
+    public void showNoteDetailScreen(Note note) {
+        noteEditorScreen = new NoteEditorScreen(this, controller, note);
+        noteEditorScreen.setNote(note);
+        contentPanel.add(noteEditorScreen, "NoteEditor");
+        showScreenWithTransition("NoteEditor");
     }
 
     public void showMainMenuScreen() {
-        cardLayout.show(mainPanel, "MainMenu");
+        showScreenWithTransition("Notes");
+        mainMenuScreen.refresh();
+    }
+
+    public void openCanvasPanel() {
+        // Tạo dữ liệu cho biểu đồ: số lượng note theo folder
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        for (Folder folder : controller.getFolders()) {
+            long noteCount = controller.getSortedNotes().stream()
+                    .filter(note -> note.getFolder() != null && note.getFolder().getName().equals(folder.getName()))
+                    .count();
+            dataset.addValue(noteCount, "Notes", folder.getName());
+        }
+
+        // Tạo biểu đồ cột
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Note Count by Folder",
+                "Folder",
+                "Number of Notes",
+                dataset
+        );
+
+        // Tạo panel cho biểu đồ
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setPreferredSize(new Dimension(600, 400));
+
+        // Hiển thị trong dialog
+        JDialog dialog = new JDialog(this, "Statistics", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.add(chartPanel, BorderLayout.CENTER);
+        dialog.setSize(650, 450);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private void setupShortcuts() {
+        InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap actionMap = getRootPane().getActionMap();
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Q, KeyEvent.CTRL_DOWN_MASK), "exit");
+        actionMap.put("exit", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                int confirm = JOptionPane.showConfirmDialog(MainFrame.this,
+                        "Are you sure you want to exit?", "Confirm Exit", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    System.exit(0);
+                }
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_W, KeyEvent.CTRL_DOWN_MASK), "toggleTheme");
+        actionMap.put("toggleTheme", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                try {
+                    if (isDarkTheme) {
+                        UIManager.setLookAndFeel(new FlatLightLaf());
+                    } else {
+                        UIManager.setLookAndFeel(new FlatDarkLaf());
+                    }
+                    isDarkTheme = !isDarkTheme;
+                    SwingUtilities.updateComponentTreeUI(MainFrame.this);
+                } catch (UnsupportedLookAndFeelException ex) {
+                    JOptionPane.showMessageDialog(MainFrame.this, "Failed to change theme!", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_1, KeyEvent.CTRL_DOWN_MASK), "showNotes");
+        actionMap.put("showNotes", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                showScreenWithTransition("Notes");
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_2, KeyEvent.CTRL_DOWN_MASK), "showMissions");
+        actionMap.put("showMissions", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                showScreenWithTransition("Missions");
+            }
+        });
     }
 }

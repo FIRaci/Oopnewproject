@@ -32,6 +32,10 @@ public class NoteManager {
                 });
             }
         }
+
+        // Log danh sách notes sau khi tải
+        System.out.println("NoteManager initialized. Total notes: " + notes.size());
+        notes.forEach(note -> System.out.println("Note: " + note.getTitle() + ", Mission Content: " + note.getMissionContent()));
     }
 
     public void addNote(Note note) {
@@ -68,6 +72,9 @@ public class NoteManager {
 
     public List<Note> getNotesInFolder(Folder folder) {
         if (folder == null) return new ArrayList<>();
+        if (folder.getName().equals("Root")) {
+            return notes.stream().filter(n -> !n.getFolder().getName().equals("Root")).collect(Collectors.toList());
+        }
         return folder.getNotes().stream().filter(notes::contains).collect(Collectors.toList());
     }
 
@@ -173,6 +180,7 @@ public class NoteManager {
             note.setFolder(getRootFolder());
             getRootFolder().addNote(note);
         }
+        note.setFolder(folder);
         saveData();
     }
 
@@ -203,7 +211,7 @@ public class NoteManager {
         return counts;
     }
 
-    private void saveData() {
+    void saveData() {
         dataStorage.save(this);
     }
 

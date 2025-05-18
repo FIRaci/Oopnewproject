@@ -1,40 +1,81 @@
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * Dialog for adding or editing a tag.
+ */
 public class TagDialog extends JDialog {
     private Tag result;
     private JTextField tagField;
 
+    static {
+        try {
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        } catch (Exception e) {
+            System.err.println("Failed to set Nimbus Look and Feel: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Constructs a TagDialog.
+     * @param owner The parent frame.
+     */
     public TagDialog(Frame owner) {
         super(owner, "Add Tag", true);
-        setLayout(new BorderLayout(10, 10));
-        setSize(300, 150);
+        setLayout(new GridBagLayout());
+        setSize(350, 200);
+        setMinimumSize(new Dimension(300, 150));
         setLocationRelativeTo(owner);
 
-        JPanel inputPanel = new JPanel(new BorderLayout(5, 0));
-        inputPanel.add(new JLabel("#"), BorderLayout.WEST);
-        tagField = new JTextField(20);
-        inputPanel.add(tagField, BorderLayout.CENTER);
-        add(inputPanel, BorderLayout.CENTER);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 15, 15, 15);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        JButton okButton = new JButton("OK");
+        JLabel tagLabel = new JLabel("Tag Name:");
+        tagLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        add(tagLabel, gbc);
+
+        tagField = new JTextField(15);
+        tagField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        add(tagField, gbc);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton okButton = new JButton("✅ OK");
+        okButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JButton cancelButton = new JButton("❌ Cancel");
+        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+
         okButton.addActionListener(e -> {
             String tagName = tagField.getText().trim();
             if (!tagName.isEmpty()) {
                 result = new Tag(tagName);
                 dispose();
             } else {
-                JOptionPane.showMessageDialog(this, "Tag cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Tag name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
-        JButton cancelButton = new JButton("Cancel");
+
         cancelButton.addActionListener(e -> dispose());
+
         buttonPanel.add(okButton);
         buttonPanel.add(cancelButton);
-        add(buttonPanel, BorderLayout.SOUTH);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        add(buttonPanel, gbc);
+
+        getRootPane().setDefaultButton(okButton);
     }
 
+    /**
+     * Gets the created or edited tag.
+     * @return The Tag object, or null if cancelled.
+     */
     public Tag getResult() {
         return result;
     }
