@@ -3,20 +3,39 @@ import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 public class Alarm {
+    private long id;
     private LocalDateTime alarmTime;
     private boolean recurring;
     private String recurrencePattern;
 
-    public Alarm(LocalDateTime alarmTime, boolean recurring, String recurrencePattern) {
+    // Constructor chính để tạo Alarm từ dữ liệu (ví dụ: từ DAO)
+    public Alarm(long id, LocalDateTime alarmTime, boolean recurring, String recurrencePattern) {
         if (alarmTime == null) {
             throw new IllegalArgumentException("Alarm time cannot be null");
         }
-        if (recurring && (recurrencePattern == null || recurrencePattern.trim().isEmpty())) {
-            throw new IllegalArgumentException("Recurrence pattern cannot be null or empty for recurring alarms");
-        }
+        this.id = id;
         this.alarmTime = alarmTime;
-        this.recurring = recurring;
-        this.recurrencePattern = recurrencePattern != null ? recurrencePattern.trim() : null;
+        // Gọi setter để đảm bảo logic nhất quán được áp dụng
+        this.setRecurring(recurring); // Quan trọng: gọi setter
+        if (this.recurring) {
+            // Chỉ đặt pattern nếu thực sự là recurring và pattern hợp lệ
+            this.setRecurrencePattern(recurrencePattern);
+        } else {
+            this.recurrencePattern = null; // Đảm bảo là null nếu không recurring
+        }
+    }
+
+    // Constructor để tạo Alarm mới (ví dụ: từ UI, chưa có ID)
+    public Alarm(LocalDateTime alarmTime, boolean recurring, String recurrencePattern) {
+        this(0L, alarmTime, recurring, recurrencePattern); // Gọi constructor chính với ID mặc định là 0
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 
     public LocalDateTime getAlarmTime() {
@@ -36,6 +55,9 @@ public class Alarm {
 
     public void setRecurring(boolean recurring) {
         this.recurring = recurring;
+        if (!this.recurring) {
+            this.recurrencePattern = null; // Đảm bảo pattern là null nếu không recurring
+        }
     }
 
     public String getRecurrencePattern() {
@@ -43,15 +65,25 @@ public class Alarm {
     }
 
     public void setRecurrencePattern(String recurrencePattern) {
-        if (recurring && (recurrencePattern == null || recurrencePattern.trim().isEmpty())) {
-            throw new IllegalArgumentException("Recurrence pattern cannot be null or empty for recurring alarms");
+        if (this.recurring) {
+            if (recurrencePattern == null || recurrencePattern.trim().isEmpty()) {
+                // Hoặc throw exception, hoặc đặt một giá trị mặc định hợp lệ nếu có
+                // throw new IllegalArgumentException("Recurrence pattern cannot be null or empty for recurring alarms.");
+                // Tạm thời cho phép null/empty pattern cho recurring alarm nếu logic của bạn cho phép
+                // và sẽ được xử lý ở tầng DAO khi lưu (đặt là NULL trong DB nếu empty)
+                this.recurrencePattern = (recurrencePattern == null || recurrencePattern.trim().isEmpty()) ? null : recurrencePattern.trim().toUpperCase();
+
+            } else {
+                this.recurrencePattern = recurrencePattern.trim().toUpperCase();
+            }
+        } else {
+            this.recurrencePattern = null; // Không cho phép set pattern nếu không recurring
         }
-        this.recurrencePattern = recurrencePattern != null ? recurrencePattern.trim() : null;
     }
 
     public boolean shouldTrigger(LocalDateTime now) {
         if (alarmTime == null || now == null) return false;
-        return now.isAfter(alarmTime) || now.isEqual(alarmTime);
+        return !now.isBefore(alarmTime);
     }
 
     @Override
@@ -59,6 +91,10 @@ public class Alarm {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Alarm alarm = (Alarm) o;
+        if (id != 0L && alarm.id != 0L) {
+            return id == alarm.id;
+        }
+        // So sánh dựa trên các thuộc tính nếu chưa có ID (cho mục đích logic, không phải định danh DB)
         return recurring == alarm.recurring &&
                 Objects.equals(alarmTime, alarm.alarmTime) &&
                 Objects.equals(recurrencePattern, alarm.recurrencePattern);
@@ -66,17 +102,29 @@ public class Alarm {
 
     @Override
     public int hashCode() {
+        if (id != 0L) {
+            return Objects.hash(id);
+        }
         return Objects.hash(alarmTime, recurring, recurrencePattern);
     }
 
     @Override
     public String toString() {
-        return "Alarm{time=" + alarmTime +
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        String timeStr = (alarmTime != null) ? alarmTime.format(formatter) : "N/A";
+        // recurrencePattern giờ đây sẽ là null nếu không recurring, nên không cần (recurrencePattern == null ? "" : ...)
+        return "Alarm{" +
+                "id=" + id +
+                ", alarmTime=" + timeStr +
                 ", recurring=" + recurring +
-                ", pattern='" + recurrencePattern + "'}";
+                ", recurrencePattern='" + recurrencePattern + '\'' + // Sẽ hiển thị 'null' nếu là null
+                '}';
     }
 
     public String getFrequency() {
-        return recurrencePattern != null ? recurrencePattern : "";
+        if (recurring && recurrencePattern != null && !recurrencePattern.isEmpty()) {
+            return recurrencePattern;
+        }
+        return "ONCE";
     }
 }

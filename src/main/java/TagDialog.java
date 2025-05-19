@@ -1,18 +1,34 @@
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * Dialog for adding or editing a tag.
+ */
 public class TagDialog extends JDialog {
     private Tag result;
     private JTextField tagField;
 
+    static {
+        try {
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        } catch (Exception e) {
+            System.err.println("Failed to set Nimbus Look and Feel: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Constructs a TagDialog.
+     * @param owner The parent frame.
+     */
     public TagDialog(Frame owner) {
         super(owner, "Add Tag", true);
         setLayout(new GridBagLayout());
-        setSize(320, 180);
+        setSize(350, 200);
+        setMinimumSize(new Dimension(300, 150));
         setLocationRelativeTo(owner);
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.insets = new Insets(15, 15, 15, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JLabel tagLabel = new JLabel("Tag Name:");
@@ -22,13 +38,16 @@ public class TagDialog extends JDialog {
         add(tagLabel, gbc);
 
         tagField = new JTextField(15);
+        tagField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         gbc.gridx = 1;
         gbc.gridy = 0;
         add(tagField, gbc);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton okButton = new JButton("✅ OK");
+        okButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         JButton cancelButton = new JButton("❌ Cancel");
+        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
 
         okButton.addActionListener(e -> {
             String tagName = tagField.getText().trim();
@@ -49,8 +68,14 @@ public class TagDialog extends JDialog {
         gbc.gridy = 1;
         gbc.gridwidth = 2;
         add(buttonPanel, gbc);
+
+        getRootPane().setDefaultButton(okButton);
     }
 
+    /**
+     * Gets the created or edited tag.
+     * @return The Tag object, or null if cancelled.
+     */
     public Tag getResult() {
         return result;
     }

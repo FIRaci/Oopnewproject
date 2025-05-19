@@ -42,4 +42,8 @@ public class MissionDialog extends JDialog {
     public String getResult() {
         return result;
     }
+
+    public boolean isSaved() {
+        return result != null;
+    }
 }

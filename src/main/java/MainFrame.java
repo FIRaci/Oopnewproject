@@ -1,11 +1,14 @@
+// Hãy đảm bảo bạn có import này nếu AlarmController không cùng package
+// import com.yourpackage.AlarmController; // << THAY com.yourpackage bằng package đúng
+
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
+import java.awt.event.*;
+import java.net.URL;
 import java.util.Objects;
 import java.util.Random;
-
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -13,47 +16,76 @@ import org.jfree.data.category.DefaultCategoryDataset;
 
 public class MainFrame extends JFrame {
     private final NoteController controller;
+    private AlarmController alarmController; // <<<< SỬA 1: Thêm trường alarmController
     private MainMenuScreen mainMenuScreen;
     private MissionScreen missionScreen;
     private NoteEditorScreen noteEditorScreen;
     private JPanel contentPanel;
     private CardLayout cardLayout;
-    private boolean isDarkTheme = false;
+    private ImageSpinner imageSpinner;
+    private MouseEventDispatcher mouseEventDispatcher;
 
     public MainFrame(NoteController controller) {
         this.controller = controller;
+        // <<<< SỬA 2: Khởi tạo AlarmController sau khi NoteController đã có
+        // Giả định AlarmController, NoteController, MainFrame ở cùng package hoặc đã import đúng
+        this.alarmController = new AlarmController(this.controller, this);
+        // --------------------------------------------------------------------
         initializeUI();
         setupShortcuts();
     }
 
     private void initializeUI() {
         setTitle("XiNoClo - Note App");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(850, 600);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                confirmAndExit();
+            }
+        });
+        setMinimumSize(new Dimension(800, 550));
+        setSize(900, 650);
         setLocationRelativeTo(null);
 
-        JPanel tabPanel = new JPanel(new BorderLayout());
+        // --- Tab Panel Setup ---
+        JPanel topBarPanel = new JPanel(new BorderLayout(0, 0));
 
         JButton notesButton = new JButton("📝 Notes");
+        notesButton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
         notesButton.setFocusPainted(false);
-        notesButton.addActionListener(e -> showScreenWithTransition("Notes"));
+        notesButton.addActionListener(e -> showScreen("Notes"));
 
         JButton missionsButton = new JButton("🎯 Missions");
+        missionsButton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
         missionsButton.setFocusPainted(false);
-        missionsButton.addActionListener(e -> showScreenWithTransition("Missions"));
+        missionsButton.addActionListener(e -> showScreen("Missions"));
 
-        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        leftPanel.add(notesButton);
+        JPanel tabBarContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8));
+        tabBarContainer.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
 
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        rightPanel.add(missionsButton);
+        imageSpinner = new ImageSpinner(50, "/images/spinner.jpg");
+        imageSpinner.setToolTipText("Rotating Indicator");
+        imageSpinner.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    HelpScreen.showDialog(MainFrame.this); // Giả sử HelpScreen.showDialog tồn tại
+                }
+            }
+        });
 
-        tabPanel.add(leftPanel, BorderLayout.WEST);
-        tabPanel.add(rightPanel, BorderLayout.EAST);
+        mouseEventDispatcher = new MouseEventDispatcher(imageSpinner, this);
+        mouseEventDispatcher.addMouseMotionListener(this);
+
+        tabBarContainer.add(notesButton);
+        tabBarContainer.add(imageSpinner);
+        tabBarContainer.add(missionsButton);
+
+        topBarPanel.add(tabBarContainer, BorderLayout.CENTER);
 
         cardLayout = new CardLayout();
         contentPanel = new JPanel(cardLayout);
-        contentPanel.setOpaque(false);
 
         mainMenuScreen = new MainMenuScreen(controller, this);
         missionScreen = new MissionScreen(controller, this);
@@ -61,149 +93,233 @@ public class MainFrame extends JFrame {
         contentPanel.add(mainMenuScreen, "Notes");
         contentPanel.add(missionScreen, "Missions");
 
-        add(tabPanel, BorderLayout.NORTH);
+        mouseEventDispatcher.addMouseMotionListener(mainMenuScreen);
+        mouseEventDispatcher.addMouseMotionListener(missionScreen);
+
+        add(topBarPanel, BorderLayout.NORTH);
         add(contentPanel, BorderLayout.CENTER);
 
-        try {
-            UIManager.setLookAndFeel(new FlatLightLaf());
-        } catch (UnsupportedLookAndFeelException e) {
-            JOptionPane.showMessageDialog(this, "Failed to set default theme!", "Error", JOptionPane.ERROR_MESSAGE);
-        }
+        applyTheme(controller.getCurrentTheme().equals("dark"));
 
         try {
-            // Mảng chứa tên các file icon
             String[] iconNames = {
                     "Acheron.jpg", "Aglaea.jpg", "BlackSwan.jpg", "Bronya.jpg", "Castroice.jpg", "Clara.jpg",
                     "Feixiao.jpg", "Firefly.jpg", "Fugue.jpg", "FuXuan.jpg", "Hanabi.jpg", "Herta.jpg",
                     "Himeko.jpg", "HuoHuo.jpg", "Jade.jpg", "Jingliu.jpg", "Kafka.jpg", "Lingsha.jpg",
                     "Robin.jpg", "RuanMei.jpg", "Seele.jpg", "SilverWolf.jpg", "Tribbie.jpg", "Yunli.jpg"
             };
-
-            // Chọn ngẫu nhiên một tên file từ mảng
             Random random = new Random();
-            String randomIcon = iconNames[random.nextInt(iconNames.length)];
-
-            // Đặt icon cho ứng dụng với tên file được chọn
-            ImageIcon icon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/images/" + randomIcon)));
-            setIconImage(icon.getImage());
+            String randomIconName = iconNames[random.nextInt(iconNames.length)];
+            URL appIconUrl = getClass().getResource("/images/" + randomIconName);
+            if (appIconUrl != null) {
+                setIconImage(new ImageIcon(appIconUrl).getImage());
+            } else {
+                System.err.println("Không thể tải icon ứng dụng: /images/" + randomIconName);
+            }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Failed to load icon: " + e.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            System.err.println("Lỗi khi tải icon ứng dụng: " + e.getMessage());
+        }
+
+        showScreen("Notes");
+    }
+
+    private void applyTheme(boolean switchToDark) {
+        try {
+            if (switchToDark) {
+                UIManager.setLookAndFeel(new FlatDarkLaf());
+            } else {
+                UIManager.setLookAndFeel(new FlatLightLaf());
+            }
+            SwingUtilities.updateComponentTreeUI(this);
+            if (imageSpinner != null) {
+                imageSpinner.repaint();
+            }
+        } catch (UnsupportedLookAndFeelException e) {
+            JOptionPane.showMessageDialog(this, "Failed to set theme: " + e.getMessage(), "Theme Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private void showScreenWithTransition(String screenName) {
-        float[] opacity = {0f};
-        Timer timer = new Timer(15, e -> {
-            opacity[0] += 0.05f;
-            if (opacity[0] >= 1f) {
-                opacity[0] = 1f;
-                ((Timer) e.getSource()).stop();
-            }
-            contentPanel.setOpaque(false);
-            contentPanel.repaint();
-        });
+    private void showScreen(String screenName) {
+        if ("NoteEditor".equals(screenName) && getNoteEditorScreenInstance() == null) {
+            // NoteEditorScreen được tạo on-demand
+        }
         cardLayout.show(contentPanel, screenName);
-        timer.start();
+        contentPanel.requestFocusInWindow();
+    }
+
+    private NoteEditorScreen getNoteEditorScreenInstance() {
+        boolean found = false;
+        for (Component comp : contentPanel.getComponents()) {
+            if (comp == noteEditorScreen) {
+                found = true;
+                break;
+            }
+        }
+        if (noteEditorScreen == null || !found) {
+            noteEditorScreen = new NoteEditorScreen(this, controller, null); // Giả sử NoteEditorScreen tồn tại
+            contentPanel.add(noteEditorScreen, "NoteEditor");
+            contentPanel.revalidate();
+            contentPanel.repaint();
+            mouseEventDispatcher.addMouseMotionListener(noteEditorScreen);
+        }
+        return noteEditorScreen;
     }
 
     public void showAddNoteScreen() {
-        noteEditorScreen = new NoteEditorScreen(this, controller, null);
-        contentPanel.add(noteEditorScreen, "NoteEditor");
-        showScreenWithTransition("NoteEditor");
+        NoteEditorScreen editor = getNoteEditorScreenInstance();
+        editor.setNote(null);
+        showScreen("NoteEditor");
     }
 
     public void showNoteDetailScreen(Note note) {
-        noteEditorScreen = new NoteEditorScreen(this, controller, note);
-        noteEditorScreen.setNote(note);
-        contentPanel.add(noteEditorScreen, "NoteEditor");
-        showScreenWithTransition("NoteEditor");
+        NoteEditorScreen editor = getNoteEditorScreenInstance();
+        editor.setNote(note);
+        showScreen("NoteEditor");
     }
 
     public void showMainMenuScreen() {
-        showScreenWithTransition("Notes");
-        mainMenuScreen.refresh();
+        showScreen("Notes");
+        if (mainMenuScreen != null) {
+            mainMenuScreen.refresh();
+        }
+    }
+
+    public void showMissionsScreen() {
+        showScreen("Missions");
+        if (missionScreen != null) {
+            missionScreen.refreshMissions();
+        }
     }
 
     public void openCanvasPanel() {
-        // Tạo dữ liệu cho biểu đồ: số lượng note theo folder
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        for (Folder folder : controller.getFolders()) {
-            long noteCount = controller.getSortedNotes().stream()
-                    .filter(note -> note.getFolder() != null && note.getFolder().getName().equals(folder.getName()))
+        java.util.List<Folder> folders = controller.getFolders();
+        if (folders == null || folders.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No folders found to display statistics.", "Statistics", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        java.util.List<Note> allNotes = controller.getNotes();
+        if (allNotes == null) {
+            JOptionPane.showMessageDialog(this, "Could not retrieve notes for statistics.", "Statistics Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        for (Folder folder : folders) {
+            long noteCount = allNotes.stream()
+                    .filter(note -> note.getFolderId() == folder.getId())
                     .count();
             dataset.addValue(noteCount, "Notes", folder.getName());
         }
 
-        // Tạo biểu đồ cột
         JFreeChart chart = ChartFactory.createBarChart(
-                "Note Count by Folder",
-                "Folder",
-                "Number of Notes",
-                dataset
-        );
+                "Note Count by Folder", "Folder", "Number of Notes", dataset);
 
-        // Tạo panel cho biểu đồ
+        chart.setBackgroundPaint(UIManager.getColor("Panel.background"));
+        if (chart.getTitle() != null) chart.getTitle().setPaint(UIManager.getColor("Label.foreground"));
+        if (chart.getCategoryPlot() != null) {
+            chart.getCategoryPlot().getDomainAxis().setLabelPaint(UIManager.getColor("Label.foreground"));
+            chart.getCategoryPlot().getDomainAxis().setTickLabelPaint(UIManager.getColor("Label.foreground"));
+            chart.getCategoryPlot().getRangeAxis().setLabelPaint(UIManager.getColor("Label.foreground"));
+            chart.getCategoryPlot().getRangeAxis().setTickLabelPaint(UIManager.getColor("Label.foreground"));
+            chart.getCategoryPlot().setBackgroundPaint(UIManager.getColor("TextField.background"));
+        }
+        if (chart.getLegend() != null) chart.getLegend().setItemPaint(UIManager.getColor("Label.foreground"));
+
         ChartPanel chartPanel = new ChartPanel(chart);
         chartPanel.setPreferredSize(new Dimension(600, 400));
-
-        // Hiển thị trong dialog
         JDialog dialog = new JDialog(this, "Statistics", true);
         dialog.setLayout(new BorderLayout());
         dialog.add(chartPanel, BorderLayout.CENTER);
-        dialog.setSize(650, 450);
+        dialog.pack();
         dialog.setLocationRelativeTo(this);
+        mouseEventDispatcher.addMouseMotionListenerToWindow(dialog);
         dialog.setVisible(true);
+    }
+
+    private void confirmAndExit() {
+        int confirm = JOptionPane.showConfirmDialog(MainFrame.this,
+                "Are you sure you want to exit XiNoClo?", "Confirm Exit",
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirm == JOptionPane.YES_OPTION) {
+            // <<<< SỬA 3: Dừng AlarmController scheduler trước khi thoát
+            if (this.alarmController != null) {
+                this.alarmController.stopSoundAndScheduler();
+            }
+            // ---------------------------------------------------------
+            DBConnectionManager.shutdown(); // Giả sử DBConnectionManager tồn tại và có phương thức này
+            System.exit(0);
+        }
     }
 
     private void setupShortcuts() {
         InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap actionMap = getRootPane().getActionMap();
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Q, KeyEvent.CTRL_DOWN_MASK), "exit");
-        actionMap.put("exit", new AbstractAction() {
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Q, KeyEvent.CTRL_DOWN_MASK), "exitApp");
+        actionMap.put("exitApp", new AbstractAction() {
             @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                int confirm = JOptionPane.showConfirmDialog(MainFrame.this,
-                        "Are you sure you want to exit?", "Confirm Exit", JOptionPane.YES_NO_OPTION);
-                if (confirm == JOptionPane.YES_OPTION) {
-                    System.exit(0);
-                }
-            }
+            public void actionPerformed(ActionEvent e) { confirmAndExit(); }
         });
 
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_W, KeyEvent.CTRL_DOWN_MASK), "toggleTheme");
         actionMap.put("toggleTheme", new AbstractAction() {
             @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                try {
-                    if (isDarkTheme) {
-                        UIManager.setLookAndFeel(new FlatLightLaf());
-                    } else {
-                        UIManager.setLookAndFeel(new FlatDarkLaf());
+            public void actionPerformed(ActionEvent e) {
+                controller.changeTheme();
+                // Note: controller.changeTheme() đã gọi SwingUtilities.updateComponentTreeUI(mainFrameInstance);
+                // Nếu mainFrameInstance trong NoteController chính là MainFrame này thì không cần gọi lại ở đây.
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_1, KeyEvent.CTRL_DOWN_MASK), "showNotesScreen");
+        actionMap.put("showNotesScreen", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) { showMainMenuScreen(); }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_2, KeyEvent.CTRL_DOWN_MASK), "showMissionsScreen");
+        actionMap.put("showMissionsScreen", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) { showMissionsScreen(); }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, KeyEvent.CTRL_DOWN_MASK), "addNoteGlobal");
+        actionMap.put("addNoteGlobal", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) { showAddNoteScreen(); }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, KeyEvent.CTRL_DOWN_MASK), "addFolderGlobal");
+        actionMap.put("addFolderGlobal", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String name = JOptionPane.showInputDialog(MainFrame.this, "Enter folder name:");
+                if (name != null && !name.trim().isEmpty()) {
+                    controller.addNewFolder(name.trim());
+                    if (mainMenuScreen != null && mainMenuScreen.isShowing()) {
+                        mainMenuScreen.refreshFolderPanel();
                     }
-                    isDarkTheme = !isDarkTheme;
-                    SwingUtilities.updateComponentTreeUI(MainFrame.this);
-                } catch (UnsupportedLookAndFeelException ex) {
-                    JOptionPane.showMessageDialog(MainFrame.this, "Failed to change theme!", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_1, KeyEvent.CTRL_DOWN_MASK), "showNotes");
-        actionMap.put("showNotes", new AbstractAction() {
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), "showShortcutsDialog");
+        actionMap.put("showShortcutsDialog", new AbstractAction() {
             @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                showScreenWithTransition("Notes");
+            public void actionPerformed(ActionEvent e) {
+                HelpScreen dialog = new HelpScreen(MainFrame.this); // Giả sử HelpScreen tồn tại
+                mouseEventDispatcher.addMouseMotionListenerToWindow(dialog);
+                dialog.setVisible(true);
             }
         });
+    }
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_2, KeyEvent.CTRL_DOWN_MASK), "showMissions");
-        actionMap.put("showMissions", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                showScreenWithTransition("Missions");
-            }
-        });
+    public void triggerThemeUpdate(boolean isNowDark) {
+        applyTheme(isNowDark);
+    }
+
+    public MouseEventDispatcher getMouseEventDispatcher() {
+        return mouseEventDispatcher;
     }
 }
