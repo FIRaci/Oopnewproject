@@ -20,12 +20,13 @@ public class DataStorage {
         this.file = new File(filePath);
         GsonBuilder builder = new GsonBuilder();
         builder.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter());
-        builder.registerTypeAdapter(Note.class, new NoteAdapter());
+        builder.registerTypeAdapter(Note.class, new NoteAdapter()); // NoteAdapter sẽ được cập nhật
         builder.registerTypeAdapter(Folder.class, new FolderAdapter());
         builder.registerTypeAdapter(Tag.class, new TagAdapter());
         this.gson = builder.setPrettyPrinting().create();
     }
 
+    // ... (các phương thức save, load, handleCorruptedFile, Data class, LocalDateTimeAdapter, FolderAdapter, TagAdapter giữ nguyên như phiên bản trước) ...
     public void save(NoteManager noteManager) {
         try (Writer writer = new FileWriter(file)) {
             Data data = new Data();
@@ -130,7 +131,14 @@ public class DataStorage {
             JsonObject json = new JsonObject();
             json.addProperty("id", src.getId());
             json.addProperty("title", src.getTitle());
-            json.addProperty("content", src.getContent());
+            // Chỉ serialize content nếu là TEXT note và content không null
+            if (src.getNoteType() == Note.NoteType.TEXT && src.getContent() != null) {
+                json.addProperty("content", src.getContent());
+            } else if (src.getNoteType() == Note.NoteType.TEXT) { // TEXT note nhưng content là null
+                json.add("content", JsonNull.INSTANCE);
+            }
+            // Không serialize content cho DRAWING note
+
             json.add("createdAt", context.serialize(src.getCreatedAt()));
             json.add("updatedAt", context.serialize(src.getUpdatedAt()));
             json.addProperty("isFavorite", src.isFavorite());
@@ -148,6 +156,16 @@ public class DataStorage {
             } else {
                 json.add("alarm", JsonNull.INSTANCE);
             }
+
+            // Serialize các trường mới
+            json.addProperty("noteType", src.getNoteType().name()); // Lưu tên của enum
+            if (src.getNoteType() == Note.NoteType.DRAWING && src.getDrawingData() != null) {
+                json.addProperty("drawingData", src.getDrawingData());
+            } else if (src.getNoteType() == Note.NoteType.DRAWING) { // DRAWING note nhưng drawingData là null
+                json.add("drawingData", JsonNull.INSTANCE);
+            }
+            // Không serialize drawingData cho TEXT note
+
             return json;
         }
 
@@ -156,73 +174,65 @@ public class DataStorage {
             JsonObject obj = json.getAsJsonObject();
 
             long id = obj.has("id") ? obj.get("id").getAsLong() : 0;
-            String title = obj.has("title") ? obj.get("title").getAsString() : "Untitled"; // Default title
-            String content = obj.has("content") ? obj.get("content").getAsString() : ""; // Default content
+            String title = obj.has("title") ? obj.get("title").getAsString() : "Untitled";
 
-            LocalDateTime createdAt = null;
-            if (obj.has("createdAt") && !obj.get("createdAt").isJsonNull()) {
-                createdAt = context.deserialize(obj.get("createdAt"), LocalDateTime.class);
-            } else {
-                createdAt = LocalDateTime.now(); // Default if missing
-            }
+            LocalDateTime createdAt = obj.has("createdAt") && !obj.get("createdAt").isJsonNull() ?
+                    context.deserialize(obj.get("createdAt"), LocalDateTime.class) : LocalDateTime.now();
+            LocalDateTime updatedAt = obj.has("updatedAt") && !obj.get("updatedAt").isJsonNull() ?
+                    context.deserialize(obj.get("updatedAt"), LocalDateTime.class) : createdAt;
 
-            LocalDateTime updatedAt = null;
-            if (obj.has("updatedAt") && !obj.get("updatedAt").isJsonNull()) {
-                updatedAt = context.deserialize(obj.get("updatedAt"), LocalDateTime.class);
-            } else {
-                updatedAt = createdAt; // Default to createdAt if missing
-            }
+            boolean isFavorite = obj.has("isFavorite") && !obj.get("isFavorite").isJsonNull() && obj.get("isFavorite").getAsBoolean();
+            boolean isMission = obj.has("isMission") && !obj.get("isMission").isJsonNull() && obj.get("isMission").getAsBoolean();
+            boolean isMissionCompleted = obj.has("isMissionCompleted") && !obj.get("isMissionCompleted").isJsonNull() && obj.get("isMissionCompleted").getAsBoolean();
+            String missionContent = obj.has("missionContent") && !obj.get("missionContent").isJsonNull() ?
+                    obj.get("missionContent").getAsString() : "";
+            long folderId = obj.has("folderId") && !obj.get("folderId").isJsonNull() ?
+                    obj.get("folderId").getAsLong() : 0;
 
-            // SỬA LỖI NullPointerException ở đây
-            boolean isFavorite = false;
-            if (obj.has("isFavorite") && !obj.get("isFavorite").isJsonNull()) {
-                isFavorite = obj.get("isFavorite").getAsBoolean();
-            }
-
-            Note note = new Note(title, content, isFavorite);
-            note.setId(id);
-            note.setCreatedAt(createdAt);
-            note.setUpdatedAt(updatedAt);
-
-            boolean isMission = false;
-            if (obj.has("isMission") && !obj.get("isMission").isJsonNull()) {
-                isMission = obj.get("isMission").getAsBoolean();
-            }
-            note.setMission(isMission);
-
-            boolean isMissionCompleted = false;
-            if (obj.has("isMissionCompleted") && !obj.get("isMissionCompleted").isJsonNull()) {
-                isMissionCompleted = obj.get("isMissionCompleted").getAsBoolean();
-            }
-            note.setMissionCompleted(isMissionCompleted);
-
-            if (obj.has("missionContent") && !obj.get("missionContent").isJsonNull()) {
-                note.setMissionContent(obj.get("missionContent").getAsString());
-            } else {
-                note.setMissionContent(""); // Default empty string
-            }
-
-            if (obj.has("folderId") && !obj.get("folderId").isJsonNull()) {
-                note.setFolderId(obj.get("folderId").getAsLong());
-            } else {
-                note.setFolderId(0); // Default or indicate no specific folder
-            }
-
+            List<Tag> tags = new ArrayList<>();
             if (obj.has("tags") && !obj.get("tags").isJsonNull()) {
                 Type listType = new TypeToken<ArrayList<Tag>>() {}.getType();
-                List<Tag> tags = context.deserialize(obj.get("tags"), listType);
-                note.setTags(tags);
-            } else {
-                note.setTags(new ArrayList<>()); // Default empty list
+                tags = context.deserialize(obj.get("tags"), listType);
             }
 
+            Alarm alarm = null;
             if (obj.has("alarm") && !obj.get("alarm").isJsonNull()) {
-                Alarm alarm = context.deserialize(obj.get("alarm"), Alarm.class);
-                note.setAlarm(alarm);
-                if (alarm != null) {
-                    note.setAlarmId(alarm.getId());
+                alarm = context.deserialize(obj.get("alarm"), Alarm.class);
+            }
+            Long alarmId = (alarm != null) ? alarm.getId() : null;
+
+
+            // Deserialize các trường mới
+            Note.NoteType noteType = Note.NoteType.TEXT; // Mặc định
+            if (obj.has("noteType") && !obj.get("noteType").isJsonNull()) {
+                try {
+                    noteType = Note.NoteType.valueOf(obj.get("noteType").getAsString());
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Cảnh báo: Giá trị noteType không hợp lệ trong JSON: " + obj.get("noteType").getAsString() + ". Sử dụng TEXT mặc định.");
+                    noteType = Note.NoteType.TEXT;
                 }
             }
+
+            String content = null;
+            if (noteType == Note.NoteType.TEXT) {
+                content = obj.has("content") && !obj.get("content").isJsonNull() ? obj.get("content").getAsString() : "";
+            }
+
+            String drawingData = null;
+            if (noteType == Note.NoteType.DRAWING) {
+                drawingData = obj.has("drawingData") && !obj.get("drawingData").isJsonNull() ?
+                        obj.get("drawingData").getAsString() : null; // Cho phép drawingData là null
+            }
+
+            // Sử dụng constructor đầy đủ của Note
+            Note note = new Note(id, title, content, createdAt, updatedAt, folderId, isFavorite,
+                    isMission, isMissionCompleted, missionContent, alarmId, tags,
+                    noteType, drawingData);
+            // Gán lại đối tượng alarm đã deserialize (nếu có) vào note
+            if (alarm != null) {
+                note.setAlarm(alarm);
+            }
+
             return note;
         }
     }
@@ -245,15 +255,15 @@ public class DataStorage {
         public Folder deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
             JsonObject obj = json.getAsJsonObject();
             long id = obj.has("id") ? obj.get("id").getAsLong() : 0;
-            String name = obj.has("name") ? obj.get("name").getAsString() : "Unnamed Folder"; // Default name
+            String name = obj.has("name") ? obj.get("name").getAsString() : "Unnamed Folder";
 
-            Folder folder = new Folder(name); // Use constructor that doesn't require ID initially
+            Folder folder = new Folder(name);
             folder.setId(id);
 
             if (obj.has("isFavorite") && !obj.get("isFavorite").isJsonNull()) {
                 folder.setFavorite(obj.get("isFavorite").getAsBoolean());
             } else {
-                folder.setFavorite(false); // Default
+                folder.setFavorite(false);
             }
 
             if (obj.has("subFolderNames") && !obj.get("subFolderNames").isJsonNull()) {
@@ -261,7 +271,7 @@ public class DataStorage {
                 List<String> subFolderNames = context.deserialize(obj.get("subFolderNames"), listType);
                 folder.setSubFolderNames(subFolderNames);
             } else {
-                folder.setSubFolderNames(new ArrayList<>()); // Default
+                folder.setSubFolderNames(new ArrayList<>());
             }
             return folder;
         }
@@ -280,9 +290,9 @@ public class DataStorage {
         public Tag deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
             JsonObject obj = json.getAsJsonObject();
             long id = obj.has("id") ? obj.get("id").getAsLong() : 0;
-            String name = obj.has("name") ? obj.get("name").getAsString() : "Unnamed Tag"; // Default name
+            String name = obj.has("name") ? obj.get("name").getAsString() : "Unnamed Tag";
 
-            Tag tag = new Tag(name); // Use constructor that doesn't require ID initially
+            Tag tag = new Tag(name);
             tag.setId(id);
             return tag;
         }

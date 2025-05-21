@@ -4,87 +4,98 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatLightLaf;
+// FlatLaf imports không cần trực tiếp ở đây nữa nếu ThemeManager xử lý
+// import com.formdev.flatlaf.FlatDarkLaf;
+// import com.formdev.flatlaf.FlatLightLaf;
 
 import javax.swing.*;
-// import java.sql.SQLException; // Không còn cần thiết
 
 public class NoteController {
     private final NoteService noteService;
     private Folder currentFolder;
-    private JFrame mainFrameInstance; // Giữ lại để hiển thị JOptionPane và quản lý theme
-    private boolean isDarkTheme = false;
+    private JFrame mainFrameInstance;
+    // private boolean isDarkTheme = false; // Không cần biến này nữa, ThemeManager sẽ quản lý
 
-    // Constructor đã được sửa để nhận NoteService
     public NoteController(JFrame mainFrameInstance, NoteService noteService) {
-        this.mainFrameInstance = mainFrameInstance; // Có thể là null ban đầu nếu MainFrame khởi tạo sau
+        this.mainFrameInstance = mainFrameInstance;
         if (noteService == null) {
             throw new IllegalArgumentException("NoteService cannot be null in NoteController constructor.");
         }
         this.noteService = noteService;
 
-        // Khởi tạo currentFolder (Root)
-        // NoteService sẽ lấy Root folder từ NoteManager
+        System.out.println("[NoteController Constructor] Đang lấy thư mục Root từ NoteService...");
         this.currentFolder = this.noteService.getFolderByName("Root");
-        if (this.currentFolder == null) {
-            System.out.println("Thư mục Root không tìm thấy bởi NoteService, đang thử tạo mới...");
-            Folder rootPlaceholder = new Folder("Root"); // Tạo đối tượng Root mới
-            this.currentFolder = noteService.createNewFolder(rootPlaceholder); // Yêu cầu service tạo (NoteManager sẽ gán ID)
+        if (this.currentFolder == null || this.currentFolder.getId() == 0) {
+            System.err.println("[NoteController Constructor] Cảnh báo: Thư mục Root không tìm thấy hoặc không hợp lệ từ NoteService. Thử tạo mới.");
+            Folder rootPlaceholder = new Folder("Root");
+            this.currentFolder = noteService.createNewFolder(rootPlaceholder);
 
-            if(this.currentFolder == null || this.currentFolder.getId() == 0) { // Kiểm tra lại sau khi tạo
-                System.err.println("LỖI NGHIÊM TRỌNG: Không thể tạo hoặc lấy thư mục Root qua NoteService.");
-                // Fallback an toàn hơn nữa, tạo một đối tượng tạm thời để tránh NullPointer ở các chỗ khác
-                this.currentFolder = new Folder("Root (Lỗi Khởi Tạo Nghiêm Trọng)");
-                this.currentFolder.setId(-System.currentTimeMillis()); // ID âm đặc biệt để nhận biết lỗi
-                // Cân nhắc việc hiển thị lỗi cho người dùng hoặc ghi log chi tiết hơn ở đây
-                if (this.mainFrameInstance != null) { // Chỉ hiển thị dialog nếu có frame
+            if(this.currentFolder == null || this.currentFolder.getId() == 0) {
+                System.err.println("LỖI NGHIÊM TRỌNG: Không thể tạo hoặc lấy thư mục Root hợp lệ sau khi thử tạo.");
+                this.currentFolder = new Folder("Root (Lỗi Khởi Tạo Controller)");
+                this.currentFolder.setId(-System.currentTimeMillis());
+                if (this.mainFrameInstance != null) {
                     JOptionPane.showMessageDialog(this.mainFrameInstance,
-                            "Lỗi nghiêm trọng: Không thể khởi tạo thư mục Root. Vui lòng kiểm tra file dữ liệu (notes.json).",
-                            "Lỗi Khởi Tạo",
+                            "Lỗi nghiêm trọng: Không thể khởi tạo thư mục Root cho controller.",
+                            "Lỗi Controller",
                             JOptionPane.ERROR_MESSAGE);
                 }
             } else {
-                System.out.println("Thư mục Root đã được tạo/lấy với ID: " + this.currentFolder.getId());
+                System.out.println("[NoteController Constructor] Thư mục Root đã được tạo/lấy với ID: " + this.currentFolder.getId());
             }
         } else {
-            System.out.println("NoteController đã khởi tạo với thư mục Root ID: " + this.currentFolder.getId());
+            System.out.println("[NoteController Constructor] NoteController đã khởi tạo với thư mục Root ID: " + this.currentFolder.getId() + ", Tên: " + this.currentFolder.getName());
         }
     }
 
-    // Getter cho mainFrameInstance để các lớp khác có thể truy cập nếu cần (ví dụ AlarmController)
     public JFrame getMainFrameInstance() {
         return mainFrameInstance;
     }
 
-    // Setter cho mainFrameInstance nếu nó được khởi tạo sau NoteController
     public void setMainFrameInstance(JFrame mainFrameInstance) {
         this.mainFrameInstance = mainFrameInstance;
     }
 
+    // ... (Các phương thức khác của NoteController giữ nguyên như phiên bản trước) ...
+    // getSortedNotes, searchNotes, selectFolder, getCurrentFolder, getFolders,
+    // addNewFolder, deleteFolder, renameFolder, setFolderFavorite,
+    // addNote, deleteNote, updateNote, renameNote, setNoteFavorite,
+    // addTag, removeTag, moveNoteToFolder, getNotes, getFolderByName,
+    // getMissions, updateMission, completeMission, setAlarm,
+    // getNoteService, updateExistingNoteInControllerList
+
+    public void changeTheme() { // Sửa lại để dùng ThemeManager
+        ThemeManager.cycleNextTheme(mainFrameInstance);
+        // MainFrame.triggerThemeUpdate sẽ được gọi từ bên trong ThemeManager.applyTheme
+        // thông qua việc updateComponentTreeUI.
+        // Nếu cần thông báo cụ thể cho MainFrame, có thể thêm callback hoặc event.
+        // Hiện tại, việc cập nhật UI toàn cục là đủ.
+        // Gọi triggerThemeUpdate của MainFrame để nó có thể xử lý các thành phần đặc biệt (như ImageSpinner)
+        if (mainFrameInstance instanceof MainFrame) {
+            ((MainFrame) mainFrameInstance).triggerThemeUpdate(ThemeManager.isCurrentThemeDark());
+        }
+    }
+
+    public String getCurrentThemeName() { // Trả về tên class của theme hiện tại
+        return ThemeManager.getCurrentThemeInfo().getClassName();
+    }
+
+    public boolean isCurrentThemeDark() { // Để MainFrame có thể hỏi
+        return ThemeManager.isCurrentThemeDark();
+    }
+
+    // Các phương thức khác giữ nguyên
     public List<Note> getSortedNotes() {
         List<Note> notesToDisplay;
-        Folder effectiveCurrentFolder = getCurrentFolder(); // Đảm bảo currentFolder hợp lệ
+        Folder effectiveCurrentFolder = getCurrentFolder();
 
-        if (effectiveCurrentFolder != null && !"Root".equalsIgnoreCase(effectiveCurrentFolder.getName())) {
-            // Lấy note từ folder cụ thể (không phải Root)
-            // Đảm bảo rằng chúng ta đang lọc dựa trên ID của folder được quản lý
+        if (effectiveCurrentFolder != null && !"Root".equalsIgnoreCase(effectiveCurrentFolder.getName()) && effectiveCurrentFolder.getId() > 0) {
             final long currentFolderId = effectiveCurrentFolder.getId();
-            if (currentFolderId == 0 && !"Root (Lỗi Khởi Tạo Nghiêm Trọng)".equals(effectiveCurrentFolder.getName())) {
-                // Nếu là folder chưa lưu (ví dụ, placeholder lỗi), trả về danh sách rỗng
-                System.err.println("Lấy ghi chú từ thư mục chưa được lưu hoặc không hợp lệ: " + effectiveCurrentFolder.getName());
-                return new ArrayList<>();
-            }
             notesToDisplay = noteService.getAllNotesForDisplay().stream()
                     .filter(note -> note.getFolder() != null && note.getFolder().getId() == currentFolderId)
                     .collect(Collectors.toList());
-        } else { // currentFolder là Root hoặc không hợp lệ (đã fallback về Root)
-            // Hiển thị tất cả các ghi chú nếu currentFolder là Root
-            // Hoặc, nếu muốn Root chỉ chứa note không thuộc folder nào khác, logic cần phức tạp hơn
-            // Hiện tại, getAllNotesForDisplay() trả về tất cả, bao gồm cả note trong các folder con của Root (nếu có)
-            // Điều này có thể cần điều chỉnh tùy theo ý muốn hiển thị "Root"
+        } else {
             notesToDisplay = noteService.getAllNotesForDisplay();
-            System.out.println("Hiển thị tất cả ghi chú (do currentFolder là Root hoặc không hợp lệ). Số lượng: " + notesToDisplay.size());
         }
 
         return notesToDisplay.stream()
@@ -108,46 +119,22 @@ public class NoteController {
                 .collect(Collectors.toList());
     }
 
-    public void selectFolder(Folder folder) {
-        if (folder != null && folder.getId() != 0) {
-            this.currentFolder = folder;
-        } else if (folder != null && "Root".equalsIgnoreCase(folder.getName())) {
-            this.currentFolder = noteService.getFolderByName("Root"); // Lấy đối tượng Root được quản lý
-            if (this.currentFolder == null) { // Xử lý trường hợp Root không tìm thấy (rất hiếm)
-                System.err.println("Lỗi nghiêm trọng: Không thể tìm thấy thư mục Root khi chọn.");
-                this.currentFolder = new Folder("Root (Lỗi Chọn Lọc)");
-                this.currentFolder.setId(-System.currentTimeMillis());
-            }
-        } else {
-            System.err.println("Cảnh báo: Cố gắng chọn một thư mục không hợp lệ hoặc null. Giữ thư mục hiện tại.");
-            // Giữ nguyên currentFolder nếu folder được truyền vào không hợp lệ
-            if (this.currentFolder == null || this.currentFolder.getId() == 0) { // Đảm bảo currentFolder luôn hợp lệ
-                this.currentFolder = noteService.getFolderByName("Root");
-                if (this.currentFolder == null) {
-                    this.currentFolder = new Folder("Root (Lỗi Chọn Lọc - Fallback)");
-                    this.currentFolder.setId(-System.currentTimeMillis());
-                }
+    private void ensureCurrentFolderIsValid() {
+        if (this.currentFolder == null || this.currentFolder.getId() == 0) {
+            System.out.println("[NoteController ensureCurrentFolderIsValid] currentFolder không hợp lệ, đang đặt lại về Root...");
+            this.currentFolder = this.noteService.getFolderByName("Root");
+            if (this.currentFolder == null || this.currentFolder.getId() == 0) {
+                System.err.println("LỖI NGHIÊM TRỌNG trong ensureCurrentFolderIsValid: Không thể lấy Root folder hợp lệ!");
+                this.currentFolder = new Folder("Root (Lỗi Nghiêm Trọng Fallback)");
+                this.currentFolder.setId(-1L);
+            } else {
+                System.out.println("[NoteController ensureCurrentFolderIsValid] currentFolder đã được đặt lại về Root: " + this.currentFolder.getName());
             }
         }
     }
 
     public Folder getCurrentFolder() {
-        // Đảm bảo currentFolder luôn là một đối tượng hợp lệ, ít nhất là Root
-        if (this.currentFolder == null || this.currentFolder.getId() == 0) {
-            Folder root = noteService.getFolderByName("Root");
-            if (root != null && root.getId() != 0) {
-                this.currentFolder = root;
-            } else {
-                // Trường hợp rất xấu: không có Root hoặc Root không có ID
-                System.err.println("Lỗi nghiêm trọng: Không tìm thấy thư mục Root hợp lệ trong getCurrentFolder.");
-                // Tạo một placeholder để tránh crash, nhưng cần điều tra
-                // Nếu constructor đã xử lý tốt, trường hợp này không nên xảy ra.
-                if (this.currentFolder == null || !"Root (Lỗi Khởi Tạo Nghiêm Trọng)".equals(this.currentFolder.getName())) {
-                    this.currentFolder = new Folder("Root (Lỗi Trạng Thái)");
-                    this.currentFolder.setId(-System.currentTimeMillis()); // ID âm để dễ nhận biết lỗi
-                }
-            }
-        }
+        ensureCurrentFolderIsValid();
         return this.currentFolder;
     }
 
@@ -167,7 +154,7 @@ public class NoteController {
                 return;
             }
             Folder folder = new Folder(name.trim());
-            noteService.createNewFolder(folder); // Service sẽ gọi NoteManager để gán ID và lưu
+            noteService.createNewFolder(folder);
             JOptionPane.showMessageDialog(mainFrameInstance, "Thư mục '" + folder.getName() + "' đã được tạo.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(mainFrameInstance, e.getMessage(), "Lỗi Tạo Thư Mục", JOptionPane.WARNING_MESSAGE);
@@ -273,10 +260,9 @@ public class NoteController {
             if (note.getFolder() == null || note.getFolder().getId() == 0) {
                 Folder folderToAssign = getCurrentFolder();
                 note.setFolder(folderToAssign);
-                if (folderToAssign != null) { // Kiểm tra null cho folderToAssign
+                if (folderToAssign != null) {
                     note.setFolderId(folderToAssign.getId());
                 } else {
-                    // Xử lý trường hợp getCurrentFolder() trả về null (rất hiếm nếu logic đúng)
                     System.err.println("Lỗi: Không thể xác định thư mục để gán cho ghi chú mới.");
                     JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi: Không thể xác định thư mục cho ghi chú mới.", "Lỗi", JOptionPane.ERROR_MESSAGE);
                     return;
@@ -316,7 +302,7 @@ public class NoteController {
         }
         note.setTitle(title.trim());
         note.setContent(content);
-        note.updateUpdatedAt(); // Cập nhật thời gian sửa đổi
+        note.updateUpdatedAt();
 
         try {
             noteService.updateExistingNote(note);
@@ -419,8 +405,6 @@ public class NoteController {
         note.setFolderId(folder.getId());
         note.updateUpdatedAt();
         try {
-            // NoteService.updateExistingNote sẽ gọi NoteManager.updateNote,
-            // nơi xử lý việc cập nhật note trong danh sách của folder cũ và mới.
             noteService.updateExistingNote(note);
             JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được chuyển đến thư mục '" + folder.getName() + "'.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
@@ -439,34 +423,6 @@ public class NoteController {
         if (name == null || name.trim().isEmpty()) return Optional.empty();
         Folder folder = noteService.getFolderByName(name.trim());
         return Optional.ofNullable(folder);
-    }
-
-    public void changeTheme() {
-        try {
-            if (isDarkTheme) {
-                UIManager.setLookAndFeel(new FlatLightLaf());
-            } else {
-                UIManager.setLookAndFeel(new FlatDarkLaf());
-            }
-            isDarkTheme = !isDarkTheme;
-            if (mainFrameInstance != null) {
-                SwingUtilities.updateComponentTreeUI(mainFrameInstance);
-                if (mainFrameInstance instanceof MainFrame) {
-                    ((MainFrame) mainFrameInstance).triggerThemeUpdate(isDarkTheme);
-                }
-            } else {
-                for (Window window : Window.getWindows()) {
-                    SwingUtilities.updateComponentTreeUI(window);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi thay đổi giao diện: " + e.getMessage(), "Lỗi Giao Diện", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    public String getCurrentTheme() {
-        return isDarkTheme ? "dark" : "light";
     }
 
     public List<Note> getMissions() {
@@ -537,7 +493,7 @@ public class NoteController {
 
         try {
             if (alarm != null) {
-                noteService.ensureAlarmHasId(alarm); // Đảm bảo alarm có ID
+                noteService.ensureAlarmHasId(alarm);
                 note.setAlarm(alarm);
             } else {
                 note.setAlarm(null);
@@ -554,6 +510,10 @@ public class NoteController {
         }
     }
 
+    public NoteService getNoteService() {
+        return this.noteService;
+    }
+
     public void updateExistingNoteInControllerList(long id, Note updatedNote) {
         List<Note> notes = getNotes();
         for (int i = 0; i < notes.size(); i++) {
@@ -565,39 +525,34 @@ public class NoteController {
         System.err.println("Cảnh báo: updateExistingNoteInControllerList không tìm thấy note với ID: " + id);
     }
 
-    public void updateExistingNote(long id, Note note) {
-        try {
-            // Fetch the existing note
-            Note existingNote = noteService.getNoteById(id);
-            if (existingNote == null) {
-                JOptionPane.showMessageDialog(mainFrameInstance, "Note with ID " + id + " not found.", "Update Error", JOptionPane.WARNING_MESSAGE);
-                return;
+    public void selectFolder(Folder selectedFolder) {
+        if (selectedFolder == null || selectedFolder.getId() == 0) {
+            JOptionPane.showMessageDialog(mainFrameInstance,
+                    "Thư mục được chọn không hợp lệ hoặc chưa được lưu. Đang chuyển về Root.",
+                    "Thông Báo", JOptionPane.INFORMATION_MESSAGE);
+            this.currentFolder = noteService.getFolderByName("Root");
+            if (this.currentFolder == null || this.currentFolder.getId() == 0) {
+                System.err.println("LỖI: Không thể lấy thư mục Root hợp lệ dù đã fallback.");
+                this.currentFolder = new Folder("Root (Fallback Error)");
+                this.currentFolder.setId(-1L);
             }
-
-            // Update fields of the existing note with the new note's data
-            existingNote.setTitle(note.getTitle());
-            existingNote.setContent(note.getContent());
-            existingNote.setFavorite(note.isFavorite());
-            existingNote.setMission(note.isMission());
-            existingNote.setMissionContent(note.getMissionContent());
-            existingNote.setMissionCompleted(note.isMissionCompleted());
-            existingNote.setAlarm(note.getAlarm());
-            existingNote.setTags(note.getTags());
-            existingNote.updateUpdatedAt();
-
-            // Persist the updated note
-            noteService.updateExistingNote(existingNote);
-
-            // Notify about the update
-            JOptionPane.showMessageDialog(mainFrameInstance, "Note with ID " + id + " successfully updated.", "Update Success", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(mainFrameInstance, "Error updating note: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        } else {
+            this.currentFolder = selectedFolder;
         }
+        System.out.println("[NoteController selectFolder] Thư mục đã được chọn: " +
+                (currentFolder != null ? currentFolder.getName() : "null"));
 
     }
 
-    public NoteService getNoteService() {
-        return noteService;
+    public void updateExistingNote(long id, Note note) {
+        List<Note> notes = getNotes();
+        for (int i = 0; i < notes.size(); i++) {
+            if (notes.get(i).getId() == id) {
+                notes.set(i, note);
+                return;
+            }
+        }
+        System.err.println("Warning: updateExistingNote did not find a note with ID: " + id);
+
     }
 }
