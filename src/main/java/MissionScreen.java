@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 // import java.util.Comparator; // Không cần import riêng nếu dùng lambda trực tiếp
@@ -318,7 +319,8 @@ public class MissionScreen extends JPanel {
 
                 if ("ONCE".equals(selectedTypeStr)) {
                     DateTimeFormatter inputDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                    LocalDateTime datePart = LocalDateTime.parse(dateField.getText(), inputDateFormatter);
+                    LocalDate dateOnly = LocalDate.parse(dateField.getText(), inputDateFormatter);
+                    LocalDateTime datePart = dateOnly.atStartOfDay();
                     newTime = datePart.withHour(hour).withMinute(minute).withSecond(0).withNano(0);
                     if (newTime.isBefore(LocalDateTime.now())) {
                         JOptionPane.showMessageDialog(dialog, "Alarm time for 'ONCE' type must be in the future.", "Warning", JOptionPane.WARNING_MESSAGE);

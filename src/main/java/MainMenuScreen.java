@@ -569,6 +569,17 @@ public class MainMenuScreen extends JPanel {
         addDrawPanelButton.addActionListener(e -> mainFrame.showNewDrawScreen());
         panel.add(addDrawPanelButton);
 
+        try {
+            ImageIcon scannerIcon = new ImageIcon(getClass().getResource("/images/Clara.jpg"));
+            Image scaledIcon = scannerIcon.getImage().getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+            JButton scannerButton = new JButton(new ImageIcon(scaledIcon));
+            scannerButton.setToolTipText("Mở công cụ Scanner");
+            scannerButton.addActionListener(e -> FloatingScannerTray.getInstance().setVisible(true));
+            panel.add(scannerButton);
+        } catch (Exception ex) {
+            System.err.println("Không thể tải icon scanner: " + ex.getMessage());
+        }
+
         titleSearchField = new JTextField(15);
         titleSearchField.setText(TITLE_SEARCH_PLACEHOLDER);
         titleSearchField.setForeground(Color.GRAY);
