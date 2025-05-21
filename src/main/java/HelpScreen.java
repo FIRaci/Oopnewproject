@@ -115,10 +115,10 @@ public class HelpScreen extends JDialog {
         // Nội dung mẫu cho Contributors
         String[] contributors = {
                 "Liem-san - Leader + Primary Tester",
-                "Shirin - AI Developer + Principal Funder",
+                "Shirin - AI Developer + UI Developer + Principal Funder",
                 "FIRaci - Frontend Developer + Database Developer",
-                "Yui - Bug Fixer + Secondary Tester",
-                "Thanh - ???",
+                "Yui - Secondary Tester",
+                "Thanh - Bug Fixer",
                 "Missing some one here bruh! Do you know where he is ?"
         };
 

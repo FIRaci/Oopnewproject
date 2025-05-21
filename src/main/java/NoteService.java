@@ -1,306 +1,289 @@
-import java.sql.Connection; // Giữ lại nếu quản lý transaction ở đây
-import java.sql.SQLException;
+// import java.sql.SQLException; // Không còn cần thiết
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional; // Có thể cần cho getFolderByName
 
 /**
  * Service class for managing notes, folders, tags, and alarms.
+ * Interacts with NoteManager for data operations.
  */
 public class NoteService {
-    private final NoteDAO noteDAO;
-    private final FolderDAO folderDAO;
-    private final TagDAO tagDAO;
-    private final AlarmDAO alarmDAO; // Thêm AlarmDAO
+    private final NoteManager noteManager;
 
-    public NoteService(NoteDAO noteDAO, FolderDAO folderDAO, TagDAO tagDAO, AlarmDAO alarmDAO) {
-        this.noteDAO = noteDAO;
-        this.folderDAO = folderDAO;
-        this.tagDAO = tagDAO;
-        this.alarmDAO = alarmDAO; // Khởi tạo AlarmDAO
+    public NoteService(NoteManager noteManager) {
+        if (noteManager == null) {
+            throw new IllegalArgumentException("NoteManager cannot be null.");
+        }
+        this.noteManager = noteManager;
     }
 
     // --- Phương thức quản lý Alarm ---
-    public long saveOrUpdateAlarm(Alarm alarm) throws SQLException {
+    // Alarm giờ được quản lý như một phần của Note.
+    // Các thao tác với Alarm (thêm, sửa, xóa) sẽ được thực hiện thông qua việc cập nhật Note.
+
+    /**
+     * Ensures an Alarm object has an ID. If it's new (ID=0), a new ID is generated.
+     * This method is typically called before associating an alarm with a note
+     * or when a note containing this alarm is about to be saved.
+     *
+     * @param alarm The Alarm object.
+     * @return The ID of the alarm (either existing or newly generated).
+     */
+    public long ensureAlarmHasId(Alarm alarm) {
         if (alarm == null) {
-            throw new IllegalArgumentException("Alarm object cannot be null for save/update.");
+            throw new IllegalArgumentException("Alarm object cannot be null.");
         }
-        if (alarm.getAlarmTime() == null) {
-            throw new IllegalArgumentException("Alarm time cannot be null.");
+        if (alarm.getId() == 0) {
+            alarm.setId(noteManager.generateNewAlarmId());
         }
-
-        if (alarm.getId() <= 0) { // Alarm mới
-            return alarmDAO.addAlarm(alarm); // addAlarm trong DAO đã set ID cho object alarm
-        } else { // Cập nhật Alarm đã có
-            alarmDAO.updateAlarm(alarm.getId(), alarm);
-            return alarm.getId();
-        }
+        return alarm.getId();
     }
 
-    public void deleteAlarm(long alarmId) throws SQLException {
-        if (alarmId <= 0) {
-            // throw new IllegalArgumentException("Invalid alarm ID for delete: " + alarmId);
-            System.out.println("Warning: Attempted to delete alarm with invalid ID: " + alarmId);
-            return;
-        }
-        // Quan trọng: Nếu CSDL không có "ON DELETE SET NULL" cho Notes.alarm_id -> Alarms.id_alarm,
-        // bạn cần đảm bảo rằng không còn Note nào tham chiếu đến alarmId này trước khi xóa.
-        // Hoặc, cập nhật các Note liên quan để set alarm_id = null.
-        // Ví dụ: noteDAO.clearAlarmIdFromNotes(alarmId); (cần tạo phương thức này trong NoteDAO)
-        alarmDAO.deleteAlarm(alarmId);
-    }
-
-    public Alarm getAlarmById(long alarmId) throws SQLException {
+    /**
+     * Retrieves an Alarm by its ID by searching through all notes.
+     * @param alarmId The ID of the alarm to find.
+     * @return The Alarm object if found, otherwise null.
+     */
+    public Alarm getAlarmById(long alarmId) {
         if (alarmId <= 0) {
             return null;
         }
-        return alarmDAO.getAlarmById(alarmId);
-    }
-
-    // --- Cập nhật các phương thức quản lý Note ---
-
-    public long createNewNote(Note note) throws SQLException {
-        if (note == null) throw new IllegalArgumentException("Note cannot be null");
-        if (note.getFolderId() <= 0) throw new IllegalArgumentException("Invalid folder ID for the note: " + note.getFolderId());
-
-        // 1. Đảm bảo folder tồn tại
-        if (!folderDAO.folderExists(note.getFolderId())) {
-            throw new SQLException("Folder with ID " + note.getFolderId() + " does not exist.");
-        }
-
-        // 2. Đảm bảo các tags tồn tại và có ID
-        if (note.getTags() != null) {
-            for (Tag tag : note.getTags()) {
-                if (tag.getId() <= 0) {
-                    long existingTagId = tagDAO.getTagIdByName(tag.getName());
-                    if (existingTagId != -1) tag.setId(existingTagId);
-                    else tag.setId(tagDAO.addTag(tag));
-                }
+        for (Note note : noteManager.getAllNotes()) {
+            if (note.getAlarm() != null && note.getAlarm().getId() == alarmId) {
+                return note.getAlarm();
             }
         }
+        return null;
+    }
 
-        // 3. Xử lý Alarm: Nếu Note có đối tượng Alarm (transient)
-        if (note.getAlarm() != null) {
-            Alarm alarmToSave = note.getAlarm();
-            saveOrUpdateAlarm(alarmToSave); // Lưu hoặc cập nhật Alarm, ID sẽ được set vào alarmToSave
-            note.setAlarmId(alarmToSave.getId()); // Gán alarmId cho Note
+    /**
+     * Deletes an alarm by its ID. This involves finding all notes associated with this alarmId,
+     * setting their alarm reference to null, and then updating these notes.
+     * The NoteManager does not store alarms independently.
+     * @param alarmId The ID of the alarm to delete.
+     */
+    public void deleteAlarm(long alarmId) {
+        if (alarmId <= 0) {
+            System.out.println("Warning: Attempted to delete alarm with invalid ID: " + alarmId);
+            return;
+        }
+        boolean alarmRemovedFromAnyNote = false;
+        List<Note> allNotes = noteManager.getAllNotes(); // Get a mutable copy if necessary
+        for (Note note : allNotes) {
+            if (note.getAlarm() != null && note.getAlarm().getId() == alarmId) {
+                note.setAlarm(null); // This also sets alarmId to null in Note's setter
+                noteManager.updateNote(note); // Persist change to the note
+                alarmRemovedFromAnyNote = true;
+                System.out.println("Removed alarm (ID: " + alarmId + ") from note: " + note.getTitle());
+            }
+        }
+        if (!alarmRemovedFromAnyNote) {
+            System.out.println("No note found associated with alarm ID: " + alarmId + ". Alarm might have already been removed or never existed.");
+        }
+        // No direct alarm list in NoteManager to delete from, changes are saved via note updates.
+    }
+
+
+    // --- Phương thức quản lý Note ---
+
+    public Note createNewNote(Note note) {
+        if (note == null) {
+            throw new IllegalArgumentException("Note cannot be null");
+        }
+
+        // Ensure folder is set, default to Root if not specified or invalid
+        if (note.getFolder() == null || note.getFolder().getId() == 0) {
+            Folder rootFolder = noteManager.getRootFolder();
+            note.setFolder(rootFolder);
+            note.setFolderId(rootFolder.getId());
         } else {
-            // Nếu không có đối tượng Alarm, đảm bảo alarmId trên Note cũng là null (hoặc đã được set đúng từ trước)
-            // note.setAlarmId(null); // Điều này thường không cần nếu logic UI đúng
+            // Ensure the folder object on the note is the one managed by NoteManager
+            Folder managedFolder = noteManager.getFolderById(note.getFolderId());
+            if (managedFolder == null) { // Should not happen if UI uses folders from NoteManager
+                System.err.println("Warning: Folder with ID " + note.getFolderId() + " not found in NoteManager. Assigning to Root.");
+                managedFolder = noteManager.getRootFolder();
+            }
+            note.setFolder(managedFolder);
+            note.setFolderId(managedFolder.getId());
         }
 
 
-        // 4. Thêm Note (NoteDAOImpl.addNote đã tự quản lý transaction cho việc thêm Note và Note_Tag)
-        // Tham số folderDAO, tagDAO cho noteDAO.addNote có thể không còn cần thiết nếu NoteDAOImpl tự xử lý
-        // các phụ thuộc này, nhưng giữ lại để khớp interface NoteDAO.
-        return noteDAO.addNote(note, folderDAO, tagDAO);
-    }
-
-    public Note getNoteDetails(long noteId) throws SQLException {
-        if (noteId <= 0) return null;
-        Note note = noteDAO.getNoteById(noteId, folderDAO, tagDAO);
-        if (note != null) {
-            // Populate transient Folder object
-            if (note.getFolderId() > 0) {
-                Folder folder = folderDAO.getFolderById(note.getFolderId());
-                note.setFolder(folder); // Gán đối tượng Folder vào trường transient
-            }
-            // Populate transient Alarm object
-            if (note.getAlarmId() != null && note.getAlarmId() > 0) {
-                Alarm alarm = alarmDAO.getAlarmById(note.getAlarmId());
-                note.setAlarm(alarm); // Gán đối tượng Alarm vào trường transient
-            }
-        }
-        return note;
-    }
-
-    public List<Note> getAllNotesForDisplay() throws SQLException {
-        List<Note> notes = noteDAO.getAllNotes(folderDAO, tagDAO);
-        // Populate transient objects (Folder, Alarm) cho từng Note nếu cần hiển thị chi tiết ngay
-        for (Note note : notes) {
-            if (note.getFolderId() > 0) {
-                note.setFolder(folderDAO.getFolderById(note.getFolderId()));
-            }
-            if (note.getAlarmId() != null && note.getAlarmId() > 0) {
-                note.setAlarm(alarmDAO.getAlarmById(note.getAlarmId()));
-            }
-        }
-        return notes;
-    }
-
-    public void updateExistingNote(long noteId, Note note) throws SQLException {
-        if (noteId <= 0) throw new IllegalArgumentException("Invalid note ID for update: " + noteId);
-        if (note == null) throw new IllegalArgumentException("Note for update cannot be null");
-        if (note.getFolderId() <= 0) throw new IllegalArgumentException("Invalid folder ID for note update: " + note.getFolderId());
-
-        // 0. Lấy alarmId cũ của note từ DB (nếu có) để so sánh
-        Note existingNoteState = noteDAO.getNoteById(noteId, folderDAO, tagDAO); // Lấy trạng thái note hiện tại
-        Long oldAlarmIdFromDB = (existingNoteState != null) ? existingNoteState.getAlarmId() : null;
-
-        // 1. Đảm bảo folder tồn tại
-        if (!folderDAO.folderExists(note.getFolderId())) {
-            throw new SQLException("Folder with ID " + note.getFolderId() + " does not exist for update.");
-        }
-
-        // 2. Đảm bảo các tags tồn tại và có ID
+        // Ensure tags are managed instances with IDs
+        List<Tag> resolvedTags = new ArrayList<>();
         if (note.getTags() != null) {
             for (Tag tag : note.getTags()) {
-                if (tag.getId() <= 0) {
-                    long existingTagId = tagDAO.getTagIdByName(tag.getName());
-                    if (existingTagId != -1) tag.setId(existingTagId);
-                    else tag.setId(tagDAO.addTag(tag));
-                }
+                resolvedTags.add(noteManager.getOrCreateTag(tag.getName()));
             }
         }
+        note.setTags(resolvedTags);
 
-        // 3. Xử lý Alarm khi update
-        Alarm currentAlarmObjectOnNote = note.getAlarm(); // Đối tượng Alarm từ UI/Controller
-        Long newAlarmIdForNote = null;
-
-        if (currentAlarmObjectOnNote != null) { // UI muốn set/update một alarm
-            saveOrUpdateAlarm(currentAlarmObjectOnNote); // Lưu/update alarm, ID được set vào currentAlarmObjectOnNote
-            newAlarmIdForNote = currentAlarmObjectOnNote.getId();
+        // Ensure alarm has an ID if it exists
+        if (note.getAlarm() != null) {
+            ensureAlarmHasId(note.getAlarm());
+            note.setAlarmId(note.getAlarm().getId());
+        } else {
+            note.setAlarmId(null);
         }
-        // Nếu currentAlarmObjectOnNote là null, nghĩa là UI muốn xóa alarm khỏi note
-        // (newAlarmIdForNote sẽ vẫn là null)
 
-        note.setAlarmId(newAlarmIdForNote); // Cập nhật alarmId trên đối tượng Note
-
-        // 4. Cập nhật Note (NoteDAOImpl.updateNote đã tự quản lý transaction cho Note và Note_Tag)
-        noteDAO.updateNote(noteId, note, folderDAO, tagDAO);
-
-        // 5. Xóa alarm cũ nếu nó không còn được note này sử dụng và không phải là alarm mới/được cập nhật
-        if (oldAlarmIdFromDB != null && (newAlarmIdForNote == null || !oldAlarmIdFromDB.equals(newAlarmIdForNote))) {
-            // Kiểm tra xem alarm cũ này có được sử dụng bởi note nào khác không, nếu không thì xóa.
-            // Logic này phức tạp nếu alarm có thể share.
-            // Đơn giản nhất: nếu CSDL có ON DELETE SET NULL và alarm không share, thì xóa alarm cũ là an toàn.
-            // Nếu không, cần cẩn thận. Giả sử alarm không share và cần xóa:
-            deleteAlarm(oldAlarmIdFromDB);
-        }
+        noteManager.addNote(note); // NoteManager handles ID generation for the note itself
+        return note; // Return the note, now with an ID
     }
 
-    public void deleteExistingNote(long noteId) throws SQLException {
-        if (noteId <= 0) throw new IllegalArgumentException("Invalid note ID for delete: " + noteId);
+    public Note getNoteDetails(long noteId) {
+        if (noteId <= 0) return null;
+        // NoteManager.getNoteById should return the note with its transient fields (Folder, Alarm, Tags) already populated
+        return noteManager.getNoteById(noteId);
+    }
 
-        // 1. Lấy alarmId của note sắp xóa (nếu có)
-        Note noteToDelete = noteDAO.getNoteById(noteId, folderDAO, tagDAO); // Tái sử dụng folderDAO, tagDAO
-        // dù có thể không cần cho getAlarmId
-        Long alarmIdToDelete = null;
-        if (noteToDelete != null) {
-            alarmIdToDelete = noteToDelete.getAlarmId();
+    public List<Note> getAllNotesForDisplay() {
+        // NoteManager.getAllNotes() should return notes with populated transient fields
+        return noteManager.getAllNotes();
+    }
+
+    public void updateExistingNote(Note note) {
+        if (note == null || note.getId() <= 0) {
+            throw new IllegalArgumentException("Note for update cannot be null and must have a valid ID.");
         }
 
-        // 2. Xóa Note (NoteDAOImpl.deleteNote đã xử lý xóa liên kết Note_Tag)
-        noteDAO.deleteNote(noteId);
-
-        // 3. Nếu Note có Alarm liên kết, xóa Alarm đó (nếu Alarm không được chia sẻ)
-        //    Điều này an toàn nếu Notes.alarm_id có FOREIGN KEY với ON DELETE CASCADE đến Alarms.id_alarm
-        //    hoặc nếu chúng ta chắc chắn rằng Alarm này chỉ thuộc về Note này.
-        //    Nếu không, bạn có thể không muốn xóa Alarm ở đây.
-        //    Nếu DB đã có ON DELETE SET NULL trên Notes.alarm_id, thì việc xóa Alarm ở bước 5
-        //    của updateExistingNote là đủ, ở đây không cần làm gì với alarm.
-        //    Nếu bạn muốn xóa alarm khi note bị xóa:
-        if (alarmIdToDelete != null && alarmIdToDelete > 0) {
-            // Kiểm tra xem có Note nào khác còn dùng Alarm này không trước khi xóa.
-            // Hoặc đơn giản là xóa nếu logic nghiệp vụ cho phép.
-            // Giả sử: xóa alarm nếu note bị xóa.
-            deleteAlarm(alarmIdToDelete);
+        // Ensure folder is valid and is the managed instance
+        if (note.getFolder() == null || note.getFolder().getId() == 0) {
+            Folder rootFolder = noteManager.getRootFolder();
+            note.setFolder(rootFolder);
+            note.setFolderId(rootFolder.getId());
+        } else {
+            Folder managedFolder = noteManager.getFolderById(note.getFolderId());
+            if (managedFolder == null) {
+                System.err.println("Warning: Folder for note update with ID " + note.getFolderId() + " not found. Assigning to Root.");
+                managedFolder = noteManager.getRootFolder();
+            }
+            note.setFolder(managedFolder);
+            note.setFolderId(managedFolder.getId());
         }
+
+
+        // Ensure tags are managed instances with IDs
+        List<Tag> resolvedTags = new ArrayList<>();
+        if (note.getTags() != null) {
+            for (Tag tag : note.getTags()) {
+                resolvedTags.add(noteManager.getOrCreateTag(tag.getName()));
+            }
+        }
+        note.setTags(resolvedTags);
+
+        // Handle Alarm: Ensure ID is set if alarm exists, or alarmId is null if alarm is null
+        Alarm currentAlarmObjectOnNote = note.getAlarm();
+        if (currentAlarmObjectOnNote != null) {
+            ensureAlarmHasId(currentAlarmObjectOnNote);
+            note.setAlarmId(currentAlarmObjectOnNote.getId());
+        } else {
+            note.setAlarmId(null); // Explicitly set alarmId to null if alarm object is removed
+        }
+
+        noteManager.updateNote(note);
+    }
+
+    public void deleteExistingNote(long noteId) {
+        if (noteId <= 0) {
+            throw new IllegalArgumentException("Invalid note ID for delete: " + noteId);
+        }
+        // NoteManager's deleteNote will handle removing the note from its folder's list
+        // and from the main notes list.
+        // Associated Alarms are part of the Note object and will be removed when the Note is removed.
+        // DataStorage will no longer save that Note or its Alarm.
+        noteManager.deleteNote(noteId);
     }
 
     // --- Các phương thức quản lý Folder ---
-    public List<Folder> getAllFolders() throws SQLException {
-        return folderDAO.getAllFolders();
+    public List<Folder> getAllFolders() {
+        return noteManager.getAllFolders();
     }
 
-    public Folder getFolderById(long folderId) throws SQLException {
+    public Folder getFolderById(long folderId) {
         if (folderId <= 0) return null;
-        return folderDAO.getFolderById(folderId);
+        return noteManager.getFolderById(folderId);
     }
 
-    public Folder getFolderByName(String name) throws SQLException {
+    public Folder getFolderByName(String name) {
         if (name == null || name.trim().isEmpty()) return null;
-        return folderDAO.getFolderByName(name);
+        return noteManager.getFolderByName(name.trim()).orElse(null);
     }
 
-    public long createNewFolder(Folder folder) throws SQLException {
+    public Folder createNewFolder(Folder folder) {
         if (folder == null || folder.getName() == null || folder.getName().trim().isEmpty()) {
             throw new IllegalArgumentException("Folder or folder name cannot be null or empty.");
         }
-        long folderId = folderDAO.addFolder(folder); // addFolder của DAO đã set ID vào object folder
-        // folder.setId(folderId); // Không cần nữa nếu DAO đã làm
-        return folderId;
+        // NoteManager.addFolder will handle ID generation if folder.getId() is 0
+        // and check for name uniqueness.
+        noteManager.addFolder(folder);
+        return folder; // folder object will have its ID set by NoteManager
     }
 
-    public void updateExistingFolder(long folderId, Folder folder) throws SQLException {
+    public void updateExistingFolder(Folder folder) {
+        if (folder == null || folder.getId() <= 0) {
+            throw new IllegalArgumentException("Folder to update must not be null and must have a valid ID.");
+        }
+        if (folder.getName() == null || folder.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Folder name for update cannot be null or empty.");
+        }
+        noteManager.updateFolder(folder);
+    }
+
+    public void deleteExistingFolder(long folderId, boolean moveNotesToRoot) throws Exception {
         if (folderId <= 0) {
-            throw new IllegalArgumentException("Invalid folder ID for update: " + folderId);
+            throw new IllegalArgumentException("Invalid folder ID for delete: " + folderId);
         }
-        if (folder == null || folder.getName() == null || folder.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Folder or folder name for update cannot be null or empty.");
-        }
-        folderDAO.updateFolder(folderId, folder);
+        noteManager.deleteFolder(folderId, moveNotesToRoot);
     }
 
-    public void deleteExistingFolder(long folderId, boolean moveNotesToRoot) throws SQLException {
-        if (folderId <= 0) throw new IllegalArgumentException("Invalid folder ID for delete: " + folderId);
-
-        Folder folderToDelete = folderDAO.getFolderById(folderId);
-        if (folderToDelete == null) {
-            System.out.println("Folder with ID " + folderId + " not found for deletion.");
-            return;
-        }
-        if ("Root".equalsIgnoreCase(folderToDelete.getName())) {
-            throw new SQLException("Cannot delete the Root folder.");
-        }
-
-        // Lấy danh sách notes trong thư mục này
-        // Cần phương thức NoteDAO.getNotesByFolderId(folderId) để hiệu quả hơn
-        // Tạm thời getAllNotes rồi lọc:
-        List<Note> allNotes = noteDAO.getAllNotes(folderDAO, tagDAO);
-        List<Note> notesInFolder = new ArrayList<>();
-        for(Note note : allNotes) {
-            if(note.getFolderId() == folderId) {
-                notesInFolder.add(note);
-            }
-        }
-
-        if (moveNotesToRoot) {
-            Folder rootFolder = folderDAO.getFolderByName("Root");
-            if (rootFolder == null || rootFolder.getId() <= 0) {
-                throw new SQLException("Root folder not found or invalid. Cannot move notes.");
-            }
-            for (Note note : notesInFolder) {
-                note.setFolderId(rootFolder.getId());
-                note.setFolder(rootFolder); // Cập nhật transient
-                noteDAO.updateNote(note.getId(), note, folderDAO, tagDAO); // Cập nhật folder_id trong DB
-            }
-        } else {
-            // Xóa các notes trong thư mục này (bao gồm cả tags và alarms liên quan của từng note)
-            for (Note note : notesInFolder) {
-                deleteExistingNote(note.getId());
-            }
-        }
-        folderDAO.deleteFolder(folderId);
-    }
-
-    // --- (Tùy chọn) Các phương thức quản lý Tag ---
-    public List<Tag> getAllTags() throws SQLException {
-        return tagDAO.getAllTags();
+    // --- Các phương thức quản lý Tag ---
+    public List<Tag> getAllTags() {
+        return noteManager.getAllTags();
     }
 
     public Tag getTagByName(String name) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Tag name cannot be null or empty");
         }
-        return tagDAO.findByName(name.trim());
+        return noteManager.getTagByName(name.trim());
     }
 
-    public void saveOrUpdateTag(Tag tagToProcess) {
-        if (tagToProcess == null) {
-            throw new IllegalArgumentException("Tag object cannot be null for save/update.");
+    /**
+     * Ensures a tag exists with the given name, creating it if necessary.
+     * The returned tag will have a valid ID.
+     * @param tagName The name of the tag.
+     * @return The managed Tag object.
+     */
+    public Tag getOrCreateTag(String tagName) {
+        return noteManager.getOrCreateTag(tagName);
+    }
+
+    /**
+     * Updates an existing tag. Primarily for renaming.
+     * @param tag The tag with updated information (must have a valid ID).
+     */
+    public void updateTag(Tag tag) {
+        if (tag == null || tag.getId() <= 0) {
+            throw new IllegalArgumentException("Tag to update must not be null and must have a valid ID.");
         }
-        if (tagToProcess.getName() == null || tagToProcess.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Tag name cannot be null or empty.");
+        noteManager.updateTag(tag);
+    }
+
+    /**
+     * Deletes a tag by its ID from the global list and removes it from all notes.
+     * @param tagId The ID of the tag to delete.
+     */
+    public void deleteTag(long tagId) {
+        if (tagId <= 0) {
+            throw new IllegalArgumentException("Invalid tag ID for delete: " + tagId);
         }
+        noteManager.deleteTag(tagId);
+    }
+
+    public Note getNoteById(long id) {
+        return noteManager.getNoteById(id);
+    }
+
+    public NoteManager getNoteManager() {
+        return noteManager;
     }
 }

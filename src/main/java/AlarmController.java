@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 public class AlarmController {
     private final NoteController noteController;
-    private final MainFrame mainFrame;
+    private final MainFrame mainFrame; // mainFrame này sẽ được dùng làm owner cho dialog
     private final ScheduledExecutorService scheduler;
     private Clip clip;
     private final ConcurrentHashMap<Long, LocalDateTime> recentlyTriggeredAlarms = new ConcurrentHashMap<>();
@@ -78,53 +78,53 @@ public class AlarmController {
 
                 System.out.println("    >>>> SUCCESS: TRIGGERING ALARM FOR NOTE: \"" + note.getTitle() + "\" (AlarmID: " + alarm.getId() + ") at " + now.format(DateTimeFormatter.ISO_LOCAL_TIME) +
                         " (Alarm time was: " + alarm.getAlarmTime().format(DateTimeFormatter.ISO_LOCAL_TIME) + ")");
+
                 final Note noteToProcess = note;
-                final Alarm alarmToProcess = alarm;
+                final Alarm alarmSnapshot = new Alarm(alarm.getId(), alarm.getAlarmTime(), alarm.isRecurring(), alarm.getRecurrencePattern());
+
+                if (!alarmSnapshot.isRecurring()) {
+                    // System.out.println("    INFO: Modifying in-memory original Alarm time for \"" + note.getTitle() + "\" (AlarmID: " + alarm.getId() + ") to prevent immediate re-trigger.");
+                    alarm.setAlarmTime(LocalDateTime.MIN);
+                }
 
                 SwingUtilities.invokeLater(() -> {
                     triggerAlarm(noteToProcess);
-                    if (!alarmToProcess.isRecurring()) {
-                        System.out.println("    INFO: (InvokeLater) Requesting DB clear for non-recurring alarm: \"" + noteToProcess.getTitle() + "\" (AlarmID: " + alarmToProcess.getId() + ")");
+
+                    if (!alarmSnapshot.isRecurring()) {
+                        System.out.println("    INFO: (InvokeLater) Requesting DB clear for non-recurring alarm: \"" + noteToProcess.getTitle() + "\" (Original AlarmID: " + alarmSnapshot.getId() + ")");
                         noteController.setAlarm(noteToProcess, null);
                     }
                 });
 
-                if (alarmToProcess.isRecurring()) {
-                    updateAlarmTimeAndSave(noteToProcess, alarmToProcess);
+                if (alarmSnapshot.isRecurring()) {
+                    updateAlarmTimeAndSave(noteToProcess, alarmSnapshot);
                 }
             }
         }
     }
 
     private void triggerAlarm(Note note) {
-        System.out.println("    DEBUG: triggerAlarm() called for note: " + note.getTitle());
-
-        final Alarm currentAlarmStateInNote = note.getAlarm(); // Lấy trạng thái alarm để kiểm tra nếu cần
-
+        // System.out.println("    DEBUG: triggerAlarm() called for note: " + note.getTitle());
+        final Alarm currentAlarmStateInNote = note.getAlarm();
         Runnable onDialogDispose = () -> {
-            // Nếu muốn xóa khỏi recentlyTriggeredAlarms ngay khi dialog đóng (để test lại nhanh hơn)
-            // và chỉ áp dụng cho báo thức không lặp lại (vì báo thức lặp lại đã được reschedule)
             if(currentAlarmStateInNote != null && !currentAlarmStateInNote.isRecurring()){
-                System.out.println("    DEBUG: Non-recurring alarm dialog closed for note: \"" + note.getTitle() + "\". Removing from recentlyTriggeredAlarms (AlarmID: " + currentAlarmStateInNote.getId() + ")");
                 recentlyTriggeredAlarms.remove(currentAlarmStateInNote.getId());
-            } else if (currentAlarmStateInNote != null) {
-                System.out.println("    DEBUG: Recurring alarm dialog closed for note: \"" + note.getTitle() + "\" (AlarmID: " + currentAlarmStateInNote.getId() + ")");
             }
-            System.out.println("    DEBUG: Notification dialog general cleanup for note: \"" + note.getTitle() + "\"");
+            // System.out.println("    DEBUG: Notification dialog general cleanup for note: \"" + note.getTitle() + "\"");
         };
 
-        // SỬA Ở ĐÂY: Gọi playSound() TRƯỚC khi setVisible(true) cho dialog modal
         playSound();
-
         AlarmNotificationDialog dialog = new AlarmNotificationDialog(mainFrame, note, this, onDialogDispose);
-        dialog.setVisible(true); // Lệnh này sẽ block cho đến khi dialog đóng (vì dialog là modal)
-        // Khi dialog đóng, phương thức dispose() của nó sẽ được gọi và dừng âm thanh.
+
+        // <<< Đặt vị trí dialog ngay trước khi hiển thị >>>
+        dialog.setLocationRelativeTo(this.mainFrame);
+
+        dialog.setVisible(true);
     }
 
     private void playSound() {
-        System.out.println("    DEBUG: playSound() called.");
-        stopAndCloseClip(); // Dừng và đóng clip cũ trước khi phát mới
-
+        // System.out.println("    DEBUG: playSound() called.");
+        stopAndCloseClip();
         try {
             URL soundResourceUrl = getClass().getResource("/sound/Doctor.wav");
             if (soundResourceUrl == null) {
@@ -136,15 +136,13 @@ public class AlarmController {
                     return;
                 }
             }
-
             AudioInputStream audioInput = AudioSystem.getAudioInputStream(soundResourceUrl);
             clip = AudioSystem.getClip();
             clip.open(audioInput);
             clip.start();
-            System.out.println("    INFO: Sound started for Doctor.wav");
+            // System.out.println("    INFO: Sound started for Doctor.wav");
             clip.addLineListener(event -> {
                 if (event.getType() == LineEvent.Type.STOP) {
-                    System.out.println("    DEBUG: Sound clip event STOP, closing line for: " + event.getLine().toString());
                     Clip c = (Clip) event.getSource();
                     if (c.isOpen()) {
                         c.close();
@@ -154,9 +152,9 @@ public class AlarmController {
         } catch (UnsupportedAudioFileException e) {
             System.err.println("    ERROR: Could not play sound - Unsupported audio file format: " + e.getMessage());
             System.err.println("           Please ensure 'Doctor.wav' is a standard PCM WAV file.");
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             System.err.println("    ERROR: Could not play sound: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -172,30 +170,28 @@ public class AlarmController {
         }
     }
 
-    private void updateAlarmTimeAndSave(Note note, Alarm alarm) {
-        if (alarm.isRecurring() && alarm.getAlarmTime() != null) {
-            String pattern = alarm.getRecurrencePattern() != null ? alarm.getRecurrencePattern().toUpperCase() : "";
-            LocalDateTime currentAlarmTime = alarm.getAlarmTime();
-            LocalDateTime newTime = currentAlarmTime;
-            boolean needsUpdate = false;
+    private void updateAlarmTimeAndSave(Note note, Alarm alarmPointInTime) {
+        String pattern = alarmPointInTime.getRecurrencePattern() != null ? alarmPointInTime.getRecurrencePattern().toUpperCase() : "";
+        LocalDateTime currentAlarmTime = alarmPointInTime.getAlarmTime();
+        LocalDateTime newTime = currentAlarmTime;
+        boolean needsUpdate = false;
 
-            switch (pattern) {
-                case "DAILY": newTime = currentAlarmTime.plusDays(1); needsUpdate = true; break;
-                case "WEEKLY": newTime = currentAlarmTime.plusWeeks(1); needsUpdate = true; break;
-                case "MONTHLY": newTime = currentAlarmTime.plusMonths(1); needsUpdate = true; break;
-                case "YEARLY": newTime = currentAlarmTime.plusYears(1); needsUpdate = true; break;
-                default:
-                    if (alarm.isRecurring() && (pattern == null || pattern.isEmpty())) {
-                        System.err.println("    WARNING: Recurring alarm for note '" + note.getTitle() + "' has invalid/empty pattern. Cannot update time.");
-                    }
-                    return;
-            }
+        switch (pattern) {
+            case "DAILY": newTime = currentAlarmTime.plusDays(1); needsUpdate = true; break;
+            case "WEEKLY": newTime = currentAlarmTime.plusWeeks(1); needsUpdate = true; break;
+            case "MONTHLY": newTime = currentAlarmTime.plusMonths(1); needsUpdate = true; break;
+            case "YEARLY": newTime = currentAlarmTime.plusYears(1); needsUpdate = true; break;
+            default:
+                if (alarmPointInTime.isRecurring() && (pattern == null || pattern.isEmpty())) {
+                    System.err.println("    WARNING: Recurring alarm for note '" + note.getTitle() + "' has invalid/empty pattern. Cannot update time.");
+                }
+                return;
+        }
 
-            if (needsUpdate) {
-                Alarm updatedAlarmInstance = new Alarm(alarm.getId(), newTime, true, alarm.getRecurrencePattern());
-                System.out.println("    INFO: Recurring alarm for note '" + note.getTitle() + "' (AlarmID: " + alarm.getId() + ") next trigger time: " + newTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-                noteController.setAlarm(note, updatedAlarmInstance);
-            }
+        if (needsUpdate) {
+            Alarm updatedAlarmInstance = new Alarm(alarmPointInTime.getId(), newTime, true, alarmPointInTime.getRecurrencePattern());
+            System.out.println("    INFO: Recurring alarm for note '" + note.getTitle() + "' (AlarmID: " + alarmPointInTime.getId() + ") next trigger time: " + newTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            noteController.setAlarm(note, updatedAlarmInstance);
         }
     }
 
@@ -252,10 +248,14 @@ public class AlarmController {
             mainContentPanel.add(scrollPane, BorderLayout.CENTER);
 
             Alarm displayAlarm = note.getAlarm();
-            if (displayAlarm != null && displayAlarm.getAlarmTime() != null) {
+            if (displayAlarm != null && displayAlarm.getAlarmTime() != null && displayAlarm.getAlarmTime() != LocalDateTime.MIN) {
                 JLabel alarmTimeLabel = new JLabel("Thời gian báo thức: " +
                         displayAlarm.getAlarmTime().format(DateTimeFormatter.ofPattern("HH:mm 'ngày' dd/MM/yyyy")),
                         SwingConstants.CENTER);
+                alarmTimeLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+                mainContentPanel.add(alarmTimeLabel, BorderLayout.SOUTH);
+            } else if (displayAlarm != null && displayAlarm.getAlarmTime() == LocalDateTime.MIN) {
+                JLabel alarmTimeLabel = new JLabel("Báo thức đã kích hoạt (non-recurring)", SwingConstants.CENTER);
                 alarmTimeLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
                 mainContentPanel.add(alarmTimeLabel, BorderLayout.SOUTH);
             }
@@ -264,22 +264,24 @@ public class AlarmController {
             JButton okButton = new JButton("OK");
             okButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
             okButton.addActionListener(e -> {
-                dispose(); // Gọi dispose() đã được override, nó sẽ dừng nhạc
+                dispose();
             });
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 10));
             buttonPanel.add(okButton);
             add(buttonPanel, BorderLayout.SOUTH);
+
             pack();
             int minWidth = 350; int minHeight = 200; int maxWidth = 500; int maxHeight = 350;
             setSize(Math.min(maxWidth, Math.max(minWidth, getWidth() + 20)),
                     Math.min(maxHeight, Math.max(minHeight, getHeight() + 20)));
-            setLocationRelativeTo(owner);
+
+            // <<< DÒNG NÀY ĐÃ BỊ XÓA/COMMENT TRONG PHIÊN BẢN NÀY >>>
+            // setLocationRelativeTo(owner);
         }
 
         @Override
         public void dispose() {
             if (alarmControllerInstance != null) {
-                System.out.println("    DEBUG: AlarmNotificationDialog.dispose() asking AlarmController to stop sound.");
                 alarmControllerInstance.stopAndCloseClip();
             }
             super.dispose();

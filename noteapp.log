@@ -1,6 +1,0 @@
-May 04, 2025 10:21:12 AM NoteApplication loadConfiguration
-INFO: Configuration file not found or could not be loaded. Using default settings.
-May 04, 2025 10:21:12 AM NoteApplication loadSavedData
-INFO: No saved data found. Creating a fresh note database.
-May 04, 2025 10:21:12 AM NoteApplication initializeController
-INFO: Loaded sample notes and folders

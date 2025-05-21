@@ -1,188 +1,191 @@
 import com.formdev.flatlaf.FlatLightLaf;
 
 import javax.swing.*;
-import java.sql.SQLException; // Thêm
+import java.awt.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-// import java.io.File; // Không cần xóa notes.json nữa
+import java.util.Enumeration;
 
 public class NoteApplication {
 
-    // --- Cấu hình SSH Tunnel (Thay đổi các giá trị này nếu bạn dùng SSH Tunnel) ---
-    private static final boolean USE_SSH_TUNNEL = false; // Đặt thành true nếu bạn cần SSH
-    private static final String SSH_USER = "your_ssh_user";
-    private static final String SSH_PASSWORD = "your_ssh_password"; // Cân nhắc dùng key-based auth
-    private static final String SSH_HOST = "your_ssh_host_ip_or_domain";
-    private static final int SSH_PORT = 22; // Cổng SSH chuẩn
-    private static final String REMOTE_DB_HOST = "localhost"; // Host của DB từ góc nhìn của SSH server (thường là localhost)
-    private static final int LOCAL_FORWARD_PORT = 9998; // Cổng local bạn sẽ dùng để kết nối DB qua tunnel
-    // DBConnectionManager sẽ dùng cổng này (localhost:9998)
-    private static final int REMOTE_DB_PORT = 9999; // Cổng thực của PostgreSQL server trên remote machine
+    private static void setUIFont(javax.swing.plaf.FontUIResource f) {
+        Enumeration<Object> keys = UIManager.getDefaults().keys();
+        while (keys.hasMoreElements()) {
+            Object key = keys.nextElement();
+            Object value = UIManager.get(key);
+            if (value instanceof javax.swing.plaf.FontUIResource) {
+                UIManager.put(key, f);
+            }
+        }
+    }
 
     public static void main(String[] args) {
-        // 1. Thiết lập Look and Feel (nên làm đầu tiên)
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
+            setUIFont(new javax.swing.plaf.FontUIResource("SansSerif", Font.PLAIN, 13));
         } catch (Exception e) {
-            System.err.println("Failed to set FlatLaf Look and Feel: " + e.getMessage());
-            // Có thể dùng Look and Feel mặc định của hệ thống nếu FlatLaf lỗi
+            System.err.println("Không thể cài đặt giao diện FlatLaf hoặc Font: " + e.getMessage());
         }
 
-        // 2. (Tùy chọn) Kết nối SSH Tunnel nếu cần
-        if (USE_SSH_TUNNEL) {
-            try {
-                System.out.println("Attempting to establish SSH tunnel...");
-                SshTunnelManager.connect(SSH_USER, SSH_PASSWORD, SSH_HOST, SSH_PORT,
-                        REMOTE_DB_HOST, LOCAL_FORWARD_PORT, REMOTE_DB_PORT);
-                System.out.println("SSH tunnel connection seems successful.");
-
-                // Thêm shutdown hook để đóng tunnel khi ứng dụng thoát
-                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                    System.out.println("Application shutting down, disconnecting SSH tunnel...");
-                    SshTunnelManager.disconnect();
-                }));
-            } catch (Exception e) { // Bắt Exception chung cho JSchException và các lỗi khác
-                System.err.println("Failed to establish SSH tunnel: " + e.getMessage());
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(null,
-                        "Could not establish SSH tunnel. Database connectivity might be affected.\n" + e.getMessage(),
-                        "SSH Tunnel Error", JOptionPane.ERROR_MESSAGE);
-                // Quyết định có nên thoát ứng dụng ở đây không nếu SSH là bắt buộc
-                // System.exit(1);
-            }
-        }
-
-        // Nhắc nhở về việc tạo schema CSDL (quan trọng!)
-        System.out.println("Reminder: Ensure your PostgreSQL database schema (tables: Folders, Tags, Notes, Alarms, Note_Tag) is created and an initial 'Root' folder exists.");
-        System.out.println("Reminder: Update database credentials in DBConnectionManager.java if you haven't.");
-        if (USE_SSH_TUNNEL) {
-            System.out.println("Reminder: JDBC URL in DBConnectionManager.java should point to localhost:" + LOCAL_FORWARD_PORT + " when using SSH tunnel.");
-        }
-
-
-        // 3. Khởi chạy ứng dụng Swing trên Event Dispatch Thread
         SwingUtilities.invokeLater(() -> {
-            NoteController controller = new NoteController(new JFrame()); // JFrame không còn được truyền vào constructor
+            System.out.println("[NoteApplication] EDT: Bắt đầu khởi tạo ứng dụng...");
 
-            // 4. Khởi tạo dữ liệu mẫu (giờ sẽ ghi vào CSDL)
-            // Bạn có thể kiểm tra xem có cần tạo dữ liệu mẫu không, ví dụ: dựa trên số lượng note hiện có
-            try {
-                if (controller.getNotes().isEmpty()) { // Chỉ tạo dữ liệu mẫu nếu DB rỗng
-                    System.out.println("Database appears empty, initializing with sample data...");
-                    initializeControllerWithSampleData(controller);
-                } else {
-                    System.out.println("Database already contains data. Skipping sample data initialization.");
-                }
-            } catch (Exception e) { // Bắt lỗi chung khi kiểm tra hoặc tạo dữ liệu mẫu
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(null,
-                        "Error during sample data initialization: " + e.getMessage(),
-                        "Data Initialization Error", JOptionPane.WARNING_MESSAGE);
+            // 1. Khởi tạo NoteManager
+            System.out.println("[NoteApplication] EDT: Đang tạo NoteManager...");
+            NoteManager noteManager = new NoteManager();
+            System.out.println("[NoteApplication] EDT: NoteManager đã tạo.");
+            if (noteManager == null) { // Kiểm tra cực kỳ cẩn thận
+                System.err.println("LỖI NGHIÊM TRỌNG: NoteManager là null sau khi tạo!");
+                JOptionPane.showMessageDialog(null, "Lỗi nghiêm trọng: NoteManager không thể khởi tạo.", "Lỗi Khởi Động", JOptionPane.ERROR_MESSAGE);
+                return;
             }
 
-            // 5. Tạo và hiển thị MainFrame
-            // MainFrame nhận controller. NoteController không cần tham chiếu MainFrame trong constructor nữa.
-            MainFrame frame = new MainFrame(controller);
-            // Nếu NoteController cần tham chiếu đến frame (ví dụ để changeTheme),
-            // MainFrame có thể gọi một setter trên controller: controller.setMainFrame(frame);
-            // Hoặc MainFrame tự gọi controller.changeTheme(frame);
-            // Hiện tại, NoteController.changeTheme() đã nhận JFrame làm tham số.
+            // 2. Khởi tạo NoteService
+            System.out.println("[NoteApplication] EDT: Đang tạo NoteService...");
+            NoteService noteService = new NoteService(noteManager);
+            System.out.println("[NoteApplication] EDT: NoteService đã tạo.");
+            if (noteService == null) { // Kiểm tra cực kỳ cẩn thận
+                System.err.println("LỖI NGHIÊM TRỌNG: NoteService là null sau khi tạo!");
+                JOptionPane.showMessageDialog(null, "Lỗi nghiêm trọng: NoteService không thể khởi tạo.", "Lỗi Khởi Động", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-            frame.setVisible(true);
+            // 3. Khởi tạo NoteController (ban đầu không có tham chiếu frame)
+            System.out.println("[NoteApplication] EDT: Đang tạo NoteController...");
+            NoteController controller = new NoteController(null, noteService);
+            System.out.println("[NoteApplication] EDT: NoteController đã tạo.");
+            if (controller == null) { // Kiểm tra cực kỳ cẩn thận
+                System.err.println("LỖI NGHIÊM TRỌNG: NoteController là null sau khi tạo!");
+                JOptionPane.showMessageDialog(null, "Lỗi nghiêm trọng: NoteController không thể khởi tạo.", "Lỗi Khởi Động", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // 4. Khởi tạo MainFrame, truyền controller vào
+            System.out.println("[NoteApplication] EDT: Đang tạo MainFrame...");
+            MainFrame mainFrame = new MainFrame(controller); // Đây là dòng 49 trong stack trace cũ của bro
+            System.out.println("[NoteApplication] EDT: MainFrame đã tạo.");
+            if (mainFrame == null) { // Kiểm tra cực kỳ cẩn thận
+                System.err.println("LỖI NGHIÊM TRỌNG: MainFrame là null sau khi tạo!");
+                JOptionPane.showMessageDialog(null, "Lỗi nghiêm trọng: MainFrame không thể khởi tạo.", "Lỗi Khởi Động", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // 5. Cung cấp tham chiếu MainFrame cho NoteController
+            controller.setMainFrameInstance(mainFrame);
+            System.out.println("[NoteApplication] EDT: Đã đặt MainFrame instance cho NoteController.");
+
+            // 6. Khởi tạo dữ liệu mẫu (nếu cần)
+            try {
+                // Quan trọng: Gọi getAllNotes() trên noteManager để kiểm tra,
+                // vì controller.getNotes() có thể vẫn đang gặp vấn đề nếu controller chưa hoàn chỉnh.
+                if (noteManager.getAllNotes().isEmpty()) {
+                    System.out.println("[NoteApplication] EDT: Đang khởi tạo dữ liệu mẫu...");
+                    initializeSampleData(noteManager); // Chỉ cần NoteManager
+                } else {
+                    System.out.println("[NoteApplication] EDT: Dữ liệu đã tồn tại. Bỏ qua khởi tạo dữ liệu mẫu.");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(mainFrame,
+                        "Lỗi trong quá trình khởi tạo dữ liệu mẫu: " + e.getMessage(),
+                        "Lỗi Khởi Tạo Dữ Liệu", JOptionPane.WARNING_MESSAGE);
+            }
+
+            // 7. Hiển thị Frame và làm mới UI
+            System.out.println("[NoteApplication] EDT: Đặt MainFrame thành visible.");
+            mainFrame.setVisible(true);
+
+            // Đảm bảo MainMenuScreen được làm mới sau khi frame hiển thị và dữ liệu mẫu (nếu có) đã được thêm.
+            SwingUtilities.invokeLater(() -> {
+                System.out.println("[NoteApplication] EDT (inner): Đang làm mới MainMenuScreen.");
+                mainFrame.showMainMenuScreen(); // Gọi lại để refresh nội dung
+            });
+            System.out.println("[NoteApplication] EDT: Hoàn tất khởi tạo ứng dụng trên EDT.");
         });
     }
 
-    private static void initializeControllerWithSampleData(NoteController controller) {
-        System.out.println("Initializing sample data into database via NoteController/NoteService...");
+    private static void initializeSampleData(NoteManager noteManager) {
+        System.out.println("[initializeSampleData] Bắt đầu khởi tạo dữ liệu mẫu...");
         try {
-            // --- Tạo Thư mục ---
-            controller.addNewFolder("Công việc"); // addNewFolder sẽ tự kiểm tra trùng tên
-            controller.addNewFolder("Cá nhân");
-            controller.addNewFolder("Quan trọng");
+            Folder workFolder = noteManager.getFolderByName("Công việc").orElseGet(() -> {
+                Folder wf = new Folder("Công việc");
+                noteManager.addFolder(wf);
+                System.out.println("[initializeSampleData] Đã tạo/lấy thư mục Công việc ID: " + wf.getId());
+                return wf;
+            });
 
-            // Lấy lại các folder đã tạo (để có ID đúng từ DB)
-            Optional<Folder> workFolderOpt = controller.getFolderByName("Công việc");
-            Optional<Folder> personalFolderOpt = controller.getFolderByName("Cá nhân");
-            Optional<Folder> importantFolderOpt = controller.getFolderByName("Quan trọng");
-            // Mặc định dùng Root nếu folder không tìm thấy (dù không nên xảy ra nếu addNewFolder thành công)
-            Folder rootFolder = controller.getFolderByName("Root").orElse(controller.getCurrentFolder());
+            Folder personalFolder = noteManager.getFolderByName("Cá nhân").orElseGet(() -> {
+                Folder pf = new Folder("Cá nhân");
+                noteManager.addFolder(pf);
+                System.out.println("[initializeSampleData] Đã tạo/lấy thư mục Cá nhân ID: " + pf.getId());
+                return pf;
+            });
+
+            Folder importantFolder = noteManager.getFolderByName("Quan trọng").orElseGet(() -> {
+                Folder inf = new Folder("Quan trọng");
+                noteManager.addFolder(inf);
+                System.out.println("[initializeSampleData] Đã tạo/lấy thư mục Quan trọng ID: " + inf.getId());
+                return inf;
+            });
+
+            Folder rootFolder = noteManager.getRootFolder();
+            if (rootFolder == null) {
+                System.err.println("[initializeSampleData] LỖI: Root folder là null!");
+                return; // Không thể tiếp tục nếu không có Root
+            }
+            System.out.println("[initializeSampleData] Root folder ID: " + rootFolder.getId());
 
 
-            Folder workFolder = workFolderOpt.orElse(rootFolder);
-            Folder personalFolder = personalFolderOpt.orElse(rootFolder);
-            Folder importantFolder = importantFolderOpt.orElse(rootFolder);
+            Tag tagProject = noteManager.getOrCreateTag("project");
+            Tag tagMeeting = noteManager.getOrCreateTag("meeting");
+            Tag tagIdea = noteManager.getOrCreateTag("idea");
+            System.out.println("[initializeSampleData] Các Tags đã được tạo/lấy.");
 
-
-            // --- Tạo Tags (nếu muốn có sẵn) ---
-            // Controller hiện không có phương thức addTag độc lập, tag được thêm vào note.
-            // Nếu muốn tạo tag trước, cần thêm phương thức vào NoteService/Controller, ví dụ:
-            // controller.createTagIfNotExists("project");
-            // controller.createTagIfNotExists("meeting");
-            // controller.createTagIfNotExists("idea");
-
-            Tag tagProject = new Tag("project");
-            Tag tagMeeting = new Tag("meeting");
-            Tag tagIdea = new Tag("idea");
-            // Để các tag này được lưu, chúng cần được thêm vào một note,
-            // hoặc bạn cần 1 phương thức controller.ensureTagsExist(List<Tag> tags) gọi service.
-
-            // --- Tạo Notes ---
-            // Note 1 (Công việc)
             Note note1 = new Note("Báo cáo tuần", "Hoàn thành báo cáo công việc tuần này.", false);
-            note1.setFolderId(workFolder.getId()); // Gán folderId
-            note1.setFolder(workFolder);          // Gán transient folder
-            note1.addTag(tagProject);             // Thêm tag vào object note
+            note1.setFolder(workFolder);
+            note1.addTag(tagProject);
             note1.addTag(tagMeeting);
-            // Tạo và gán Alarm
             Alarm alarm1 = new Alarm(LocalDateTime.now().plusDays(1).withHour(9).withMinute(0), false, null);
-            note1.setAlarm(alarm1); // Gán object Alarm, controller.addNote sẽ xử lý lưu alarm và gán alarmId
-            controller.addNote(note1); // addNote sẽ lưu note, alarm, và các liên kết tag
+            note1.setAlarm(alarm1);
+            noteManager.addNote(note1);
+            System.out.println("[initializeSampleData] Đã thêm Note 1: " + note1.getTitle());
 
-            // Note 2 (Cá nhân)
             Note note2 = new Note("Mua sắm cuối tuần", "Đi siêu thị mua đồ dùng cá nhân.", true);
-            note2.setFolderId(personalFolder.getId());
             note2.setFolder(personalFolder);
             note2.addTag(tagIdea);
-            // Note này có Mission
             note2.setMission(true);
             note2.setMissionContent("Nhớ mua sữa và bánh mì.");
-            controller.addNote(note2);
+            noteManager.addNote(note2);
+            System.out.println("[initializeSampleData] Đã thêm Note 2: " + note2.getTitle());
 
-            // Note 3 (Quan trọng)
             Note note3 = new Note("Học Java Swing", "Ôn tập các khái niệm về LayoutManager và Event Handling.", false);
-            note3.setFolderId(importantFolder.getId());
             note3.setFolder(importantFolder);
             note3.addTag(tagProject);
             note3.addTag(tagIdea);
-            Alarm alarm3 = new Alarm(LocalDateTime.now().plusHours(2), true, "DAILY"); // Lặp lại hàng ngày
+            Alarm alarm3 = new Alarm(LocalDateTime.now().plusHours(2), true, "DAILY");
             note3.setAlarm(alarm3);
-            controller.addNote(note3);
+            noteManager.addNote(note3);
+            System.out.println("[initializeSampleData] Đã thêm Note 3: " + note3.getTitle());
 
-            // Note 4 (Trong Root, có mission và alarm)
             Note note4 = new Note("Đọc sách", "Đọc 1 chương sách 'Clean Code'", false);
-            // FolderId sẽ được tự động gán vào Root nếu không set (logic trong controller.addNote)
-            // Hoặc gán tường minh:
-            if (rootFolder != null && rootFolder.getId() > 0) {
-                note4.setFolderId(rootFolder.getId());
-                note4.setFolder(rootFolder);
-            }
+            note4.setFolder(rootFolder);
             note4.setMission(true);
             note4.setMissionContent("Ghi lại 3 ý tưởng chính.");
             Alarm alarm4 = new Alarm(LocalDateTime.now().plusMinutes(30), false, null);
             note4.setAlarm(alarm4);
-            controller.addNote(note4);
+            noteManager.addNote(note4);
+            System.out.println("[initializeSampleData] Đã thêm Note 4: " + note4.getTitle());
 
+            System.out.println("[initializeSampleData] Hoàn tất khởi tạo dữ liệu mẫu.");
 
-            System.out.println("Sample data initialization complete.");
-
-        } catch (Exception e) { // Bắt Exception chung vì nhiều loại lỗi có thể xảy ra
+        } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(null, // Sử dụng null nếu mainFrameInstance chưa có
-                    "Error initializing sample data into database: " + e.getMessage(),
-                    "Sample Data Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null,
+                    "Lỗi khi khởi tạo dữ liệu mẫu: " + e.getMessage(),
+                    "Lỗi Dữ Liệu Mẫu", JOptionPane.ERROR_MESSAGE);
         }
     }
 }
