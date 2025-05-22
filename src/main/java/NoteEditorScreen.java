@@ -4,45 +4,33 @@ import javax.swing.undo.UndoManager;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-// Giả sử các lớp Note, Tag, MainFrame, NoteController, AIService,
-// AlarmDialog, Alarm, MissionDialog, Folder đã được định nghĩa và import đúng cách.
-// Ví dụ:
-// import com.yourproject.model.Note;
-// import com.yourproject.model.Tag;
-// import com.yourproject.model.Alarm;
-// import com.yourproject.model.Folder;
-// import com.yourproject.ui.MainFrame;
-// import com.yourproject.controller.NoteController;
-// import com.yourproject.service.AIService;
-// import com.yourproject.ui.dialog.AlarmDialog;
-// import com.yourproject.ui.dialog.MissionDialog;
-
+// Assuming Note, Tag, MainFrame, NoteController, AIService,
+// AlarmDialog, Alarm, MissionDialog, Folder are correctly defined and imported.
 
 public class NoteEditorScreen extends JPanel {
-    // Constants from both versions
-    private static final String SAVE_LABEL = "Save";
-    private static final String BACK_LABEL = "Back";
-    private static final String ADD_TAG_LABEL = "Add Tag";
-    private static final String ADD_ALARM_LABEL = "Add Alarm"; // Base label, text will be dynamic
-    private static final String EDIT_ALARM_LABEL = "Edit Alarm";
-    private static final String SET_MISSION_LABEL = "Set Mission"; // Base label
-    private static final String EDIT_MISSION_LABEL = "Edit Mission"; // Base label, text will be dynamic
-    private static final String TRANSLATE_LABEL = "Translate";
-    private static final String SUMMARY_LABEL = "Summary";
+    private static final String SAVE_LABEL = "Lưu";
+    private static final String BACK_LABEL = "Quay Lại";
+    private static final String ADD_TAG_LABEL = "Thêm Tag";
+    private static final String ADD_ALARM_LABEL = "Đặt Báo thức";
+    private static final String EDIT_ALARM_LABEL = "Sửa Báo thức";
+    private static final String SET_MISSION_LABEL = "Đặt Nhiệm vụ";
+    private static final String EDIT_MISSION_LABEL = "Sửa Nhiệm vụ";
+    private static final String TRANSLATE_LABEL = "Dịch";
+    private static final String SUMMARY_LABEL = "Tóm tắt";
     private static final String AI_AUTO_TAG_LABEL = "AI Auto Tag";
 
     private final MainFrame mainFrame;
     private final NoteController controller;
-    private Note note; // Note hiện tại đang được chỉnh sửa hoặc tạo mới
+    private Note note;
 
     private JTextField titleField;
     private JTextArea contentField;
-    private JPanel tagPanel;
+    private JPanel tagPanelContainer; // Renamed for clarity, this will hold the JScrollPane
+    private JPanel actualTagDisplayPanel; // The panel with FlowLayout for tags
     private JLabel wordCountLabel;
     private JLabel modifiedLabel;
     private UndoManager undoManager;
 
-    // Button references for dynamic text updates or enabling/disabling
     private JButton alarmButtonReference;
     private JButton missionButtonReference;
     private JButton aiAutoTagButtonReference;
@@ -52,21 +40,23 @@ public class NoteEditorScreen extends JPanel {
     public NoteEditorScreen(MainFrame mainFrame, NoteController controller, Note noteToEdit) {
         this.mainFrame = mainFrame;
         this.controller = controller;
-        this.note = (noteToEdit != null) ? noteToEdit : new Note("New Note", "", false); // Giả sử constructor Note(title, content, isMission)
-        initializeUI(); // Khởi tạo UI trước
-        setNoteFields(this.note); // Sau đó điền dữ liệu và cập nhật text nút
+        this.note = (noteToEdit != null) ? noteToEdit : new Note("Ghi chú mới", Note.NoteType.TEXT, controller.getCurrentFolder());
+        initializeUI();
+        setNoteFields(this.note);
         setupShortcuts();
     }
 
     public void setNote(Note noteToSet) {
-        this.note = (noteToSet != null) ? noteToSet : new Note("New Note", "", false);
+        // If null is passed, create a new TEXT note associated with the current folder in controller
+        this.note = (noteToSet != null) ? noteToSet : new Note("Ghi chú mới", Note.NoteType.TEXT, controller.getCurrentFolder());
         setNoteFields(this.note);
     }
+
 
     private void setNoteFields(Note currentNote) {
         titleField.setText(currentNote.getTitle());
         contentField.setText(currentNote.getContent());
-        contentField.setCaretPosition(0); // Reset caret position to the beginning
+        contentField.setCaretPosition(0);
 
         updateTagDisplay();
         updateWordCount();
@@ -80,8 +70,6 @@ public class NoteEditorScreen extends JPanel {
 
     private void updateDynamicButtonTexts() {
         if (alarmButtonReference != null) {
-            // Giả sử Note có phương thức getAlarm() trả về Alarm object hoặc null
-            // và Alarm có getId() trả về ID ( > 0 nếu đã lưu)
             boolean hasAlarm = note != null && note.getAlarm() != null && note.getAlarm().getId() > 0;
             alarmButtonReference.setText(hasAlarm ? EDIT_ALARM_LABEL : ADD_ALARM_LABEL);
         }
@@ -92,80 +80,97 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private void updateTagDisplay() {
-        if (tagPanel == null) return;
-        tagPanel.removeAll();
+        if (actualTagDisplayPanel == null) return;
+        actualTagDisplayPanel.removeAll();
         if (note != null && note.getTags() != null && !note.getTags().isEmpty()) {
             for (Tag tag : note.getTags()) {
-                JPanel tagItem = new JPanel(new BorderLayout(3, 0));
-                tagItem.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-                tagItem.setBackground(new Color(240, 240, 240));
+                JPanel tagItem = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 1)); // Tighter spacing
+                tagItem.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(Color.GRAY),
+                        BorderFactory.createEmptyBorder(1, 3, 1, 1) // Inner padding
+                ));
+                // Use UIManager color for consistency with theme
+                tagItem.setBackground(UIManager.getColor("Panel.background"));
+
 
                 JLabel tagLabel = new JLabel(tag.getName());
                 tagLabel.setFont(tagLabel.getFont().deriveFont(11f));
+
                 JButton removeButton = new JButton("x");
-                removeButton.setMargin(new Insets(0, 2, 0, 2));
+                removeButton.setMargin(new Insets(0, 1, 0, 1)); // Minimal margin
                 removeButton.setFont(removeButton.getFont().deriveFont(9f));
                 removeButton.setFocusPainted(false);
+                // Make button less visually intrusive
+                removeButton.setContentAreaFilled(false);
+                removeButton.setBorderPainted(false);
+                removeButton.setForeground(Color.RED);
+
+
                 removeButton.addActionListener(e -> {
-                    int confirm = JOptionPane.showConfirmDialog(mainFrame,
-                            "Remove tag '" + tag.getName() + "' from this note?",
-                            "Confirm Remove Tag", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        controller.removeTag(note, tag); // Controller sẽ update note trong DB và có thể cập nhật object 'note'
-                        updateTagDisplay(); // Refresh UI
-                    }
+                    controller.removeTag(note, tag);
+                    updateTagDisplay();
                 });
-                tagItem.add(tagLabel, BorderLayout.CENTER);
-                tagItem.add(removeButton, BorderLayout.EAST);
-                tagPanel.add(tagItem);
+                tagItem.add(tagLabel);
+                tagItem.add(removeButton);
+                actualTagDisplayPanel.add(tagItem);
             }
         } else {
-            JLabel noTagsLabel = new JLabel("No tags yet.");
+            JLabel noTagsLabel = new JLabel("Chưa có tag nào.");
             noTagsLabel.setForeground(Color.GRAY);
-            tagPanel.add(noTagsLabel);
+            noTagsLabel.setBorder(BorderFactory.createEmptyBorder(5,5,5,5)); // Padding for the label
+            actualTagDisplayPanel.add(noTagsLabel);
         }
-        tagPanel.revalidate();
-        tagPanel.repaint();
+        actualTagDisplayPanel.revalidate();
+        actualTagDisplayPanel.repaint();
+        // Also revalidate the scroll pane container if it's separate
+        if (tagPanelContainer != null) {
+            tagPanelContainer.revalidate();
+            tagPanelContainer.repaint();
+        }
     }
+
 
     private void updateWordCount() {
         if (contentField == null || wordCountLabel == null) return;
         String text = contentField.getText();
         int count = text.trim().isEmpty() ? 0 : text.trim().split("\\s+").length;
-        wordCountLabel.setText("Words: " + count);
+        wordCountLabel.setText("Số từ: " + count);
     }
 
     private void updateModifiedTime() {
         if (note != null && modifiedLabel != null) {
-            modifiedLabel.setText("Last modified: " + note.getFormattedModificationDate()); // Giả sử Note có getFormattedModificationDate()
+            modifiedLabel.setText("Sửa đổi lần cuối: " + note.getFormattedModificationDate());
         } else if (modifiedLabel != null) {
-            modifiedLabel.setText("Last modified: N/A");
+            modifiedLabel.setText("Sửa đổi lần cuối: N/A");
         }
     }
 
     private void initializeUI() {
         setLayout(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); // More padding
 
         // Top Panel: Title and Back Button
-        JPanel topPanel = new JPanel(new BorderLayout(10, 0));
+        JPanel topPanel = new JPanel(new BorderLayout(15, 0)); // Increased gap
         titleField = new JTextField();
-        titleField.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
-        JLabel titleLabel = new JLabel("Title:");
+        titleField.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18)); // Larger title font
+        JLabel titleLabel = new JLabel("Tiêu đề:");
         titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0,0,0,5)); // Margin for label
         topPanel.add(titleLabel, BorderLayout.WEST);
         topPanel.add(titleField, BorderLayout.CENTER);
 
         JButton backButton = new JButton(BACK_LABEL);
+        backButton.setToolTipText("Quay lại màn hình chính (Esc)");
         backButton.addActionListener(e -> mainFrame.showMainMenuScreen());
         topPanel.add(backButton, BorderLayout.EAST);
         add(topPanel, BorderLayout.NORTH);
 
         // Center Panel: Content Area
         contentField = new JTextArea();
-        contentField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        contentField.setFont(new Font("Segoe UI", Font.PLAIN, 15)); // Slightly larger content font
         contentField.setLineWrap(true);
         contentField.setWrapStyleWord(true);
+        contentField.setMargin(new Insets(5,5,5,5)); // Padding inside text area
         contentField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
@@ -174,30 +179,41 @@ public class NoteEditorScreen extends JPanel {
         });
         undoManager = new UndoManager();
         contentField.getDocument().addUndoableEditListener(undoManager);
-        add(new JScrollPane(contentField), BorderLayout.CENTER);
+        JScrollPane contentScrollPane = new JScrollPane(contentField);
+        contentScrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Nội dung"),
+                BorderFactory.createEmptyBorder(5,5,5,5)
+        ));
+        add(contentScrollPane, BorderLayout.CENTER);
 
         // Bottom Panel: Status, Tags, Buttons
-        JPanel bottomOuterPanel = new JPanel(new BorderLayout(0, 5));
+        JPanel bottomOuterPanel = new JPanel(new BorderLayout(0, 10)); // Increased gap
 
         // Status Panel
         JPanel statusPanel = new JPanel(new BorderLayout());
-        statusPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-        wordCountLabel = new JLabel("Words: 0");
-        wordCountLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0));
-        modifiedLabel = new JLabel("Last modified: N/A");
-        modifiedLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
+        statusPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        wordCountLabel = new JLabel("Số từ: 0");
+        modifiedLabel = new JLabel("Sửa đổi lần cuối: N/A");
         statusPanel.add(wordCountLabel, BorderLayout.WEST);
         statusPanel.add(modifiedLabel, BorderLayout.EAST);
         bottomOuterPanel.add(statusPanel, BorderLayout.NORTH);
 
-        // Tag Panel
-        tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        tagPanel.setBorder(BorderFactory.createTitledBorder("Tags"));
-        JScrollPane tagScrollPane = new JScrollPane(tagPanel);
-        tagScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED); // AS_NEEDED is better
-        tagScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        tagScrollPane.setPreferredSize(new Dimension(0, 65)); // Giới hạn chiều cao một chút
-        bottomOuterPanel.add(tagScrollPane, BorderLayout.CENTER);
+        // Tag Panel Container (this will hold the scroll pane)
+        tagPanelContainer = new JPanel(new BorderLayout());
+        tagPanelContainer.setBorder(BorderFactory.createTitledBorder("Tags"));
+
+        actualTagDisplayPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 3)); // Panel that actually holds tags
+        actualTagDisplayPanel.setBorder(BorderFactory.createEmptyBorder(2,2,2,2));
+
+        JScrollPane tagScrollPane = new JScrollPane(actualTagDisplayPanel);
+        tagScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        tagScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER); // Usually not needed for tags
+        tagScrollPane.setPreferredSize(new Dimension(0, 55)); // Adjusted preferred height
+        tagScrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove scrollpane border if TitledBorder is on container
+
+        tagPanelContainer.add(tagScrollPane, BorderLayout.CENTER);
+        bottomOuterPanel.add(tagPanelContainer, BorderLayout.CENTER);
+
 
         // Button Panel
         bottomOuterPanel.add(createButtonPanel(), BorderLayout.SOUTH);
@@ -205,61 +221,75 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private JPanel createButtonPanel() {
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 5)); // Khoảng cách giữa các nút
+        // Using GridBagLayout for more control over button sizes and spacing
+        JPanel buttonPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 4, 5, 4); // Padding around buttons
+        gbc.fill = GridBagConstraints.HORIZONTAL; // Make buttons expand horizontally a bit
+
+        int gridx = 0;
 
         JButton addTagButton = new JButton(ADD_TAG_LABEL);
-        addTagButton.setToolTipText("Add a new tag to this note (Ctrl+T)");
+        addTagButton.setToolTipText("Thêm tag mới cho ghi chú này (Ctrl+T)");
         addTagButton.addActionListener(e -> handleAddTagAction());
-        buttonPanel.add(addTagButton);
+        gbc.gridx = gridx++; buttonPanel.add(addTagButton, gbc);
 
         aiAutoTagButtonReference = new JButton(AI_AUTO_TAG_LABEL);
-        aiAutoTagButtonReference.setToolTipText("Suggest tags for this note using AI");
+        aiAutoTagButtonReference.setToolTipText("AI gợi ý tag cho ghi chú này (Ctrl+I)");
         aiAutoTagButtonReference.addActionListener(e -> handleAiAutoTagAction());
-        buttonPanel.add(aiAutoTagButtonReference);
+        gbc.gridx = gridx++; buttonPanel.add(aiAutoTagButtonReference, gbc);
 
-        alarmButtonReference = new JButton(ADD_ALARM_LABEL); // Text sẽ được cập nhật
-        alarmButtonReference.setToolTipText("Set or edit the alarm for this note (Ctrl+G)");
+        alarmButtonReference = new JButton(ADD_ALARM_LABEL);
+        alarmButtonReference.setToolTipText("Đặt hoặc sửa báo thức cho ghi chú (Ctrl+G)");
         alarmButtonReference.addActionListener(e -> handleSetAlarmAction());
-        buttonPanel.add(alarmButtonReference);
+        gbc.gridx = gridx++; buttonPanel.add(alarmButtonReference, gbc);
 
-        missionButtonReference = new JButton(SET_MISSION_LABEL); // Text sẽ được cập nhật
-        missionButtonReference.setToolTipText("Set or edit the mission for this note (Ctrl+M)");
+        missionButtonReference = new JButton(SET_MISSION_LABEL);
+        missionButtonReference.setToolTipText("Đặt hoặc sửa nhiệm vụ cho ghi chú (Ctrl+M)");
         missionButtonReference.addActionListener(e -> handleEditMissionAction());
-        buttonPanel.add(missionButtonReference);
+        gbc.gridx = gridx++; buttonPanel.add(missionButtonReference, gbc);
 
         translateButtonReference = new JButton(TRANSLATE_LABEL);
-        translateButtonReference.setToolTipText("Translate the note content (Ctrl+D)");
+        translateButtonReference.setToolTipText("Dịch nội dung ghi chú (Ctrl+D)");
         translateButtonReference.addActionListener(e -> handleTranslateAction());
-        buttonPanel.add(translateButtonReference);
+        gbc.gridx = gridx++; buttonPanel.add(translateButtonReference, gbc);
 
         summaryButtonReference = new JButton(SUMMARY_LABEL);
-        summaryButtonReference.setToolTipText("Summarize the note content (Ctrl+U)");
+        summaryButtonReference.setToolTipText("Tóm tắt nội dung ghi chú (Ctrl+U)");
         summaryButtonReference.addActionListener(e -> handleSummaryAction());
-        buttonPanel.add(summaryButtonReference);
+        gbc.gridx = gridx++; buttonPanel.add(summaryButtonReference, gbc);
+
+        // Add a flexible spacer to push the Save button to the right
+        gbc.gridx = gridx++;
+        gbc.weightx = 1.0; // This component will take up extra horizontal space
+        buttonPanel.add(Box.createHorizontalGlue(), gbc);
+        gbc.weightx = 0; // Reset weight
 
         JButton saveButton = new JButton(SAVE_LABEL);
-        saveButton.setToolTipText("Save changes (Ctrl+S)");
+        saveButton.setToolTipText("Lưu các thay đổi (Ctrl+S)");
         saveButton.addActionListener(e -> saveNote());
-        buttonPanel.add(saveButton);
+        gbc.gridx = gridx++;
+        gbc.anchor = GridBagConstraints.EAST; // Anchor save button to the right
+        buttonPanel.add(saveButton, gbc);
 
         return buttonPanel;
     }
 
     private void handleAddTagAction() {
         if (note == null) {
-            JOptionPane.showMessageDialog(mainFrame, "Cannot add tag: Note is not loaded.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(mainFrame, "Không thể thêm tag: Ghi chú chưa được tải.", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if (note.getId() <= 0) { // Giả sử ID > 0 nghĩa là note đã được lưu
-            JOptionPane.showMessageDialog(mainFrame, "Please save the note first to add tags.", "Note not saved", JOptionPane.WARNING_MESSAGE);
+        if (note.getId() <= 0) {
+            JOptionPane.showMessageDialog(mainFrame, "Vui lòng lưu ghi chú trước khi thêm tag.", "Ghi chú chưa được lưu", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        String tagName = JOptionPane.showInputDialog(mainFrame, "Enter tag name:", "Add Tag", JOptionPane.PLAIN_MESSAGE);
+        String tagName = JOptionPane.showInputDialog(mainFrame, "Nhập tên tag:", "Thêm Tag", JOptionPane.PLAIN_MESSAGE);
         if (tagName != null && !tagName.trim().isEmpty()) {
             boolean tagExistsInNote = note.getTags().stream()
                     .anyMatch(t -> t.getName().equalsIgnoreCase(tagName.trim()));
             if (tagExistsInNote) {
-                JOptionPane.showMessageDialog(mainFrame, "Tag '" + tagName.trim() + "' is already on this note.", "Tag Exists", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(mainFrame, "Tag '" + tagName.trim() + "' đã có trong ghi chú này.", "Tag Đã Tồn Tại", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
             controller.addTag(note, new Tag(tagName.trim()));
@@ -268,8 +298,8 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private void handleAiAutoTagAction() {
-        if (note == null) {
-            JOptionPane.showMessageDialog(mainFrame, "Please save the note first to use AI Auto Tag.", "Note not saved", JOptionPane.WARNING_MESSAGE);
+        if (note == null || note.getId() <= 0) { // Check if note is saved
+            JOptionPane.showMessageDialog(mainFrame, "Vui lòng lưu ghi chú trước khi sử dụng AI Auto Tag.", "Ghi chú chưa được lưu", JOptionPane.WARNING_MESSAGE);
             return;
         }
         String contentToAnalyze = contentField.getText();
@@ -293,18 +323,22 @@ public class NoteEditorScreen extends JPanel {
                         for (String tagName : tagNames) {
                             String trimmedTagName = tagName.trim();
                             if (!trimmedTagName.isEmpty()) {
-                                controller.addTag(note, new Tag(trimmedTagName)); // Controller nên xử lý trùng lặp nếu cần
-                                tagsAddedCount++;
+                                // Check if tag already exists on the note before adding
+                                boolean tagExists = note.getTags().stream().anyMatch(t -> t.getName().equalsIgnoreCase(trimmedTagName));
+                                if (!tagExists) {
+                                    controller.addTag(note, new Tag(trimmedTagName));
+                                    tagsAddedCount++;
+                                }
                             }
                         }
                         updateTagDisplay();
                         if (tagsAddedCount > 0) {
-                            JOptionPane.showMessageDialog(mainFrame, tagsAddedCount + " AI tag(s) added successfully!", "AI Auto Tag Success", JOptionPane.INFORMATION_MESSAGE);
+                            JOptionPane.showMessageDialog(mainFrame, tagsAddedCount + " AI tag(s) đã được thêm!", "AI Auto Tag Thành Công", JOptionPane.INFORMATION_MESSAGE);
                         } else {
-                            JOptionPane.showMessageDialog(mainFrame, "AI did not suggest any new tags or tags were empty.", "AI Auto Tag", JOptionPane.INFORMATION_MESSAGE);
+                            JOptionPane.showMessageDialog(mainFrame, "AI không gợi ý tag mới hoặc các tag đã tồn tại.", "AI Auto Tag", JOptionPane.INFORMATION_MESSAGE);
                         }
                     } else {
-                        JOptionPane.showMessageDialog(mainFrame, "AI did not suggest any tags.", "AI Auto Tag", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(mainFrame, "AI không gợi ý tag nào.", "AI Auto Tag", JOptionPane.INFORMATION_MESSAGE);
                     }
                 });
             }
@@ -323,55 +357,41 @@ public class NoteEditorScreen extends JPanel {
 
     private void handleSetAlarmAction() {
         if (note == null) {
-            JOptionPane.showMessageDialog(mainFrame, "Cannot set alarm: Note is not loaded.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(mainFrame, "Không thể đặt báo thức: Ghi chú chưa được tải.", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (note.getId() <= 0) {
-            JOptionPane.showMessageDialog(mainFrame, "Please save the note first to set an alarm.", "Note not saved", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(mainFrame, "Vui lòng lưu ghi chú trước khi đặt báo thức.", "Ghi chú chưa được lưu", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        AlarmDialog alarmDialog = new AlarmDialog(mainFrame);
-        // Nếu Note đã có Alarm, truyền vào Dialog để chỉnh sửa
-        if (note.getAlarm() != null && note.getAlarm().getId() > 0) {
-            alarmDialog.setAlarmToEdit(note.getAlarm()); // Giả sử AlarmDialog có phương thức này
-        }
-
+        AlarmDialog alarmDialog = new AlarmDialog(mainFrame, note.getAlarm()); // Pass current alarm
         alarmDialog.setVisible(true);
-        Alarm resultAlarm = alarmDialog.getResult(); // `getResult` có thể trả về null nếu cancel
 
-        if (alarmDialog.isOkPressed() && resultAlarm != null) { // isOkPressed là cờ tự thêm trong Dialog
-            // Nếu note đã có alarm (ID > 0) và resultAlarm từ dialog là mới (ID = 0),
-            // thì đây là trường hợp edit, ta nên giữ ID cũ.
-            if (note.getAlarm() != null && note.getAlarm().getId() > 0 && resultAlarm.getId() == 0) {
-                resultAlarm.setId(note.getAlarm().getId());
-            }
-            controller.setAlarm(note, resultAlarm); // Controller sẽ xử lý add mới hoặc update
-        } else if (alarmDialog.isOkPressed() && resultAlarm == null) { // Người dùng có thể đã chọn xóa alarm trong dialog
-            controller.setAlarm(note, null); // Yêu cầu controller xóa alarm
+        if (alarmDialog.isOkPressed()) {
+            Alarm resultAlarm = alarmDialog.getResult();
+            controller.setAlarm(note, resultAlarm); // Controller handles if resultAlarm is null (delete) or new/updated
         }
-        // Nếu người dùng bấm Cancel (isOkPressed = false), không làm gì cả.
-        updateDynamicButtonTexts(); // Cập nhật text nút
+        updateDynamicButtonTexts();
     }
 
     private void handleEditMissionAction() {
         if (note == null) {
-            JOptionPane.showMessageDialog(mainFrame, "Cannot edit mission: Note is not loaded.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(mainFrame, "Không thể sửa nhiệm vụ: Ghi chú chưa được tải.", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (note.getId() <= 0) {
-            JOptionPane.showMessageDialog(mainFrame, "Please save the note first to edit its mission.", "Note not saved", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(mainFrame, "Vui lòng lưu ghi chú trước khi sửa nhiệm vụ.", "Ghi chú chưa được lưu", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        MissionDialog missionDialog = new MissionDialog(mainFrame); // Giả sử MissionDialog tồn tại
-        missionDialog.setMission(note.getMissionContent()); // Truyền mission hiện tại (nếu có)
+        MissionDialog missionDialog = new MissionDialog(mainFrame);
+        missionDialog.setMission(note.getMissionContent());
         missionDialog.setVisible(true);
-        String resultMissionContent = missionDialog.getResult(); // Có thể trả về null nếu cancel
 
-        // Kiểm tra xem người dùng có bấm Save trong dialog không (thường dialog sẽ có cờ báo)
-        if (missionDialog.isSaved() && resultMissionContent != null) { // isSaved() là cờ bạn tự thêm vào MissionDialog
-            controller.updateMission(note, resultMissionContent);
+        if (missionDialog.isSaved()) {
+            String resultMissionContent = missionDialog.getResult();
+            controller.updateMission(note, resultMissionContent); // Controller handles null or empty content
         }
         updateDynamicButtonTexts();
     }
@@ -382,7 +402,6 @@ public class NoteEditorScreen extends JPanel {
             JOptionPane.showMessageDialog(mainFrame, "Không có nội dung để dịch.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-        // Danh sách ngôn ngữ mở rộng từ V2
         String[] languages = {
                 "Vietnamese", "English", "French", "Spanish", "German",
                 "Japanese", "Chinese", "Korean", "Hindi", "Arabic",
@@ -392,7 +411,7 @@ public class NoteEditorScreen extends JPanel {
                 "Javanese", "Telugu", "Marathi", "Tamil"
         };
         String targetLanguage = (String) JOptionPane.showInputDialog(mainFrame, "Chọn ngôn ngữ đích:", "Dịch ngôn ngữ",
-                JOptionPane.PLAIN_MESSAGE, null, languages, languages[1]); // Mặc định là English
+                JOptionPane.PLAIN_MESSAGE, null, languages, languages[1]);
 
         if (targetLanguage != null) {
             translateButtonReference.setEnabled(false);
@@ -451,21 +470,13 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private void showResultDialog(String title, String textContent) {
-        JTextArea resultArea = new JTextArea(textContent);
-        resultArea.setWrapStyleWord(true);
-        resultArea.setLineWrap(true);
-        resultArea.setEditable(false);
-        resultArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        resultArea.setBackground(this.getBackground()); // Hoặc một màu nền phù hợp
-        JScrollPane scrollPane = new JScrollPane(resultArea);
-        scrollPane.setPreferredSize(new Dimension(500, 300));
-
-        JOptionPane.showMessageDialog(mainFrame, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
+        // Now uses the new StyledResultDialog
+        StyledResultDialog.showDialog(mainFrame, title, textContent);
     }
 
     private void saveNote() {
         String newTitle = titleField.getText().trim();
-        String newContent = contentField.getText(); // Không trim content để giữ định dạng
+        String newContent = contentField.getText();
 
         if (newTitle.isEmpty()) {
             JOptionPane.showMessageDialog(mainFrame, "Tiêu đề không được để trống!", "Lỗi Nhập Liệu", JOptionPane.ERROR_MESSAGE);
@@ -475,37 +486,28 @@ public class NoteEditorScreen extends JPanel {
 
         this.note.setTitle(newTitle);
         this.note.setContent(newContent);
-        // Giả sử Note.setTitle và Note.setContent tự động gọi this.note.updateModificationDate();
+        this.note.updateUpdatedAt(); // Ensure modification date is updated
 
         try {
-            if (this.note.getId() > 0) { // Note đã tồn tại (có ID) -> Update
+            if (this.note.getId() > 0) {
                 controller.updateExistingNote(this.note.getId(), this.note);
-            } else { // Note mới -> Add
-                // Gán folderId nếu chưa có (logic từ V2)
-                if (this.note.getFolderId() <= 0) {
-                    Folder currentSelectedFolder = controller.getCurrentFolder(); // Giả sử controller có getCurrentFolder()
-                    if (currentSelectedFolder != null && currentSelectedFolder.getId() > 0) {
-                        this.note.setFolderId(currentSelectedFolder.getId());
-                        // this.note.setFolder(currentSelectedFolder); // Nếu cần tham chiếu object
+            } else {
+                if (this.note.getFolderId() <= 0 && controller.getCurrentFolder() != null) {
+                    this.note.setFolder(controller.getCurrentFolder()); // This will also set folderId
+                } else if (this.note.getFolderId() <= 0) {
+                    Folder rootFolder = controller.getFolderByName("Root").orElse(null);
+                    if (rootFolder != null) {
+                        this.note.setFolder(rootFolder);
                     } else {
-                        // Mặc định vào Root hoặc folder đầu tiên nếu không có folder nào được chọn
-                        Folder rootFolder = controller.getFolderByName("Root").orElse(null); // Giả sử có getFolderByName
-                        if (rootFolder != null && rootFolder.getId() > 0) {
-                            this.note.setFolderId(rootFolder.getId());
-                        } else {
-                            // Xử lý trường hợp không tìm thấy Root folder (quan trọng)
-                            JOptionPane.showMessageDialog(mainFrame, "Không thể xác định thư mục mặc định. Vui lòng tạo thư mục 'Root' hoặc chọn một thư mục.", "Lỗi Lưu", JOptionPane.ERROR_MESSAGE);
-                            return;
-                        }
+                        JOptionPane.showMessageDialog(mainFrame, "Không thể xác định thư mục. Vui lòng tạo thư mục 'Root'.", "Lỗi Lưu", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
                 }
-                controller.addNote(this.note); // Controller sẽ xử lý việc lưu note mới và các object liên quan (như Alarm mới)
+                controller.addNote(this.note);
             }
-            // Sau khi lưu thành công (controller nên thông báo), quay về màn hình chính
             mainFrame.showMainMenuScreen();
         } catch (Exception e) {
             e.printStackTrace();
-            // Controller nên đã hiển thị lỗi chi tiết hơn, hoặc bạn có thể hiển thị lỗi chung ở đây
             JOptionPane.showMessageDialog(mainFrame, "Đã xảy ra lỗi khi lưu note: " + e.getMessage(), "Lỗi Lưu Note", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -514,78 +516,58 @@ public class NoteEditorScreen extends JPanel {
         InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap actionMap = getActionMap();
 
-        // Save Note
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK), "saveNoteShortcut");
         actionMap.put("saveNoteShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) { saveNote(); }
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { saveNote(); }
         });
 
-        // Add Tag
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_T, KeyEvent.CTRL_DOWN_MASK), "addTagShortcut");
         actionMap.put("addTagShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) { handleAddTagAction(); }
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { handleAddTagAction(); }
         });
 
-        // Go Back
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "goBackShortcut");
         actionMap.put("goBackShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) { mainFrame.showMainMenuScreen(); }
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { mainFrame.showMainMenuScreen(); }
         });
 
-        // Undo
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, KeyEvent.CTRL_DOWN_MASK), "undoShortcut");
         actionMap.put("undoShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
                 if (undoManager.canUndo()) undoManager.undo();
             }
         });
 
-        // Redo
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, KeyEvent.CTRL_DOWN_MASK), "redoShortcut");
         actionMap.put("redoShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
                 if (undoManager.canRedo()) undoManager.redo();
             }
         });
 
-        // Set/Edit Alarm
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_G, KeyEvent.CTRL_DOWN_MASK), "setAlarmShortcut");
         actionMap.put("setAlarmShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) { handleSetAlarmAction(); }
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { handleSetAlarmAction(); }
         });
 
-        // Set/Edit Mission
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_M, KeyEvent.CTRL_DOWN_MASK), "missionShortcut");
         actionMap.put("missionShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) { handleEditMissionAction(); }
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { handleEditMissionAction(); }
         });
 
-        // Translate
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_D, KeyEvent.CTRL_DOWN_MASK), "translateShortcut");
         actionMap.put("translateShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) { handleTranslateAction(); }
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { handleTranslateAction(); }
         });
 
-        // Summary (Ví dụ: Ctrl+U)
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_U, KeyEvent.CTRL_DOWN_MASK), "summaryShortcut");
         actionMap.put("summaryShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) { handleSummaryAction(); }
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { handleSummaryAction(); }
         });
 
-        // AI Auto Tag (Ví dụ: Ctrl+I)
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_I, KeyEvent.CTRL_DOWN_MASK), "aiAutoTagShortcut");
         actionMap.put("aiAutoTagShortcut", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) { handleAiAutoTagAction(); }
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { handleAiAutoTagAction(); }
         });
     }
 }

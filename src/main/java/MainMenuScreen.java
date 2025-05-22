@@ -1,3 +1,4 @@
+// File: MainMenuScreen.java
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -13,12 +14,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects; // Thêm import này
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class MainMenuScreen extends JPanel {
     private static final String[] NOTE_COLUMNS = {"Title", "Favorite", "Mission", "Alarm", "Modified"};
-    private static final String FOLDERS_TITLE = "Thư mục"; // Đổi tên cho thân thiện
+    private static final String FOLDERS_TITLE = "Thư mục";
     private static final String ADD_FOLDER_LABEL = "Thêm Thư mục";
     private static final String ADD_NOTE_LABEL = "Thêm Ghi chú Chữ";
     private static final String ADD_DRAW_PANEL_LABEL = "Thêm Bản Vẽ";
@@ -34,10 +35,10 @@ public class MainMenuScreen extends JPanel {
     private JTextField titleSearchField;
     private JTextField tagSearchField;
     private JList<Folder> folderList;
-    private DefaultListModel<Folder> folderListModel; // Giữ tham chiếu đến model
+    private DefaultListModel<Folder> folderListModel;
     private List<Note> filteredNotes;
     private ImageIcon[] hourIcons;
-    private ListSelectionListener folderListSelectionHandler; // Giữ tham chiếu đến listener
+    private ListSelectionListener folderListSelectionHandler;
 
     public MainMenuScreen(NoteController controller, MainFrame mainFrame) {
         this.controller = controller;
@@ -83,8 +84,8 @@ public class MainMenuScreen extends JPanel {
     }
 
     private void initializeUI() {
-        setLayout(new BorderLayout(5, 5));
-        setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        setLayout(new BorderLayout(10, 10)); // Increased gap between main areas
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Overall padding
         add(buildFolderPanel(), BorderLayout.WEST);
         add(buildNotesPanel(), BorderLayout.CENTER);
     }
@@ -92,8 +93,11 @@ public class MainMenuScreen extends JPanel {
     private JPanel buildFolderPanel() {
         folderPanel = new JPanel();
         folderPanel.setLayout(new BoxLayout(folderPanel, BoxLayout.Y_AXIS));
-        folderPanel.setBorder(BorderFactory.createTitledBorder(FOLDERS_TITLE));
-        folderPanel.setPreferredSize(new Dimension(200, 0));
+        folderPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(FOLDERS_TITLE),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5) // Padding inside titled border
+        ));
+        folderPanel.setPreferredSize(new Dimension(220, 0)); // Slightly wider folder panel
 
         folderListModel = new DefaultListModel<>();
         folderList = new JList<>(folderListModel);
@@ -107,6 +111,8 @@ public class MainMenuScreen extends JPanel {
                     StringBuilder displayText = new StringBuilder(folder.getName());
                     if (folder.isFavorite()) displayText.append(" ★");
                     setText(displayText.toString());
+                    // Add padding to list items
+                    setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
                 }
                 return c;
             }
@@ -119,30 +125,30 @@ public class MainMenuScreen extends JPanel {
             public void mouseReleased(MouseEvent e) { if (e.isPopupTrigger()) showFolderPopupMenu(e); }
         });
 
-        // Tạo listener và lưu lại tham chiếu
         folderListSelectionHandler = e -> {
             if (!e.getValueIsAdjusting()) {
                 Folder selectedFolder = folderList.getSelectedValue();
-                // Chỉ gọi controller.selectFolder nếu selectedFolder thực sự hợp lệ
                 if (controller != null && selectedFolder != null && selectedFolder.getId() != 0) {
-                    System.out.println("[MainMenuScreen FolderListener] Đã chọn: " + selectedFolder.getName() + " (ID: " + selectedFolder.getId() + ")");
                     controller.selectFolder(selectedFolder);
                 } else if (controller != null && selectedFolder == null && !folderListModel.isEmpty()){
-                    // Nếu không có gì được chọn (ví dụ sau khi xóa), thử chọn Root
-                    System.out.println("[MainMenuScreen FolderListener] Không có thư mục nào được chọn, thử chọn Root.");
                     Folder root = controller.getFolderByName("Root").orElse(null);
                     if (root != null) controller.selectFolder(root);
-                } else if (controller != null && selectedFolder != null && selectedFolder.getId() == 0) {
-                    System.out.println("[MainMenuScreen FolderListener] Thư mục được chọn có ID 0: " + selectedFolder.getName() + ". Bỏ qua select.");
                 }
                 populateNoteTableModel();
             }
         };
         folderList.addListSelectionListener(folderListSelectionHandler);
 
-        folderPanel.add(new JScrollPane(folderList));
+        JScrollPane scrollPane = new JScrollPane(folderList);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove default border of JScrollPane if any
+        folderPanel.add(scrollPane);
+
         JButton addFolderButton = createAddFolderButton();
-        folderPanel.add(addFolderButton);
+        // Panel to hold the button and provide some margin
+        JPanel buttonHolder = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonHolder.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0)); // Top margin for the button
+        buttonHolder.add(addFolderButton);
+        folderPanel.add(buttonHolder);
 
         refreshFolderPanel();
         return folderPanel;
@@ -150,18 +156,14 @@ public class MainMenuScreen extends JPanel {
 
     public void refreshFolderPanel() {
         if (folderList == null || controller == null) return;
-        System.out.println("[MainMenuScreen refreshFolderPanel] Bắt đầu làm mới danh sách thư mục.");
 
         Folder previouslySelectedFolder = folderList.getSelectedValue();
         long previouslySelectedId = (previouslySelectedFolder != null) ? previouslySelectedFolder.getId() : 0;
         if (previouslySelectedId == 0 && previouslySelectedFolder != null && "Root".equalsIgnoreCase(previouslySelectedFolder.getName())) {
-            // Nếu folder chọn trước đó là Root (có thể là instance tạm thời), lấy ID Root thực sự
             Folder rootFromCtrl = controller.getFolderByName("Root").orElse(null);
             if (rootFromCtrl != null) previouslySelectedId = rootFromCtrl.getId();
         }
 
-
-        // Tạm thời vô hiệu hóa listener
         if (folderListSelectionHandler != null) {
             folderList.removeListSelectionListener(folderListSelectionHandler);
         }
@@ -170,14 +172,13 @@ public class MainMenuScreen extends JPanel {
         List<Folder> foldersFromController = controller.getFolders();
 
         Folder rootFolder = foldersFromController.stream()
-                .filter(f -> "Root".equalsIgnoreCase(f.getName()) && f.getId() != 0) // Đảm bảo Root có ID
+                .filter(f -> "Root".equalsIgnoreCase(f.getName()) && f.getId() != 0)
                 .findFirst().orElse(null);
 
         if (rootFolder != null) {
             folderListModel.addElement(rootFolder);
         } else {
             System.err.println("[MainMenuScreen refreshFolderPanel] Lỗi: Không tìm thấy thư mục Root hợp lệ từ controller.");
-            // Có thể tạo một Root tạm thời ở đây nếu cần, nhưng NoteManager nên đảm bảo Root luôn tồn tại
         }
 
         List<Folder> otherFolders = foldersFromController.stream()
@@ -187,14 +188,13 @@ public class MainMenuScreen extends JPanel {
                 .collect(Collectors.toList());
 
         for (Folder folder : otherFolders) {
-            if (folder.getId() != 0) { // Chỉ thêm các folder có ID hợp lệ
+            if (folder.getId() != 0) {
                 folderListModel.addElement(folder);
             } else {
                 System.err.println("[MainMenuScreen refreshFolderPanel] Cảnh báo: Bỏ qua thư mục '" + folder.getName() + "' vì không có ID hợp lệ.");
             }
         }
 
-        // Cố gắng chọn lại folder
         int selectionIndex = -1;
         if (previouslySelectedId != 0) {
             for (int i = 0; i < folderListModel.getSize(); i++) {
@@ -205,7 +205,6 @@ public class MainMenuScreen extends JPanel {
             }
         }
 
-        // Nếu không tìm thấy lựa chọn cũ, thử chọn currentFolder của controller
         if (selectionIndex == -1 && controller.getCurrentFolder() != null) {
             Folder currentCtrlFolder = controller.getCurrentFolder();
             if (currentCtrlFolder != null && currentCtrlFolder.getId() != 0) {
@@ -218,32 +217,20 @@ public class MainMenuScreen extends JPanel {
             }
         }
 
-        // Nếu vẫn không có gì được chọn và danh sách không rỗng, chọn mục đầu tiên (thường là Root)
         if (selectionIndex == -1 && !folderListModel.isEmpty()) {
             selectionIndex = 0;
         }
 
         if (selectionIndex != -1) {
             folderList.setSelectedIndex(selectionIndex);
-            // Không cần gọi controller.selectFolder() ở đây nữa,
-            // vì listener sẽ được thêm lại và xử lý khi người dùng thực sự chọn.
-            // Hoặc, nếu muốn cập nhật controller ngay:
-            // Folder newlySelected = folderListModel.getElementAt(selectionIndex);
-            // if (controller != null && newlySelected != null && newlySelected.getId() != 0) {
-            //    controller.selectFolder(newlySelected);
-            // }
         }
 
-        // Thêm lại listener
         if (folderListSelectionHandler != null) {
             folderList.addListSelectionListener(folderListSelectionHandler);
         }
-        System.out.println("[MainMenuScreen refreshFolderPanel] Hoàn tất làm mới danh sách thư mục. Mục được chọn (index): " + selectionIndex);
-        // populateNoteTableModel(); // Gọi sau khi folder đã được chọn (listener sẽ làm điều này)
+        // populateNoteTableModel(); // Listener will handle this
     }
 
-
-    // ... (showFolderPopupMenu, createAddFolderButton, buildNotesPanel, createNoteTable, showAlarmDialog, createNoteControlPanel, addSearchFieldListener, populateNoteTableModel, handleNoteDoubleClick, showNotePopup, handleNoteDeletion, refresh, setupShortcuts giữ nguyên như phiên bản trước)
     private void showFolderPopupMenu(MouseEvent e) {
         int index = folderList.locationToIndex(e.getPoint());
         if (index < 0) return;
@@ -251,14 +238,14 @@ public class MainMenuScreen extends JPanel {
         folderList.setSelectedIndex(index);
         Folder folder = folderList.getSelectedValue();
 
-        if (folder != null && !"Root".equalsIgnoreCase(folder.getName()) && folder.getId() != 0) { // Thêm kiểm tra folder.getId() != 0
+        if (folder != null && !"Root".equalsIgnoreCase(folder.getName()) && folder.getId() != 0) {
             JPopupMenu popup = new JPopupMenu();
             JMenuItem renameItem = new JMenuItem("Đổi tên");
             renameItem.addActionListener(ev -> {
                 String newName = JOptionPane.showInputDialog(mainFrame, "Nhập tên thư mục mới:", folder.getName());
                 if (newName != null && !newName.trim().isEmpty() && controller != null) {
                     controller.renameFolder(folder, newName.trim());
-                    refreshFolderPanel(); // Làm mới để cập nhật tên
+                    refreshFolderPanel();
                 }
             });
             popup.add(renameItem);
@@ -267,7 +254,7 @@ public class MainMenuScreen extends JPanel {
             favoriteItem.addActionListener(ev -> {
                 if (controller != null) {
                     controller.setFolderFavorite(folder, !folder.isFavorite());
-                    refreshFolderPanel(); // Làm mới để cập nhật trạng thái sao
+                    refreshFolderPanel();
                 }
             });
             popup.add(favoriteItem);
@@ -275,9 +262,9 @@ public class MainMenuScreen extends JPanel {
             JMenuItem deleteItem = new JMenuItem("Xóa");
             deleteItem.addActionListener(ev -> {
                 if (controller != null) {
-                    controller.deleteFolder(folder); // Controller sẽ xử lý logic xóa và di chuyển notes
-                    refreshFolderPanel();      // Làm mới danh sách folder
-                    populateNoteTableModel();  // Làm mới danh sách note (vì currentFolder có thể đã thay đổi)
+                    controller.deleteFolder(folder);
+                    refreshFolderPanel();
+                    populateNoteTableModel();
                 }
             });
             popup.add(deleteItem);
@@ -288,6 +275,7 @@ public class MainMenuScreen extends JPanel {
 
     private JButton createAddFolderButton() {
         JButton addFolderButton = new JButton(ADD_FOLDER_LABEL);
+        addFolderButton.setToolTipText("Thêm một thư mục mới (Ctrl+F)");
         addFolderButton.addActionListener(e -> {
             String name = JOptionPane.showInputDialog(mainFrame, "Nhập tên thư mục:");
             if (name != null && !name.trim().isEmpty() && controller != null) {
@@ -298,12 +286,16 @@ public class MainMenuScreen extends JPanel {
         return addFolderButton;
     }
 
-
     private JPanel buildNotesPanel() {
-        JPanel notesPanel = new JPanel(new BorderLayout(5, 5));
-        notesPanel.setBorder(BorderFactory.createTitledBorder("Ghi chú & Bản vẽ"));
+        JPanel notesPanel = new JPanel(new BorderLayout(5, 10)); // Increased vgap
+        notesPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Ghi chú & Bản vẽ"),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5) // Padding inside titled border
+        ));
         noteTable = createNoteTable();
-        notesPanel.add(new JScrollPane(noteTable), BorderLayout.CENTER);
+        JScrollPane tableScrollPane = new JScrollPane(noteTable);
+        tableScrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove default border of JScrollPane
+        notesPanel.add(tableScrollPane, BorderLayout.CENTER);
         notesPanel.add(createNoteControlPanel(), BorderLayout.NORTH);
         populateNoteTableModel();
         return notesPanel;
@@ -314,31 +306,40 @@ public class MainMenuScreen extends JPanel {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         noteTable = new JTable(model);
-        noteTable.setRowHeight(25);
+        noteTable.setRowHeight(28); // Slightly taller rows for better touch targets and readability
         noteTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-        noteTable.getColumnModel().getColumn(0).setPreferredWidth(250);
-        noteTable.getColumnModel().getColumn(1).setMaxWidth(60);
-        noteTable.getColumnModel().getColumn(2).setPreferredWidth(300);
-        noteTable.getColumnModel().getColumn(3).setMaxWidth(60);
-        noteTable.getColumnModel().getColumn(4).setPreferredWidth(150);
+        noteTable.setFillsViewportHeight(true); // Table uses entire height of scroll pane
+        noteTable.setIntercellSpacing(new Dimension(5, 2)); // Spacing between cells
+
+        // Column widths
+        noteTable.getColumnModel().getColumn(0).setPreferredWidth(250); // Title
+        noteTable.getColumnModel().getColumn(1).setMaxWidth(70);      // Favorite
+        noteTable.getColumnModel().getColumn(1).setMinWidth(60);
+        noteTable.getColumnModel().getColumn(2).setPreferredWidth(300); // Mission
+        noteTable.getColumnModel().getColumn(3).setMaxWidth(70);      // Alarm
+        noteTable.getColumnModel().getColumn(3).setMinWidth(60);
+        noteTable.getColumnModel().getColumn(4).setPreferredWidth(150); // Modified
         noteTable.getColumnModel().getColumn(4).setMinWidth(130);
+
 
         DefaultTableCellRenderer titleRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                // Giá trị 'value' giờ đây là đối tượng Note
                 super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (value instanceof Note) { // Kiểm tra kiểu để an toàn
+                if (value instanceof Note) {
                     Note note = (Note) value;
                     String titleText = note.getTitle();
                     if (note.getNoteType() == Note.NoteType.DRAWING) {
-                        titleText += " (DP)";
+                        titleText = "🎨 " + titleText; // Icon for drawing
+                    } else {
+                        titleText = "📄 " + titleText; // Icon for text note
                     }
                     setText(titleText);
                 } else {
                     setText(value != null ? value.toString() : "");
                 }
                 setHorizontalAlignment(JLabel.LEFT);
+                setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5)); // Padding in title cell
                 return this;
             }
         };
@@ -346,13 +347,14 @@ public class MainMenuScreen extends JPanel {
 
         DefaultTableCellRenderer centerRendererAll = new DefaultTableCellRenderer();
         centerRendererAll.setHorizontalAlignment(JLabel.CENTER);
-        for (int i = 1; i < noteTable.getColumnModel().getColumnCount(); i++) {
-            if (i != 2) {
-                noteTable.getColumnModel().getColumn(i).setCellRenderer(centerRendererAll);
-            }
-        }
+        noteTable.getColumnModel().getColumn(1).setCellRenderer(centerRendererAll); // Favorite
+        noteTable.getColumnModel().getColumn(3).setCellRenderer(centerRendererAll); // Alarm (icon will be centered)
+        noteTable.getColumnModel().getColumn(4).setCellRenderer(centerRendererAll); // Modified
+
+
         DefaultTableCellRenderer missionRenderer = new DefaultTableCellRenderer();
         missionRenderer.setHorizontalAlignment(JLabel.LEFT);
+        missionRenderer.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5)); // Padding in mission cell
         noteTable.getColumnModel().getColumn(2).setCellRenderer(missionRenderer);
 
 
@@ -391,7 +393,6 @@ public class MainMenuScreen extends JPanel {
 
                 if (e.getClickCount() == 1 && col == 2 && selectedNote.isMission()) {
                     MissionDialog dialog = new MissionDialog(mainFrame);
-                    if(mainFrame.getMouseEventDispatcher() != null) mainFrame.getMouseEventDispatcher().addMouseMotionListenerToWindow(dialog);
                     dialog.setMission(selectedNote.getMissionContent());
                     dialog.setVisible(true);
                     if (dialog.isSaved()) {
@@ -399,7 +400,7 @@ public class MainMenuScreen extends JPanel {
                         if (controller != null) controller.updateMission(selectedNote, result);
                         populateNoteTableModel();
                     }
-                } else if (e.getClickCount() == 1 && col == 3) {
+                } else if (e.getClickCount() == 1 && col == 3) { // Click on Alarm column
                     showAlarmDialog(selectedNote);
                 }
             }
@@ -412,16 +413,10 @@ public class MainMenuScreen extends JPanel {
                     }
                 }
             }
-
             @Override
-            public void mousePressed(MouseEvent e) {
-                if (e.isPopupTrigger()) handleRightClick(e);
-            }
-
+            public void mousePressed(MouseEvent e) { if (e.isPopupTrigger()) handleRightClick(e); }
             @Override
-            public void mouseReleased(MouseEvent e) {
-                if (e.isPopupTrigger()) handleRightClick(e);
-            }
+            public void mouseReleased(MouseEvent e) { if (e.isPopupTrigger()) handleRightClick(e); }
         });
         return noteTable;
     }
@@ -431,11 +426,9 @@ public class MainMenuScreen extends JPanel {
 
         JDialog dialog = new JDialog(mainFrame, "Chi tiết Báo thức cho: " + note.getTitle(), true);
         if(mainFrame.getMouseEventDispatcher() != null) mainFrame.getMouseEventDispatcher().addMouseMotionListenerToWindow(dialog);
-        dialog.setSize(350, 350);
-        dialog.setResizable(false);
         dialog.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 10, 8, 10);
+        gbc.insets = new Insets(10, 12, 10, 12); // Increased insets
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
@@ -444,12 +437,13 @@ public class MainMenuScreen extends JPanel {
         LocalDateTime initialDateTimeToShow = (currentAlarm != null && currentAlarm.getAlarmTime() != null) ?
                 currentAlarm.getAlarmTime() :
                 LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0);
-        String initialTypeStr = (currentAlarm != null && currentAlarm.getRecurrencePattern() != null) ? currentAlarm.getRecurrencePattern().toUpperCase() : "ONCE";
+        String initialTypeStr = (currentAlarm != null && currentAlarm.isRecurring() && currentAlarm.getRecurrencePattern() != null) ?
+                currentAlarm.getRecurrencePattern().toUpperCase() : "ONCE";
         if(currentAlarm != null && !currentAlarm.isRecurring()) initialTypeStr = "ONCE";
 
 
         JLabel currentInfoLabel = new JLabel("Hiện tại: " + (currentAlarm != null ? currentAlarm.toString() : "Chưa đặt báo thức."));
-        currentInfoLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        currentInfoLabel.setFont(new Font("Segoe UI", Font.ITALIC, 13));
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         dialog.add(currentInfoLabel, gbc);
 
@@ -461,7 +455,8 @@ public class MainMenuScreen extends JPanel {
         gbc.gridx = 1;
         dialog.add(typeComboBox, gbc);
 
-        JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0)); // Reduced hgap
+        datePanel.setOpaque(false); // Make panel transparent if dialog bg is set
         JLabel dateLabelComponent = new JLabel("Ngày (yyyy-MM-dd):");
         JTextField dateField = new JTextField(10);
         dateField.setText(initialDateTimeToShow.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
@@ -470,7 +465,8 @@ public class MainMenuScreen extends JPanel {
         gbc.gridx = 0; gbc.gridy++; gbc.gridwidth = 2;
         dialog.add(datePanel, gbc);
 
-        JPanel timePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JPanel timePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        timePanel.setOpaque(false);
         timePanel.add(new JLabel("Thời gian (HH:mm):"));
         JSpinner hourSpinner = new JSpinner(new SpinnerNumberModel(initialDateTimeToShow.getHour(), 0, 23, 1));
         JSpinner minuteSpinner = new JSpinner(new SpinnerNumberModel(initialDateTimeToShow.getMinute(), 0, 59, 1));
@@ -483,11 +479,13 @@ public class MainMenuScreen extends JPanel {
         Runnable updatePanelsVisibility = () -> {
             boolean isOnce = "ONCE".equals(typeComboBox.getSelectedItem());
             datePanel.setVisible(isOnce);
+            dialog.pack(); // Repack dialog when visibility changes
         };
         typeComboBox.addActionListener(e -> updatePanelsVisibility.run());
         updatePanelsVisibility.run();
 
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8)); // Increased hgap
+        buttonsPanel.setOpaque(false);
         JButton updateButton = new JButton(existingAlarmId > 0 ? "Cập Nhật" : "Đặt Báo Thức");
         updateButton.addActionListener(e -> {
             try {
@@ -549,26 +547,62 @@ public class MainMenuScreen extends JPanel {
         buttonsPanel.add(cancelButton);
 
         gbc.gridx = 0; gbc.gridy++; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE; // Don't stretch button panel
         dialog.add(buttonsPanel, gbc);
 
         dialog.pack();
-        dialog.setMinimumSize(new Dimension(350, dialog.getHeight()));
+        dialog.setMinimumSize(new Dimension(400, dialog.getHeight())); // Ensure min width
         dialog.setLocationRelativeTo(mainFrame);
         dialog.setVisible(true);
     }
 
 
     private JPanel createNoteControlPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5); // Padding around components
+        gbc.anchor = GridBagConstraints.WEST; // Default anchor
 
+        // Add Note Button
         JButton addNoteButton = new JButton(ADD_NOTE_LABEL);
+        addNoteButton.setToolTipText("Thêm ghi chú văn bản mới (Ctrl+N)");
         addNoteButton.addActionListener(e -> mainFrame.showAddNoteScreen());
-        panel.add(addNoteButton);
+        gbc.gridx = 0; gbc.gridy = 0;
+        panel.add(addNoteButton, gbc);
 
+        // Add Draw Panel Button
         JButton addDrawPanelButton = new JButton(ADD_DRAW_PANEL_LABEL);
+        addDrawPanelButton.setToolTipText("Thêm một bản vẽ mới (Ctrl+Shift+N)");
         addDrawPanelButton.addActionListener(e -> mainFrame.showNewDrawScreen());
-        panel.add(addDrawPanelButton);
+        gbc.gridx = 1; gbc.gridy = 0;
+        panel.add(addDrawPanelButton, gbc);
 
+        // Scanner Button
+        try {
+            ImageIcon scannerIcon = new ImageIcon(getClass().getResource("/images/Clara.jpg")); // Ensure path is correct
+            Image scaledIcon = scannerIcon.getImage().getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+            JButton scannerButton = new JButton(new ImageIcon(scaledIcon));
+            scannerButton.setToolTipText("Mở công cụ Scanner");
+            scannerButton.addActionListener(e -> FloatingScannerTray.getInstance().setVisible(true));
+            gbc.gridx = 2; gbc.gridy = 0;
+            panel.add(scannerButton, gbc);
+        } catch (Exception ex) {
+            System.err.println("Không thể tải icon scanner: " + ex.getMessage());
+            // Optionally add a placeholder or text button if icon fails
+            JButton scannerFallbackButton = new JButton("Scan");
+            scannerFallbackButton.setToolTipText("Mở công cụ Scanner (icon lỗi)");
+            scannerFallbackButton.addActionListener(e -> FloatingScannerTray.getInstance().setVisible(true));
+            gbc.gridx = 2; gbc.gridy = 0;
+            panel.add(scannerFallbackButton, gbc);
+        }
+
+        // Spacer
+        gbc.gridx = 3; gbc.weightx = 0.1; // Add some weight to push subsequent items
+        panel.add(Box.createHorizontalStrut(10), gbc);
+        gbc.weightx = 0;
+
+
+        // Title Search Field
         titleSearchField = new JTextField(15);
         titleSearchField.setText(TITLE_SEARCH_PLACEHOLDER);
         titleSearchField.setForeground(Color.GRAY);
@@ -589,8 +623,10 @@ public class MainMenuScreen extends JPanel {
             }
         });
         addSearchFieldListener(titleSearchField);
-        panel.add(titleSearchField);
+        gbc.gridx = 4; gbc.gridy = 0;
+        panel.add(titleSearchField, gbc);
 
+        // Tag Search Field
         tagSearchField = new JTextField(15);
         tagSearchField.setText(TAG_SEARCH_PLACEHOLDER);
         tagSearchField.setForeground(Color.GRAY);
@@ -611,15 +647,32 @@ public class MainMenuScreen extends JPanel {
             }
         });
         addSearchFieldListener(tagSearchField);
-        panel.add(tagSearchField);
+        gbc.gridx = 5; gbc.gridy = 0;
+        panel.add(tagSearchField, gbc);
 
+        // Spacer to push stats and refresh to the right
+        gbc.gridx = 6; gbc.weightx = 1.0; // This will take up remaining space
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(Box.createHorizontalGlue(), gbc);
+        gbc.weightx = 0; // Reset weight
+        gbc.fill = GridBagConstraints.NONE;
+
+
+        // Stats Button
         JButton statsButton = new JButton(SHOW_STATS_LABEL);
+        statsButton.setToolTipText("Hiển thị thống kê ghi chú");
         statsButton.addActionListener(e -> mainFrame.openCanvasPanel());
-        panel.add(statsButton);
+        gbc.gridx = 7; gbc.gridy = 0; gbc.anchor = GridBagConstraints.EAST;
+        panel.add(statsButton, gbc);
 
+        // Refresh Button
         JButton refreshButton = new JButton(REFRESH_LABEL);
+        refreshButton.setToolTipText("Làm mới danh sách (Ctrl+R)");
         refreshButton.addActionListener(e -> refresh());
-        panel.add(refreshButton);
+            gbc.gridx = 8; gbc.gridy = 0;
+        panel.add(refreshButton, gbc);
+
+        panel.setBorder(BorderFactory.createEmptyBorder(5,0,5,0)); // Add some vertical padding to the panel itself
 
         return panel;
     }
@@ -643,9 +696,9 @@ public class MainMenuScreen extends JPanel {
         DefaultTableModel model = (DefaultTableModel) noteTable.getModel();
         model.setRowCount(0);
 
-        String titleQuery = (titleSearchField != null && !titleSearchField.getText().equals(TITLE_SEARCH_PLACEHOLDER)) ?
+        String titleQuery = (titleSearchField != null && !TITLE_SEARCH_PLACEHOLDER.equals(titleSearchField.getText())) ?
                 titleSearchField.getText().trim().toLowerCase() : "";
-        String tagQuery = (tagSearchField != null && !tagSearchField.getText().equals(TAG_SEARCH_PLACEHOLDER)) ?
+        String tagQuery = (tagSearchField != null && !TAG_SEARCH_PLACEHOLDER.equals(tagSearchField.getText())) ?
                 tagSearchField.getText().trim().toLowerCase() : "";
 
         List<Note> notesToDisplay = controller.getSortedNotes();
@@ -671,7 +724,7 @@ public class MainMenuScreen extends JPanel {
                     }
                 }
                 model.addRow(new Object[]{
-                        note,
+                        note, // Pass the whole Note object to the renderer
                         note.isFavorite() ? "★" : "",
                         missionDisplay,
                         alarmValue,
@@ -732,7 +785,7 @@ public class MainMenuScreen extends JPanel {
             popup.add(missionItemOriginal);
         }
 
-        JMenuItem alarmItem = new JMenuItem("Đặt Báo thức");
+        JMenuItem alarmItem = new JMenuItem("Đặt/Sửa Báo thức");
         alarmItem.addActionListener(ev -> {
             showAlarmDialog(note);
         });
@@ -743,18 +796,20 @@ public class MainMenuScreen extends JPanel {
             List<Folder> allFolders = controller.getFolders();
             Folder currentNoteFolder = note.getFolder();
 
-            final Folder finalCurrentNoteFolder = currentNoteFolder;
+            // Filter out the current folder from the list of target folders
+            final Folder finalCurrentNoteFolder = currentNoteFolder; // Effective final for lambda
             List<Folder> targetFolders = allFolders.stream()
                     .filter(f -> finalCurrentNoteFolder == null || f.getId() != finalCurrentNoteFolder.getId())
-                    .filter(f -> !"Root".equalsIgnoreCase(f.getName()) || (finalCurrentNoteFolder != null && !"Root".equalsIgnoreCase(finalCurrentNoteFolder.getName())))
                     .collect(Collectors.toList());
 
-            if (finalCurrentNoteFolder != null && !"Root".equalsIgnoreCase(finalCurrentNoteFolder.getName())) {
-                Folder rootF = controller.getFolderByName("Root").orElse(null);
-                if (rootF != null && !targetFolders.stream().anyMatch(tf -> tf.getId() == rootF.getId())) {
-                    targetFolders.add(0, rootF);
+            // If the note is not in "Root" and "Root" is not its current folder, add "Root" as a move option
+            Folder rootFolder = controller.getFolderByName("Root").orElse(null);
+            if (rootFolder != null && (finalCurrentNoteFolder == null || finalCurrentNoteFolder.getId() != rootFolder.getId())) {
+                if (!targetFolders.stream().anyMatch(tf -> tf.getId() == rootFolder.getId())) {
+                    targetFolders.add(0, rootFolder); // Add Root to the beginning
                 }
             }
+
 
             if (targetFolders.isEmpty()) {
                 JOptionPane.showMessageDialog(mainFrame, "Không có thư mục khác để di chuyển đến.", "Di Chuyển Ghi Chú", JOptionPane.INFORMATION_MESSAGE);
@@ -775,7 +830,7 @@ public class MainMenuScreen extends JPanel {
                 Folder selectedFolder = (Folder) folderCombo.getSelectedItem();
                 if (selectedFolder != null) {
                     controller.moveNoteToFolder(note, selectedFolder);
-                    populateNoteTableModel();
+                    populateNoteTableModel(); // Refresh notes as current folder's content might change
                 }
             }
         });
@@ -804,8 +859,8 @@ public class MainMenuScreen extends JPanel {
             return;
         }
         System.out.println("MainMenuScreen: Refreshing...");
-        refreshFolderPanel(); // Làm mới folder trước
-        populateNoteTableModel(); // Sau đó làm mới note dựa trên folder đã chọn (hoặc mặc định)
+        refreshFolderPanel();
+        populateNoteTableModel();
     }
 
     private void setupShortcuts() {
@@ -851,4 +906,3 @@ public class MainMenuScreen extends JPanel {
         });
     }
 }
-

@@ -270,7 +270,7 @@ public class NoteController {
             }
 
             noteService.createNewNote(note);
-            JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được thêm.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+            //JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được thêm.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi thêm ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -284,7 +284,6 @@ public class NoteController {
         }
         try {
             noteService.deleteExistingNote(note.getId());
-            JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được xóa.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi xóa ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -306,7 +305,7 @@ public class NoteController {
 
         try {
             noteService.updateExistingNote(note);
-            JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được cập nhật.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+            //JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được cập nhật.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi cập nhật ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -364,7 +363,7 @@ public class NoteController {
             note.addTag(managedTag);
             note.updateUpdatedAt();
             noteService.updateExistingNote(note);
-            JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + managedTag.getName() + "' đã được thêm vào ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+            //JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + managedTag.getName() + "' đã được thêm vào ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi thêm tag vào ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -381,7 +380,7 @@ public class NoteController {
             note.updateUpdatedAt();
             try {
                 noteService.updateExistingNote(note);
-                JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + tagToRemove.getName() + "' đã được xóa khỏi ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+                //JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + tagToRemove.getName() + "' đã được xóa khỏi ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {
                 note.addTag(tagToRemove);
                 e.printStackTrace();
@@ -554,5 +553,21 @@ public class NoteController {
         }
         System.err.println("Warning: updateExistingNote did not find a note with ID: " + id);
 
+    }
+
+    public void updateNote(Note note) { // Phương thức mới hoặc sửa tên từ updateExistingNote(long, Note)
+        if (note == null || note.getId() == 0) {
+            JOptionPane.showMessageDialog(mainFrameInstance, "Không thể cập nhật ghi chú không hợp lệ hoặc chưa được lưu.", "Lỗi Thao Tác", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        // Không cần set title, content ở đây vì Note object đã được cập nhật từ DrawScreen
+        note.updateUpdatedAt();
+        try {
+            noteService.updateExistingNote(note); // Gọi service với object Note đã cập nhật
+            JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được cập nhật.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi cập nhật ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }

@@ -1,81 +1,92 @@
+// File: TagDialog.java
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
-/**
- * Dialog for adding or editing a tag.
- */
 public class TagDialog extends JDialog {
     private Tag result;
     private JTextField tagField;
 
-    static {
-        try {
-            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-        } catch (Exception e) {
-            System.err.println("Failed to set Nimbus Look and Feel: " + e.getMessage());
+    // Removed static UIManager block, theme should be handled by ThemeManager
+
+    public TagDialog(Frame owner) {
+        super(owner, "Thêm Tag Mới", true); // Title can be more dynamic if used for editing too
+        initializeUI();
+    }
+
+    // Optional: Constructor for editing an existing tag
+    public TagDialog(Frame owner, Tag tagToEdit) {
+        super(owner, "Sửa Tag", true);
+        initializeUI();
+        if (tagToEdit != null) {
+            tagField.setText(tagToEdit.getName());
         }
     }
 
-    /**
-     * Constructs a TagDialog.
-     * @param owner The parent frame.
-     */
-    public TagDialog(Frame owner) {
-        super(owner, "Add Tag", true);
-        setLayout(new GridBagLayout());
-        setSize(350, 200);
-        setMinimumSize(new Dimension(300, 150));
-        setLocationRelativeTo(owner);
+    private void initializeUI() {
+        setLayout(new BorderLayout(10,10)); // Main layout with gaps
+        getRootPane().setBorder(new EmptyBorder(15, 15, 15, 15)); // Padding for the dialog
+        // setSize(350, 180); // Let pack() determine size initially
+        // setMinimumSize(new Dimension(300, 160)); // Set minimum after packing
 
+        JPanel contentPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(15, 15, 15, 15);
+        gbc.insets = new Insets(5, 5, 5, 5); // Padding around components
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
 
-        JLabel tagLabel = new JLabel("Tag Name:");
-        tagLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JLabel tagLabel = new JLabel("Tên Tag:");
+        tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14)); // Consistent font
         gbc.gridx = 0;
         gbc.gridy = 0;
-        add(tagLabel, gbc);
+        gbc.weightx = 0; // Label doesn't expand
+        contentPanel.add(tagLabel, gbc);
 
-        tagField = new JTextField(15);
+        tagField = new JTextField(20); // Increased preferred columns
         tagField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         gbc.gridx = 1;
         gbc.gridy = 0;
-        add(tagField, gbc);
+        gbc.weightx = 1; // Field expands
+        contentPanel.add(tagField, gbc);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton okButton = new JButton("✅ OK");
-        okButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        JButton cancelButton = new JButton("❌ Cancel");
-        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        add(contentPanel, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        // buttonPanel.setBorder(new EmptyBorder(10,0,0,0)); // Top padding for buttons
+        JButton okButton = new JButton("OK");
+        okButton.setFont(new Font("Segoe UI", Font.BOLD, 13)); // Consistent font
+        JButton cancelButton = new JButton("Hủy");
+        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
 
         okButton.addActionListener(e -> {
             String tagName = tagField.getText().trim();
             if (!tagName.isEmpty()) {
+                // If editing, result should be the existing tag with updated name
+                // For simplicity, this dialog currently only creates new Tag objects.
+                // If editing is needed, the logic to update an existing Tag object would be here.
                 result = new Tag(tagName);
                 dispose();
             } else {
-                JOptionPane.showMessageDialog(this, "Tag name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Tên tag không được để trống.", "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        cancelButton.addActionListener(e -> dispose());
+        cancelButton.addActionListener(e -> {
+            result = null; // Ensure result is null on cancel
+            dispose();
+        });
 
         buttonPanel.add(okButton);
         buttonPanel.add(cancelButton);
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 2;
-        add(buttonPanel, gbc);
+        add(buttonPanel, BorderLayout.SOUTH);
 
         getRootPane().setDefaultButton(okButton);
+
+        pack(); // Pack after all components are added
+        setMinimumSize(new Dimension(300, getHeight())); // Set minimum width, height from pack
+        setLocationRelativeTo(getOwner()); // Center after packing
     }
 
-    /**
-     * Gets the created or edited tag.
-     * @return The Tag object, or null if cancelled.
-     */
     public Tag getResult() {
         return result;
     }

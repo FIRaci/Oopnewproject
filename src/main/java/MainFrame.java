@@ -48,7 +48,7 @@ public class MainFrame extends JFrame {
 
     private void initializeUI() {
         System.out.println("[MainFrame initializeUI] Bắt đầu. Controller hiện tại: " + (this.controller == null ? "NULL" : "KHÔNG NULL"));
-        setTitle("XiNoClo - Note App");
+        setTitle("XiNoClo");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override
