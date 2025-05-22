@@ -5,7 +5,7 @@
       "title": "Báo cáo tuần",
       "content": "Hoàn thành báo cáo công việc tuần này. Không có cái báo cáo nào cả",
       "createdAt": "2025-05-21T18:03:54.7457148",
-      "updatedAt": "2025-05-22T11:39:18.9915791",
+      "updatedAt": "2025-05-22T12:41:04.6399899",
       "isFavorite": false,
       "isMission": false,
       "isMissionCompleted": false,
@@ -28,7 +28,7 @@
       "title": "Mua sắm cuối tuần",
       "content": "�?i siêu thị mua đồ dùng cá nhân.",
       "createdAt": "2025-05-21T18:03:54.7497141",
-      "updatedAt": "2025-05-22T11:44:15.7159694",
+      "updatedAt": "2025-05-22T12:41:04.6399899",
       "isFavorite": true,
       "isMission": true,
       "isMissionCompleted": true,
@@ -47,7 +47,7 @@
       "title": "Học Java Swing",
       "content": "Ôn tập các khái niệm và LayoutManager và Event Handling.",
       "createdAt": "2025-05-21T18:03:54.7512222",
-      "updatedAt": "2025-05-22T11:43:40.2751849",
+      "updatedAt": "2025-05-22T12:43:00.8852821",
       "isFavorite": false,
       "isMission": true,
       "isMissionCompleted": false,
@@ -55,12 +55,16 @@
       "folderId": 4,
       "tags": [
         {
-          "id": 1,
-          "name": "project"
+          "id": 4,
+          "name": "layout-manager"
         },
         {
-          "id": 3,
-          "name": "idea"
+          "id": 5,
+          "name": "event-handling"
+        },
+        {
+          "id": 6,
+          "name": "practice-exercises"
         }
       ],
       "alarm": {
@@ -76,7 +80,7 @@
       "title": "Đọc sách",
       "content": "Đọc 1 chương sách \u0027Clean Code\u0027",
       "createdAt": "2025-05-21T18:03:54.7522348",
-      "updatedAt": "2025-05-22T11:39:12.7493156",
+      "updatedAt": "2025-05-22T12:41:04.6399899",
       "isFavorite": false,
       "isMission": true,
       "isMissionCompleted": false,
@@ -89,7 +93,7 @@
       "id": 5,
       "title": "Bản vẽ không tên 5234",
       "createdAt": "2025-05-21T18:28:15.23431",
-      "updatedAt": "2025-05-22T11:39:12.7493156",
+      "updatedAt": "2025-05-22T12:41:04.6399899",
       "isFavorite": false,
       "isMission": false,
       "isMissionCompleted": false,
@@ -103,7 +107,7 @@
       "id": 6,
       "title": "Bản vẽ 5522",
       "createdAt": "2025-05-22T11:41:05.5228943",
-      "updatedAt": "2025-05-22T11:43:14.3690478",
+      "updatedAt": "2025-05-22T12:41:04.6399899",
       "isFavorite": false,
       "isMission": false,
       "isMissionCompleted": false,
@@ -148,6 +152,18 @@
     {
       "id": 3,
       "name": "idea"
+    },
+    {
+      "id": 4,
+      "name": "layout-manager"
+    },
+    {
+      "id": 5,
+      "name": "event-handling"
+    },
+    {
+      "id": 6,
+      "name": "practice-exercises"
     }
   ]
 }
