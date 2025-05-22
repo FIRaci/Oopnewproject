@@ -270,7 +270,7 @@ public class NoteController {
             }
 
             noteService.createNewNote(note);
-            JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được thêm.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+            //JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được thêm.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi thêm ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -306,7 +306,7 @@ public class NoteController {
 
         try {
             noteService.updateExistingNote(note);
-            JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được cập nhật.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+            //JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được cập nhật.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi cập nhật ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);

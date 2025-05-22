@@ -238,32 +238,20 @@ public class DrawScreen extends JPanel {
         try {
             String base64Image = drawingPanel.getImageAsBase64("png");
             if (base64Image == null || base64Image.isEmpty()) {
-                // Check if the panel is truly empty or just appears so due to background color
-                if (drawingPanel.isEffectivelyEmpty()) {
-                    JOptionPane.showMessageDialog(this, "Không có gì để lưu (bản vẽ trống).", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-                    return;
-                }
-                // If not effectively empty, it means something was drawn (even if it's white on white)
-                // Still, it's unusual, so maybe a warning or proceed. For now, let's proceed.
+                JOptionPane.showMessageDialog(this, "Không có gì để lưu (bản vẽ trống).", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                return;
             }
-
-
-            currentDrawingNote.setTitle(title);
-            currentDrawingNote.setDrawingData(base64Image); // base64Image can be null if panel is empty
-            currentDrawingNote.setNoteType(Note.NoteType.DRAWING);
-            currentDrawingNote.setContent(null); // No text content for drawing
-
-            if (currentDrawingNote.getId() == 0) { // New drawing
-                if (currentDrawingNote.getFolder() == null || currentDrawingNote.getFolder().getId() == 0) {
-                    currentDrawingNote.setFolder(controller.getCurrentFolder());
-                }
+            boolean isNew = (currentDrawingNote == null || currentDrawingNote.getId() == 0);
+            if (isNew) {
+                // ... khởi tạo và thiết lập properties cho note mới ...
                 controller.addNote(currentDrawingNote);
-                JOptionPane.showMessageDialog(this, "Bản vẽ '" + title + "' đã được lưu!", "Lưu Thành Công", JOptionPane.INFORMATION_MESSAGE);
-            } else { // Update existing drawing
+            } else {
+                // ... cập nhật properties cho note cũ ...
                 controller.updateNote(currentDrawingNote, title, null);
-                JOptionPane.showMessageDialog(this, "Bản vẽ '" + title + "' đã được cập nhật!", "Cập Nhật Thành Công", JOptionPane.INFORMATION_MESSAGE);
             }
-            mainFrame.showMainMenuScreen();
+            // Chỉ show 1 dialog chung
+            String message = isNew ? "Bản vẽ '" + title + "' đã được lưu!" : "Bản vẽ '" + title + "' đã được cập nhật!";JOptionPane.showMessageDialog(this, message, "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+            mainFrame.showMainMenuScreen(); // Quay về màn hình chính sau khi lưu
 
         } catch (IOException e) {
             e.printStackTrace();
