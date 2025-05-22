@@ -107,13 +107,8 @@ public class NoteEditorScreen extends JPanel {
 
 
                 removeButton.addActionListener(e -> {
-                    int confirm = JOptionPane.showConfirmDialog(mainFrame,
-                            "Xóa tag '" + tag.getName() + "' khỏi ghi chú này?",
-                            "Xác Nhận Xóa Tag", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        controller.removeTag(note, tag);
-                        updateTagDisplay();
-                    }
+                    controller.removeTag(note, tag);
+                    updateTagDisplay();
                 });
                 tagItem.add(tagLabel);
                 tagItem.add(removeButton);

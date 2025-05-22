@@ -284,7 +284,6 @@ public class NoteController {
         }
         try {
             noteService.deleteExistingNote(note.getId());
-            JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được xóa.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi xóa ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -364,7 +363,7 @@ public class NoteController {
             note.addTag(managedTag);
             note.updateUpdatedAt();
             noteService.updateExistingNote(note);
-            JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + managedTag.getName() + "' đã được thêm vào ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+            //JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + managedTag.getName() + "' đã được thêm vào ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi thêm tag vào ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -381,7 +380,7 @@ public class NoteController {
             note.updateUpdatedAt();
             try {
                 noteService.updateExistingNote(note);
-                JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + tagToRemove.getName() + "' đã được xóa khỏi ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+                //JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + tagToRemove.getName() + "' đã được xóa khỏi ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {
                 note.addTag(tagToRemove);
                 e.printStackTrace();
