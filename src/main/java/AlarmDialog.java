@@ -1,3 +1,4 @@
+// File: AlarmDialog.java
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDate;
@@ -5,36 +6,33 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
+import javax.swing.border.EmptyBorder;
 
 public class AlarmDialog extends JDialog {
-    private Alarm resultAlarm = null; // Sẽ chứa Alarm object kết quả
-    private boolean okPressed = false; // Cờ để biết nút OK có được nhấn không
+    private Alarm resultAlarm = null;
+    private boolean okPressed = false;
 
-    private JSpinner dateTimeSpinner; // Cho ngày và giờ (khi type là ONCE)
-    private JSpinner timeOnlySpinner;   // Chỉ cho giờ:phút (khi type là RECURRING)
+    private JSpinner dateTimeSpinner;
+    private JSpinner timeOnlySpinner;
     private JComboBox<String> recurrenceTypeComboBox;
-    private JRadioButton specificDateTimeRadio; // Đổi tên cho rõ
+    private JRadioButton specificDateTimeRadio;
     private JRadioButton recurringTimeRadio;
 
-    private JPanel specificDateTimePanel; // Panel cho chọn ngày giờ cụ thể
-    private JPanel recurringPanel;      // Panel cho chọn lặp lại
+    private JPanel specificDateTimePanel;
+    private JPanel recurringPanel;
 
-    private Alarm alarmToEdit = null; // Alarm hiện tại để chỉnh sửa (nếu có)
+    private Alarm alarmToEdit = null;
 
+    // Constructor for new alarm
     public AlarmDialog(Frame owner) {
-        super(owner, "Set or Edit Alarm", true); // Tiêu đề chung
-        initializeUI();
-        // Nếu không có alarmToEdit, hiển thị giá trị mặc định
-        if (this.alarmToEdit == null) {
-            setInitialDefaults();
-        }
-        updatePanelsVisibility(); // Cập nhật hiển thị panel dựa trên radio button
+        this(owner, null); // Call the main constructor with null alarmToEdit
     }
 
-    // Constructor mới để nhận Alarm cần chỉnh sửa
+    // Main constructor for new or editing alarm
     public AlarmDialog(Frame owner, Alarm alarmToEdit) {
-        super(owner, "Set or Edit Alarm", true);
+        super(owner, (alarmToEdit == null || alarmToEdit.getId() == 0) ? "Đặt Báo thức Mới" : "Sửa Báo thức", true);
         this.alarmToEdit = alarmToEdit;
         initializeUI();
         if (this.alarmToEdit != null) {
@@ -43,79 +41,93 @@ public class AlarmDialog extends JDialog {
             setInitialDefaults();
         }
         updatePanelsVisibility();
+        pack(); // Pack after UI is built and populated
+        setMinimumSize(new Dimension(420, getHeight())); // Ensure minimum width after packing
+        setLocationRelativeTo(owner); // Center after packing and sizing
     }
 
 
     private void initializeUI() {
-        setLayout(new GridBagLayout());
-        // setSize(420, 300); // Kích thước có thể điều chỉnh bằng pack()
-        setLocationRelativeTo(getOwner());
+        setLayout(new BorderLayout(10,10)); // Main layout with gaps
+        getRootPane().setBorder(new EmptyBorder(15, 15, 15, 15)); // Padding for the whole dialog
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 8, 5, 8);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.WEST;
+        // Panel for radio buttons and their associated controls
+        JPanel mainControlsPanel = new JPanel();
+        mainControlsPanel.setLayout(new BoxLayout(mainControlsPanel, BoxLayout.Y_AXIS));
+
 
         // 1. Radio buttons for mode selection
-        specificDateTimeRadio = new JRadioButton("Specific Date & Time", true);
-        recurringTimeRadio = new JRadioButton("Recurring Time");
+        specificDateTimeRadio = new JRadioButton("Ngày & Giờ cụ thể", true);
+        recurringTimeRadio = new JRadioButton("Lặp lại theo thời gian");
         ButtonGroup modeGroup = new ButtonGroup();
         modeGroup.add(specificDateTimeRadio);
         modeGroup.add(recurringTimeRadio);
 
+        // Panel for radio buttons themselves
+        JPanel radioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 5));
+        radioPanel.add(specificDateTimeRadio);
+        radioPanel.add(Box.createHorizontalStrut(20)); // Space between radio buttons
+        radioPanel.add(recurringTimeRadio);
+        radioPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        mainControlsPanel.add(radioPanel);
+        mainControlsPanel.add(Box.createRigidArea(new Dimension(0,10))); // Spacer
+
+
         specificDateTimeRadio.addActionListener(e -> updatePanelsVisibility());
         recurringTimeRadio.addActionListener(e -> updatePanelsVisibility());
 
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        add(specificDateTimeRadio, gbc);
-        gbc.gridy++;
-        add(recurringTimeRadio, gbc);
 
         // 2. Panel for "Specific Date & Time" (ONCE)
         specificDateTimePanel = new JPanel(new GridBagLayout());
+        specificDateTimePanel.setBorder(BorderFactory.createEmptyBorder(5,0,5,0));
         GridBagConstraints dtpGbc = new GridBagConstraints();
-        dtpGbc.insets = new Insets(3,3,3,3); dtpGbc.fill = GridBagConstraints.HORIZONTAL;
+        dtpGbc.insets = new Insets(5,5,5,5);
+        dtpGbc.anchor = GridBagConstraints.WEST;
 
         dtpGbc.gridx = 0; dtpGbc.gridy = 0;
-        specificDateTimePanel.add(new JLabel("Date & Time:"), dtpGbc);
+        specificDateTimePanel.add(new JLabel("Ngày & Giờ:"), dtpGbc);
         dateTimeSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateTimeSpinner, "yyyy-MM-dd HH:mm");
         dateTimeSpinner.setEditor(dateEditor);
-        dtpGbc.gridx = 1;
+        dtpGbc.gridx = 1; dtpGbc.weightx = 1.0; dtpGbc.fill = GridBagConstraints.HORIZONTAL;
         specificDateTimePanel.add(dateTimeSpinner, dtpGbc);
+        specificDateTimePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        mainControlsPanel.add(specificDateTimePanel);
 
-        gbc.gridy++; gbc.gridwidth = 2;
-        add(specificDateTimePanel, gbc);
 
         // 3. Panel for "Recurring Time"
         recurringPanel = new JPanel(new GridBagLayout());
+        recurringPanel.setBorder(BorderFactory.createEmptyBorder(5,0,5,0));
         GridBagConstraints rpGbc = new GridBagConstraints();
-        rpGbc.insets = new Insets(3,3,3,3); rpGbc.fill = GridBagConstraints.HORIZONTAL;
+        rpGbc.insets = new Insets(5,5,5,5);
+        rpGbc.anchor = GridBagConstraints.WEST;
 
         rpGbc.gridx = 0; rpGbc.gridy = 0;
-        recurringPanel.add(new JLabel("Time:"), rpGbc);
-        timeOnlySpinner = new JSpinner(new SpinnerDateModel()); // Dùng model khác cho chỉ giờ:phút
+        recurringPanel.add(new JLabel("Thời gian:"), rpGbc);
+        timeOnlySpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor timeEditor = new JSpinner.DateEditor(timeOnlySpinner, "HH:mm");
         timeOnlySpinner.setEditor(timeEditor);
-        rpGbc.gridx = 1;
+        rpGbc.gridx = 1; rpGbc.weightx = 1.0; rpGbc.fill = GridBagConstraints.HORIZONTAL;
         recurringPanel.add(timeOnlySpinner, rpGbc);
 
-        rpGbc.gridx = 0; rpGbc.gridy = 1;
-        recurringPanel.add(new JLabel("Recurrence:"), rpGbc);
+        rpGbc.gridx = 0; rpGbc.gridy = 1; rpGbc.weightx = 0.0; rpGbc.fill = GridBagConstraints.NONE;
+        recurringPanel.add(new JLabel("Lặp lại:"), rpGbc);
         String[] recurrenceOptions = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"};
         recurrenceTypeComboBox = new JComboBox<>(recurrenceOptions);
-        rpGbc.gridx = 1;
+        rpGbc.gridx = 1; rpGbc.weightx = 1.0; rpGbc.fill = GridBagConstraints.HORIZONTAL;
         recurringPanel.add(recurrenceTypeComboBox, rpGbc);
+        recurringPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        mainControlsPanel.add(recurringPanel);
 
-        gbc.gridy++;
-        add(recurringPanel, gbc);
+        add(mainControlsPanel, BorderLayout.CENTER);
 
         // 4. Buttons Panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 5));
+        buttonPanel.setBorder(new EmptyBorder(10,0,0,0)); // Top padding for button panel
         JButton okButton = new JButton("OK");
         okButton.addActionListener(e -> handleOkAction());
-        JButton cancelButton = new JButton("Cancel");
+        JButton cancelButton = new JButton("Hủy");
         cancelButton.addActionListener(e -> {
             okPressed = false;
             resultAlarm = null;
@@ -123,42 +135,51 @@ public class AlarmDialog extends JDialog {
         });
         buttonPanel.add(okButton);
         buttonPanel.add(cancelButton);
+        add(buttonPanel, BorderLayout.SOUTH);
 
-        gbc.gridy++; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
-        add(buttonPanel, gbc);
-
-        pack(); // Điều chỉnh kích thước tự động
-        setSize(Math.max(getWidth(), 400), Math.max(getHeight(), 280)); // Đảm bảo kích thước tối thiểu
+        getRootPane().setDefaultButton(okButton);
     }
 
     private void setInitialDefaults() {
         specificDateTimeRadio.setSelected(true);
-        LocalDateTime defaultDateTime = LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0);
+        LocalDateTime defaultDateTime = LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0);
         dateTimeSpinner.setValue(Date.from(defaultDateTime.atZone(ZoneId.systemDefault()).toInstant()));
-        timeOnlySpinner.setValue(Date.from(defaultDateTime.atZone(ZoneId.systemDefault()).toInstant())); // Mặc định giờ
+        // Set timeOnlySpinner to a sensible default time, e.g., current hour, 0 minutes
+        LocalDateTime defaultTimeOnly = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
+        timeOnlySpinner.setValue(Date.from(defaultTimeOnly.atZone(ZoneId.systemDefault()).toInstant()));
         recurrenceTypeComboBox.setSelectedItem("DAILY");
     }
 
     private void populateFieldsFromAlarm(Alarm alarm) {
         if (alarm.isRecurring()) {
             recurringTimeRadio.setSelected(true);
-            timeOnlySpinner.setValue(Date.from(alarm.getAlarmTime().atZone(ZoneId.systemDefault()).toInstant()));
+            if (alarm.getAlarmTime() != null) {
+                timeOnlySpinner.setValue(Date.from(alarm.getAlarmTime().atZone(ZoneId.systemDefault()).toInstant()));
+            } else { // Fallback if alarmTime is somehow null for a recurring alarm
+                LocalDateTime defaultTimeOnly = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
+                timeOnlySpinner.setValue(Date.from(defaultTimeOnly.atZone(ZoneId.systemDefault()).toInstant()));
+            }
             if (alarm.getRecurrencePattern() != null) {
                 recurrenceTypeComboBox.setSelectedItem(alarm.getRecurrencePattern().toUpperCase());
             } else {
-                recurrenceTypeComboBox.setSelectedItem("DAILY"); // Mặc định nếu pattern null
+                recurrenceTypeComboBox.setSelectedItem("DAILY");
             }
         } else { // ONCE
             specificDateTimeRadio.setSelected(true);
-            dateTimeSpinner.setValue(Date.from(alarm.getAlarmTime().atZone(ZoneId.systemDefault()).toInstant()));
+            if (alarm.getAlarmTime() != null) {
+                dateTimeSpinner.setValue(Date.from(alarm.getAlarmTime().atZone(ZoneId.systemDefault()).toInstant()));
+            } else { // Fallback if alarmTime is null for a non-recurring alarm
+                LocalDateTime defaultDateTime = LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0);
+                dateTimeSpinner.setValue(Date.from(defaultDateTime.atZone(ZoneId.systemDefault()).toInstant()));
+            }
         }
     }
 
     private void updatePanelsVisibility() {
         specificDateTimePanel.setVisible(specificDateTimeRadio.isSelected());
         recurringPanel.setVisible(recurringTimeRadio.isSelected());
-        // pack(); // Có thể gọi pack() ở đây để dialog tự điều chỉnh kích thước
-        // setSize(Math.max(getWidth(), 400), Math.max(getHeight(), 280));
+        pack(); // Repack when visibility changes to adjust dialog size
+        // setMinimumSize(new Dimension(400, getHeight())); // Re-apply min width
     }
 
     private void handleOkAction() {
@@ -170,36 +191,35 @@ public class AlarmDialog extends JDialog {
         if (specificDateTimeRadio.isSelected()) {
             isRecurring = false;
             Date selectedDate = (Date) dateTimeSpinner.getValue();
-            selectedAlarmTime = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-            if (selectedAlarmTime.isBefore(LocalDateTime.now())) {
-                JOptionPane.showMessageDialog(this, "Alarm time must be in the future.", "Invalid Time", JOptionPane.WARNING_MESSAGE);
+            selectedAlarmTime = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().withSecond(0).withNano(0);
+            if (selectedAlarmTime.isBefore(LocalDateTime.now().withSecond(0).withNano(0))) {
+                JOptionPane.showMessageDialog(this, "Thời gian báo thức phải ở trong tương lai.", "Thời gian không hợp lệ", JOptionPane.WARNING_MESSAGE);
                 return;
             }
         } else { // recurringTimeRadio is selected
             isRecurring = true;
             Date spinnerTime = (Date) timeOnlySpinner.getValue();
-            LocalTime timePart = spinnerTime.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
-            // Đối với recurring, ngày không quá quan trọng, nhưng ta cần một ngày tham chiếu.
-            // Nếu đang sửa alarm cũ và nó là recurring, giữ lại ngày cũ.
-            // Nếu tạo mới recurring, hoặc sửa từ ONCE sang recurring, dùng ngày hiện tại.
+            LocalTime timePart = spinnerTime.toInstant().atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0);
+
             LocalDate datePart;
-            if (alarmToEdit != null && alarmToEdit.isRecurring()) {
+            if (alarmToEdit != null && alarmToEdit.isRecurring() && alarmToEdit.getAlarmTime() != null) {
                 datePart = alarmToEdit.getAlarmTime().toLocalDate();
             } else {
-                datePart = LocalDate.now();
+                datePart = LocalDate.now(); // Default to today for new recurring alarms
             }
             selectedAlarmTime = LocalDateTime.of(datePart, timePart);
             recurrencePattern = (String) recurrenceTypeComboBox.getSelectedItem();
+            if (recurrencePattern == null) recurrencePattern = "DAILY"; // Default if somehow null
         }
 
-        if (currentAlarmId > 0) { // Đang chỉnh sửa alarm đã có
-            this.resultAlarm = alarmToEdit; // Sử dụng lại object cũ để giữ ID
+        if (currentAlarmId > 0 && alarmToEdit != null) {
+            this.resultAlarm = alarmToEdit;
             this.resultAlarm.setAlarmTime(selectedAlarmTime);
             this.resultAlarm.setRecurring(isRecurring);
             this.resultAlarm.setRecurrencePattern(isRecurring ? recurrencePattern : null);
-        } else { // Tạo alarm mới
+        } else {
             this.resultAlarm = new Alarm(selectedAlarmTime, isRecurring, recurrencePattern);
-            // ID của resultAlarm sẽ là 0L theo constructor của Alarm
+            // ID will be 0L, NoteController/Service will assign a new ID when saving
         }
         this.okPressed = true;
         dispose();
@@ -213,17 +233,15 @@ public class AlarmDialog extends JDialog {
         return okPressed;
     }
 
+    // This method might be redundant if using the constructor that takes alarmToEdit
     public void setAlarmToEdit(Alarm alarm) {
         this.alarmToEdit = alarm;
+        setTitle((alarm == null || alarm.getId() == 0) ? "Đặt Báo thức Mới" : "Sửa Báo thức");
         if (alarm != null) {
             populateFieldsFromAlarm(alarm);
         } else {
             setInitialDefaults();
         }
         updatePanelsVisibility();
-
     }
-
-    // Phương thức này không còn cần thiết vì getResult() trả về null nếu cancel
-    // public boolean wasCancelOrNoChange() { ... }
 }

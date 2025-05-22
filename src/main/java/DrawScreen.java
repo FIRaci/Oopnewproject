@@ -1,36 +1,38 @@
+// File: DrawScreen.java
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
 import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+
 
 public class DrawScreen extends JPanel {
     private static final String SAVE_LABEL = "Lưu Bản Vẽ";
     private static final String BACK_LABEL = "Quay Lại";
     private static final String CLEAR_LABEL = "Xóa Hết";
     private static final String ERASER_LABEL = "Tẩy";
-    private static final String PENCIL_LABEL = "Bút";
+    private static final String PENCIL_LABEL = "Bút Vẽ"; // Changed for clarity
 
     private final MainFrame mainFrame;
     private final NoteController controller;
-    private Note currentDrawingNote; // Note hiện tại (có thể là mới hoặc đang chỉnh sửa)
+    private Note currentDrawingNote;
 
     private DrawingPanel drawingPanel;
     private JTextField titleField;
     private JSlider strokeSlider;
     private JButton colorButton;
     private JButton eraserButton;
-    private JButton pencilButton; // Để quay lại chế độ bút vẽ
+    private JButton pencilButton;
     private JLabel currentStrokeLabel;
+    private JPanel toolbarInnerPanel; // Panel to hold tools for better alignment
 
     private Color currentColor = Color.BLACK;
     private int currentStrokeSize = 3;
@@ -39,92 +41,124 @@ public class DrawScreen extends JPanel {
     public DrawScreen(MainFrame mainFrame, NoteController controller) {
         this.mainFrame = mainFrame;
         this.controller = controller;
-        // Ban đầu, currentDrawingNote là null, nghĩa là tạo bản vẽ mới
-        // Nếu muốn mở bản vẽ cũ, cần một phương thức setNote(Note note)
         initializeUI();
-        setDrawingNote(null); // Khởi tạo cho bản vẽ mới
+        setDrawingNote(null);
     }
 
     private void initializeUI() {
-        setLayout(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setLayout(new BorderLayout(15, 15)); // Increased gaps
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); // Overall padding
 
-        // Panel tiêu đề và các nút điều khiển chính
+        // Top Panel: Title and Main Buttons
         JPanel topControlPanel = new JPanel(new BorderLayout(10, 5));
+        topControlPanel.setBorder(BorderFactory.createEmptyBorder(0,0,10,0)); // Bottom margin
+
+        JPanel titlePanel = new JPanel(new BorderLayout(5,0));
+        JLabel titleLabel = new JLabel("Tiêu đề:");
+        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        titlePanel.add(titleLabel, BorderLayout.WEST);
         titleField = new JTextField("Bản vẽ không tên");
         titleField.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
-        topControlPanel.add(new JLabel("Tiêu đề:"), BorderLayout.WEST);
-        topControlPanel.add(titleField, BorderLayout.CENTER);
+        titlePanel.add(titleField, BorderLayout.CENTER);
+        topControlPanel.add(titlePanel, BorderLayout.CENTER);
 
-        JPanel mainButtonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        JPanel mainButtonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         JButton saveButton = new JButton(SAVE_LABEL);
+        saveButton.setToolTipText("Lưu bản vẽ hiện tại");
         saveButton.addActionListener(e -> saveDrawing());
         JButton backButton = new JButton(BACK_LABEL);
+        backButton.setToolTipText("Quay lại màn hình chính (Esc)");
         backButton.addActionListener(e -> mainFrame.showMainMenuScreen());
         mainButtonsPanel.add(saveButton);
         mainButtonsPanel.add(backButton);
         topControlPanel.add(mainButtonsPanel, BorderLayout.EAST);
         add(topControlPanel, BorderLayout.NORTH);
 
-        // Panel công cụ vẽ
-        JPanel toolbarPanel = new JPanel();
-        toolbarPanel.setLayout(new BoxLayout(toolbarPanel, BoxLayout.Y_AXIS)); // Sắp xếp theo chiều dọc
-        toolbarPanel.setBorder(BorderFactory.createTitledBorder("Công cụ"));
-        toolbarPanel.setPreferredSize(new Dimension(150, 0)); // Độ rộng cố định cho toolbar
+        // Toolbar Panel (West)
+        JPanel toolbarOuterPanel = new JPanel(new BorderLayout()); // Use BorderLayout for TitledBorder padding
+        toolbarOuterPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Công cụ vẽ"),
+                new EmptyBorder(5, 8, 5, 8) // Padding inside TitledBorder
+        ));
+        toolbarOuterPanel.setPreferredSize(new Dimension(180, 0)); // Slightly wider toolbar
 
-        // Chọn màu
+        toolbarInnerPanel = new JPanel();
+        toolbarInnerPanel.setLayout(new BoxLayout(toolbarInnerPanel, BoxLayout.Y_AXIS));
+
+        // Color Chooser Button
         colorButton = new JButton("Chọn Màu");
-        colorButton.setOpaque(true);
-        colorButton.setBackground(currentColor);
-        colorButton.setForeground(getContrastColor(currentColor));
+        colorButton.setOpaque(true); // Necessary for background to show
+        colorButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        setButtonColor(currentColor);
         colorButton.addActionListener(e -> chooseColor());
-        toolbarPanel.add(colorButton);
-        toolbarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        toolbarInnerPanel.add(colorButton);
+        toolbarInnerPanel.add(Box.createRigidArea(new Dimension(0, 12)));
 
-        // Kích thước bút
-        toolbarPanel.add(new JLabel("Kích thước nét:"));
+        // Stroke Size Slider
+        JLabel strokeTitleLabel = new JLabel("Kích thước nét:");
+        strokeTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        toolbarInnerPanel.add(strokeTitleLabel);
+
+        JPanel strokePanel = new JPanel(new BorderLayout(5,0));
+        strokePanel.setOpaque(false); // Make transparent if toolbar has own bg
         strokeSlider = new JSlider(JSlider.HORIZONTAL, 1, 50, currentStrokeSize);
         strokeSlider.setMajorTickSpacing(10);
         strokeSlider.setMinorTickSpacing(1);
         strokeSlider.setPaintTicks(true);
-        // strokeSlider.setPaintLabels(true); // Không cần label số chi tiết
-        currentStrokeLabel = new JLabel(String.valueOf(currentStrokeSize));
+        currentStrokeLabel = new JLabel(String.valueOf(currentStrokeSize), SwingConstants.CENTER);
+        currentStrokeLabel.setPreferredSize(new Dimension(25, currentStrokeLabel.getPreferredSize().height)); // Fixed width for label
         strokeSlider.addChangeListener(e -> {
             currentStrokeSize = strokeSlider.getValue();
             currentStrokeLabel.setText(String.valueOf(currentStrokeSize));
             drawingPanel.setCurrentStrokeSize(currentStrokeSize);
         });
-        JPanel strokePanel = new JPanel(new BorderLayout(5,0));
         strokePanel.add(strokeSlider, BorderLayout.CENTER);
         strokePanel.add(currentStrokeLabel, BorderLayout.EAST);
-        toolbarPanel.add(strokePanel);
-        toolbarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        strokePanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        toolbarInnerPanel.add(strokePanel);
+        toolbarInnerPanel.add(Box.createRigidArea(new Dimension(0, 12)));
 
-        // Bút vẽ (mặc định)
+        // Pencil Button
         pencilButton = new JButton(PENCIL_LABEL);
+        pencilButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         pencilButton.addActionListener(e -> setPencilMode());
-        toolbarPanel.add(pencilButton);
+        toolbarInnerPanel.add(pencilButton);
+        toolbarInnerPanel.add(Box.createRigidArea(new Dimension(0, 5)));
 
-        // Tẩy
+
+        // Eraser Button
         eraserButton = new JButton(ERASER_LABEL);
+        eraserButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         eraserButton.addActionListener(e -> setEraserMode());
-        toolbarPanel.add(eraserButton);
-        toolbarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        toolbarInnerPanel.add(eraserButton);
+        toolbarInnerPanel.add(Box.createRigidArea(new Dimension(0, 12)));
 
-
-        // Xóa hết
+        // Clear Button
         JButton clearButton = new JButton(CLEAR_LABEL);
+        clearButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         clearButton.addActionListener(e -> drawingPanel.clearDrawing());
-        toolbarPanel.add(clearButton);
+        toolbarInnerPanel.add(clearButton);
 
-        add(toolbarPanel, BorderLayout.WEST);
+        toolbarInnerPanel.add(Box.createVerticalGlue()); // Pushes tools to the top if space available
 
-        // Vùng vẽ chính
+        toolbarOuterPanel.add(toolbarInnerPanel, BorderLayout.NORTH); // Add inner panel to outer
+        add(toolbarOuterPanel, BorderLayout.WEST);
+
+        // Main Drawing Area
         drawingPanel = new DrawingPanel();
-        drawingPanel.setBackground(Color.WHITE);
-        add(new JScrollPane(drawingPanel), BorderLayout.CENTER); // Cho phép scroll nếu cần
+        drawingPanel.setBackground(Color.WHITE); // Default background
+        drawingPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY)); // Border for drawing area
+        add(new JScrollPane(drawingPanel) {{
+            setBorder(BorderFactory.createEmptyBorder()); // Remove scroll pane's own border
+        }}, BorderLayout.CENTER);
 
         updateToolStates();
+    }
+
+    private void setButtonColor(Color color) {
+        colorButton.setBackground(color);
+        colorButton.setForeground(getContrastColor(color));
     }
 
     private Color getContrastColor(Color color) {
@@ -133,23 +167,24 @@ public class DrawScreen extends JPanel {
     }
 
     private void updateToolStates() {
-        pencilButton.setEnabled(eraserMode); // Bật nếu đang ở chế độ tẩy
-        eraserButton.setEnabled(!eraserMode); // Bật nếu đang ở chế độ bút
+        pencilButton.setEnabled(eraserMode);
+        eraserButton.setEnabled(!eraserMode);
+        // Visually indicate active tool (e.g., thicker border or different background)
+        pencilButton.setBorder(eraserMode ? UIManager.getBorder("Button.border") : BorderFactory.createLineBorder(Color.BLUE, 2));
+        eraserButton.setBorder(!eraserMode ? UIManager.getBorder("Button.border") : BorderFactory.createLineBorder(Color.BLUE, 2));
+
     }
 
     private void setPencilMode() {
         eraserMode = false;
         drawingPanel.setEraserMode(false);
-        drawingPanel.setCurrentColor(currentColor); // Đặt lại màu hiện tại cho bút
-        System.out.println("Chế độ: Bút vẽ, Màu: " + currentColor);
+        drawingPanel.setCurrentColor(currentColor);
         updateToolStates();
     }
 
     private void setEraserMode() {
         eraserMode = true;
         drawingPanel.setEraserMode(true);
-        // Màu của tẩy sẽ là màu nền của drawingPanel
-        System.out.println("Chế độ: Tẩy");
         updateToolStates();
     }
 
@@ -158,45 +193,39 @@ public class DrawScreen extends JPanel {
         Color newColor = JColorChooser.showDialog(this, "Chọn màu vẽ", currentColor);
         if (newColor != null) {
             currentColor = newColor;
-            colorButton.setBackground(currentColor);
-            colorButton.setForeground(getContrastColor(currentColor));
-            if (!eraserMode) { // Chỉ cập nhật màu vẽ nếu không ở chế độ tẩy
+            setButtonColor(currentColor);
+            if (!eraserMode) {
                 drawingPanel.setCurrentColor(currentColor);
             }
         }
     }
 
     public void setDrawingNote(Note note) {
-        if (note != null && note.getNoteType() == Note.NoteType.DRAWING) {
-            this.currentDrawingNote = note;
-            titleField.setText(note.getTitle());
-            if (note.getDrawingData() != null && !note.getDrawingData().isEmpty()) {
-                try {
-                    drawingPanel.loadImageFromBase64(note.getDrawingData());
-                } catch (IOException e) {
-                    System.err.println("Lỗi khi tải dữ liệu bản vẽ: " + e.getMessage());
-                    JOptionPane.showMessageDialog(this, "Không thể tải dữ liệu bản vẽ.", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                    drawingPanel.clearDrawing(); // Xóa nếu không tải được
-                }
-            } else {
+        this.currentDrawingNote = (note != null && note.getNoteType() == Note.NoteType.DRAWING) ?
+                note :
+                new Note("Bản vẽ " + System.currentTimeMillis()%10000, Note.NoteType.DRAWING, controller.getCurrentFolder());
+
+        titleField.setText(this.currentDrawingNote.getTitle());
+        if (this.currentDrawingNote.getDrawingData() != null && !this.currentDrawingNote.getDrawingData().isEmpty()) {
+            try {
+                drawingPanel.loadImageFromBase64(this.currentDrawingNote.getDrawingData());
+            } catch (IOException e) {
+                System.err.println("Lỗi khi tải dữ liệu bản vẽ: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Không thể tải dữ liệu bản vẽ.", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 drawingPanel.clearDrawing();
             }
-        } else { // Tạo bản vẽ mới
-            this.currentDrawingNote = new Note("Bản vẽ không tên " + System.currentTimeMillis()%10000, Note.NoteType.DRAWING, controller.getCurrentFolder());
-            titleField.setText(this.currentDrawingNote.getTitle());
+        } else {
             drawingPanel.clearDrawing();
         }
-        // Reset các công cụ về mặc định
+
         currentColor = Color.BLACK;
-        colorButton.setBackground(currentColor);
-        colorButton.setForeground(getContrastColor(currentColor));
+        setButtonColor(currentColor);
         currentStrokeSize = 3;
         strokeSlider.setValue(currentStrokeSize);
         currentStrokeLabel.setText(String.valueOf(currentStrokeSize));
-        setPencilMode(); // Mặc định là bút vẽ
+        setPencilMode();
         drawingPanel.setCurrentColor(currentColor);
         drawingPanel.setCurrentStrokeSize(currentStrokeSize);
-
     }
 
     private void saveDrawing() {
@@ -209,38 +238,32 @@ public class DrawScreen extends JPanel {
         try {
             String base64Image = drawingPanel.getImageAsBase64("png");
             if (base64Image == null || base64Image.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Không có gì để lưu (bản vẽ trống).", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-                return;
+                // Check if the panel is truly empty or just appears so due to background color
+                if (drawingPanel.isEffectivelyEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Không có gì để lưu (bản vẽ trống).", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+                // If not effectively empty, it means something was drawn (even if it's white on white)
+                // Still, it's unusual, so maybe a warning or proceed. For now, let's proceed.
             }
 
-            if (currentDrawingNote == null || currentDrawingNote.getId() == 0) { // Tạo mới
-                // currentDrawingNote đã được khởi tạo trong setDrawingNote(null)
-                // hoặc nếu mở để tạo mới.
-                // Chỉ cần cập nhật title và data.
-                currentDrawingNote.setTitle(title);
-                currentDrawingNote.setDrawingData(base64Image);
-                currentDrawingNote.setNoteType(Note.NoteType.DRAWING);
-                currentDrawingNote.setContent(null); // Không có content text cho drawing
 
-                // Gán folder hiện tại nếu chưa có
+            currentDrawingNote.setTitle(title);
+            currentDrawingNote.setDrawingData(base64Image); // base64Image can be null if panel is empty
+            currentDrawingNote.setNoteType(Note.NoteType.DRAWING);
+            currentDrawingNote.setContent(null); // No text content for drawing
+
+            if (currentDrawingNote.getId() == 0) { // New drawing
                 if (currentDrawingNote.getFolder() == null || currentDrawingNote.getFolder().getId() == 0) {
                     currentDrawingNote.setFolder(controller.getCurrentFolder());
-                    if (controller.getCurrentFolder() != null) {
-                        currentDrawingNote.setFolderId(controller.getCurrentFolder().getId());
-                    }
                 }
-                controller.addNote(currentDrawingNote); // Controller sẽ gọi service, service gọi manager
+                controller.addNote(currentDrawingNote);
                 JOptionPane.showMessageDialog(this, "Bản vẽ '" + title + "' đã được lưu!", "Lưu Thành Công", JOptionPane.INFORMATION_MESSAGE);
-
-            } else { // Cập nhật bản vẽ đã có
-                currentDrawingNote.setTitle(title);
-                currentDrawingNote.setDrawingData(base64Image);
-                currentDrawingNote.setNoteType(Note.NoteType.DRAWING);
-                currentDrawingNote.setContent(null);
-                controller.updateNote(currentDrawingNote, title, null); // Truyền content là null
+            } else { // Update existing drawing
+                controller.updateNote(currentDrawingNote, title, null);
                 JOptionPane.showMessageDialog(this, "Bản vẽ '" + title + "' đã được cập nhật!", "Cập Nhật Thành Công", JOptionPane.INFORMATION_MESSAGE);
             }
-            mainFrame.showMainMenuScreen(); // Quay về màn hình chính sau khi lưu
+            mainFrame.showMainMenuScreen();
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -248,50 +271,35 @@ public class DrawScreen extends JPanel {
         }
     }
 
-    // Lớp nội bộ cho vùng vẽ
     private static class DrawingPanel extends JPanel {
         private BufferedImage canvasImage;
         private Graphics2D g2dCanvas;
-        private Path2D.Double currentPath;
         private Color currentColor = Color.BLACK;
         private int currentStrokeSize = 3;
         private boolean isEraserMode = false;
-
-        // Lưu trữ các nét vẽ để có thể vẽ lại (quan trọng cho việc thay đổi kích thước cửa sổ, v.v.)
-        // Hoặc đơn giản hơn là vẽ trực tiếp lên BufferedImage và chỉ vẽ lại BufferedImage đó.
-        // Cách đơn giản (vẽ lên BufferedImage):
         private Point lastPoint;
+        private boolean hasDrawingContent = false; // Track if anything has been drawn
 
         public DrawingPanel() {
-            // Khởi tạo canvasImage với kích thước mặc định, sẽ được vẽ lại khi panel có kích thước
-            // Hoặc đợi đến khi có kích thước thực sự trong componentResized
-            setPreferredSize(new Dimension(600, 400)); // Kích thước mặc định ban đầu
+            setPreferredSize(new Dimension(800, 600)); // Default preferred size
+            setBackground(Color.WHITE); // Explicitly set background
 
             addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
                     lastPoint = e.getPoint();
-                    // Nếu dùng Path2D:
-                    // currentPath = new Path2D.Double();
-                    // currentPath.moveTo(e.getX(), e.getY());
-                    // paths.add(new DrawablePath(currentPath, currentColor, new BasicStroke(currentStrokeSize, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)));
-
-                    // Vẽ điểm đầu tiên nếu là click chuột (không kéo)
                     if (g2dCanvas != null) {
                         g2dCanvas.setColor(isEraserMode ? getBackground() : currentColor);
                         g2dCanvas.setStroke(new BasicStroke(currentStrokeSize, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                        // Draw a small circle for a single click
                         g2dCanvas.fillOval(e.getX() - currentStrokeSize / 2, e.getY() - currentStrokeSize / 2, currentStrokeSize, currentStrokeSize);
+                        hasDrawingContent = true;
                         repaint();
                     }
                 }
-
                 @Override
                 public void mouseReleased(MouseEvent e) {
                     lastPoint = null;
-                    // if (currentPath != null) {
-                    //     // currentPath đã được thêm vào list, không cần làm gì thêm
-                    //     currentPath = null;
-                    // }
                 }
             });
 
@@ -303,96 +311,89 @@ public class DrawScreen extends JPanel {
                         g2dCanvas.setStroke(new BasicStroke(currentStrokeSize, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                         g2dCanvas.drawLine(lastPoint.x, lastPoint.y, e.getX(), e.getY());
                         lastPoint = e.getPoint();
+                        hasDrawingContent = true;
                         repaint();
                     }
-                    // Nếu dùng Path2D:
-                    // if (currentPath != null) {
-                    //     currentPath.lineTo(e.getX(), e.getY());
-                    //     repaint();
-                    // }
                 }
             });
 
-            // Xử lý khi kích thước panel thay đổi để tạo lại BufferedImage
             addComponentListener(new ComponentAdapter() {
                 @Override
                 public void componentResized(ComponentEvent e) {
                     super.componentResized(e);
                     if (getWidth() > 0 && getHeight() > 0) {
-                        if (canvasImage == null || canvasImage.getWidth() != getWidth() || canvasImage.getHeight() != getHeight()) {
-                            BufferedImage oldImage = canvasImage;
-                            canvasImage = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
-                            g2dCanvas = canvasImage.createGraphics();
-                            g2dCanvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                            g2dCanvas.setColor(getBackground()); // Đặt màu nền cho canvas mới
-                            g2dCanvas.fillRect(0, 0, getWidth(), getHeight());
-                            if (oldImage != null) { // Vẽ lại ảnh cũ lên canvas mới (giữ nội dung khi resize)
-                                g2dCanvas.drawImage(oldImage, 0, 0, null);
-                            }
-                            System.out.println("DrawingPanel resized, canvas recreated.");
+                        BufferedImage oldImage = canvasImage;
+                        canvasImage = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
+                        g2dCanvas = canvasImage.createGraphics();
+                        setupGraphics2D(g2dCanvas);
+                        if (oldImage != null) {
+                            g2dCanvas.drawImage(oldImage, 0, 0, null);
                         }
+                        repaint();
                     }
-                    repaint();
                 }
             });
+            // Ensure canvas is initialized on first paint if not resized yet
+            SwingUtilities.invokeLater(this::initializeCanvas);
         }
 
-        public void setCurrentColor(Color color) {
-            this.currentColor = color;
-        }
-
-        public void setCurrentStrokeSize(int size) {
-            this.currentStrokeSize = Math.max(1, size); // Đảm bảo stroke > 0
-        }
-
-        public void setEraserMode(boolean isEraser) {
-            this.isEraserMode = isEraser;
-        }
-
-        public void clearDrawing() {
-            if (g2dCanvas != null) {
-                g2dCanvas.setColor(getBackground()); // Tô màu nền
-                g2dCanvas.fillRect(0, 0, getWidth(), getHeight());
+        private void initializeCanvas() {
+            if (getWidth() > 0 && getHeight() > 0 && canvasImage == null) {
+                canvasImage = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
+                g2dCanvas = canvasImage.createGraphics();
+                setupGraphics2D(g2dCanvas);
                 repaint();
             }
-            // Nếu dùng List<Path2D>, thì paths.clear();
         }
+
+        private void setupGraphics2D(Graphics2D g2d) {
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+            g2d.setColor(getBackground());
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+        }
+
+
+        public void setCurrentColor(Color color) { this.currentColor = color; }
+        public void setCurrentStrokeSize(int size) { this.currentStrokeSize = Math.max(1, size); }
+        public void setEraserMode(boolean isEraser) { this.isEraserMode = isEraser; }
+
+        public void clearDrawing() {
+            if (g2dCanvas != null && getWidth() > 0 && getHeight() > 0) {
+                g2dCanvas.setColor(getBackground());
+                g2dCanvas.fillRect(0, 0, getWidth(), getHeight());
+                hasDrawingContent = false;
+                repaint();
+            } else if (getWidth() > 0 && getHeight() > 0) { // If g2dCanvas was null but panel has size
+                initializeCanvas(); // Initialize and clear
+                hasDrawingContent = false;
+                repaint();
+            }
+        }
+
+        public boolean isEffectivelyEmpty() {
+            return !hasDrawingContent;
+        }
+
 
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             if (canvasImage == null && getWidth() > 0 && getHeight() > 0) {
-                // Khởi tạo lần đầu nếu chưa có khi panel đã có kích thước
-                canvasImage = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
-                g2dCanvas = canvasImage.createGraphics();
-                g2dCanvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2dCanvas.setColor(getBackground());
-                g2dCanvas.fillRect(0, 0, getWidth(), getHeight());
+                initializeCanvas();
             }
             if (canvasImage != null) {
                 g.drawImage(canvasImage, 0, 0, this);
             }
-            // Nếu dùng List<Path2D>:
-            // Graphics2D g2 = (Graphics2D) g;
-            // g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            // for (DrawablePath dp : paths) {
-            //     g2.setColor(dp.getColor());
-            //     g2.setStroke(dp.getStroke());
-            //     g2.draw(dp.getPath());
-            // }
         }
 
         public String getImageAsBase64(String formatName) throws IOException {
-            if (canvasImage == null) return null;
-            // Kiểm tra xem canvas có trống không (ví dụ, toàn màu nền)
-            // Cách đơn giản: nếu không có path nào được vẽ (nếu dùng List<Path2D>)
-            // Hoặc một cách phức tạp hơn là quét pixel, nhưng có thể bỏ qua bước này ban đầu.
+            if (canvasImage == null || !hasDrawingContent) return null; // Return null if nothing drawn
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ImageIO.write(canvasImage, formatName, baos);
             byte[] imageBytes = baos.toByteArray();
-            if (imageBytes.length == 0) return null; // Hoặc một ngưỡng kích thước nhỏ
-            return Base64.getEncoder().encodeToString(imageBytes);
+            return (imageBytes.length == 0) ? null : Base64.getEncoder().encodeToString(imageBytes);
         }
 
         public void loadImageFromBase64(String base64Image) throws IOException {
@@ -405,22 +406,19 @@ public class DrawScreen extends JPanel {
             BufferedImage loadedImage = ImageIO.read(bais);
 
             if (loadedImage != null) {
-                // Tạo canvas mới với kích thước của panel hiện tại và vẽ ảnh đã load lên đó
-                if (getWidth() > 0 && getHeight() > 0) {
+                if (getWidth() <= 0 || getHeight() <= 0) { // Panel not yet sized
+                    // Temporarily store and wait for resize, or use image's own size
+                    setPreferredSize(new Dimension(loadedImage.getWidth(), loadedImage.getHeight()));
+                    canvasImage = loadedImage; // This will be redrawn correctly on resize or first paint
+                    // No g2dCanvas to draw on yet, will be created in componentResized or paintComponent
+                } else {
+                    // Panel is sized, create/recreate canvasImage and draw loadedImage onto it
                     canvasImage = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
                     g2dCanvas = canvasImage.createGraphics();
-                    g2dCanvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    // Vẽ màu nền trước
-                    g2dCanvas.setColor(getBackground());
-                    g2dCanvas.fillRect(0, 0, getWidth(), getHeight());
-                    // Sau đó vẽ ảnh đã load, có thể cần scale cho vừa
-                    g2dCanvas.drawImage(loadedImage, 0, 0, getWidth(), getHeight(), null);
-                } else {
-                    // Nếu panel chưa có kích thước, tạm thời giữ ảnh gốc
-                    // và chờ componentResized xử lý
-                    canvasImage = loadedImage;
-                    // g2dCanvas sẽ được tạo trong componentResized hoặc paintComponent
+                    setupGraphics2D(g2dCanvas); // Clears with background
+                    g2dCanvas.drawImage(loadedImage, 0, 0, getWidth(), getHeight(), null); // Scale to fit
                 }
+                hasDrawingContent = true; // Assume loaded image has content
                 repaint();
             } else {
                 throw new IOException("Không thể giải mã dữ liệu ảnh từ Base64.");

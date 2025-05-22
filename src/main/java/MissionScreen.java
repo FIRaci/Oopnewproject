@@ -1,12 +1,17 @@
+// File: MissionScreen.java
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.time.LocalDate;
+import java.time.LocalDate; // Keep this if showAlarmDialog or other parts use it
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-// import java.util.Comparator; // Không cần import riêng nếu dùng lambda trực tiếp
 import java.util.List;
+import java.util.Comparator; // Added this import
+import java.util.stream.Collectors; // Ensure this is present for Collectors.toList()
 
 public class MissionScreen extends JPanel {
     private final NoteController controller;
@@ -14,6 +19,19 @@ public class MissionScreen extends JPanel {
     private JPanel missionContainer;
     private JButton deleteButton;
     private boolean deleteMode = false;
+    private JComboBox<String> filterComboBox;
+    private JComboBox<String> sortComboBox;
+
+    private static final String FILTER_ALL = "Tất cả Nhiệm vụ";
+    private static final String FILTER_COMPLETED = "Đã Hoàn Thành";
+    private static final String FILTER_INCOMPLETE = "Chưa Hoàn Thành";
+    private static final String FILTER_OVERDUE = "Quá Hạn";
+
+    private static final String SORT_DEFAULT = "Mặc định (Ưu tiên)";
+    private static final String SORT_DUE_DATE_ASC = "Theo Ngày Hạn (Gần nhất)";
+    private static final String SORT_DUE_DATE_DESC = "Theo Ngày Hạn (Xa nhất)";
+    private static final String SORT_MODIFIED_DATE_DESC = "Theo Ngày Sửa Đổi (Mới nhất)";
+
 
     public MissionScreen(NoteController controller, MainFrame mainFrame) {
         this.controller = controller;
@@ -23,25 +41,51 @@ public class MissionScreen extends JPanel {
 
     private void initializeUI() {
         setLayout(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); // Increased padding
 
-        JPanel topPanel = new JPanel(new BorderLayout());
-        deleteButton = new JButton("🗑");
+        // Top Panel for controls
+        JPanel topPanel = new JPanel(new BorderLayout(10, 5));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(0,0,10,0)); // Bottom margin for top panel
+
+        // Filter and Sort Panel
+        JPanel filterSortPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        filterSortPanel.add(new JLabel("Lọc:"));
+        filterComboBox = new JComboBox<>(new String[]{FILTER_ALL, FILTER_INCOMPLETE, FILTER_OVERDUE, FILTER_COMPLETED});
+        filterComboBox.addActionListener(e -> refreshMissions());
+        filterSortPanel.add(filterComboBox);
+
+        filterSortPanel.add(Box.createHorizontalStrut(15)); // Spacer
+
+        filterSortPanel.add(new JLabel("Sắp xếp:"));
+        sortComboBox = new JComboBox<>(new String[]{SORT_DEFAULT, SORT_DUE_DATE_ASC, SORT_DUE_DATE_DESC, SORT_MODIFIED_DATE_DESC});
+        sortComboBox.addActionListener(e -> refreshMissions());
+        filterSortPanel.add(sortComboBox);
+
+        topPanel.add(filterSortPanel, BorderLayout.WEST);
+
+
+        deleteButton = new JButton("🗑 Xóa"); // Icon and text
+        deleteButton.setToolTipText("Chuyển sang chế độ xóa nhiệm vụ");
         deleteButton.addActionListener(e -> toggleDeleteMode());
         topPanel.add(deleteButton, BorderLayout.EAST);
         add(topPanel, BorderLayout.NORTH);
 
-        missionContainer = new JPanel(new GridLayout(0, 3, 20, 20));
-        missionContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
+        missionContainer = new JPanel();
+        // Using MigLayout for more flexible grid-like layout that handles varying heights better
+        // For MigLayout, you need to add the MigLayout JAR to your project.
+        // If MigLayout is not available, fallback to GridLayout or another manager.
+        // For simplicity, let's stick to GridLayout for now and advise user if more complex layout is needed.
+        missionContainer.setLayout(new GridLayout(0, 3, 15, 15)); // rows, cols, hgap, vgap
+        missionContainer.setBorder(BorderFactory.createEmptyBorder(5,0,5,0));
+
 
         JScrollPane scrollPane = new JScrollPane(missionContainer);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER); // Usually not needed
+        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove scrollpane border
 
-        scrollPane.getVerticalScrollBar().setUnitIncrement(20);
-        scrollPane.getVerticalScrollBar().setBlockIncrement(100);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(20);
-        scrollPane.getHorizontalScrollBar().setBlockIncrement(100);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16); // Smoother scrolling
+        scrollPane.getVerticalScrollBar().setBlockIncrement(80);
 
         add(scrollPane, BorderLayout.CENTER);
         refreshMissions();
@@ -49,67 +93,89 @@ public class MissionScreen extends JPanel {
 
     private void toggleDeleteMode() {
         deleteMode = !deleteMode;
-        deleteButton.setText(deleteMode ? "Done" : "🗑");
-        refreshMissions();
+        deleteButton.setText(deleteMode ? "Hoàn Tất Xóa" : "🗑 Xóa");
+        deleteButton.setToolTipText(deleteMode ? "Hoàn tất và thoát chế độ xóa" : "Chuyển sang chế độ xóa nhiệm vụ");
+        refreshMissions(); // Re-render panels to show/hide delete checkboxes
     }
 
     public void refreshMissions() {
         missionContainer.removeAll();
+        LocalDateTime consistencyNow = LocalDateTime.now();
 
-        List<Note> missions = controller.getMissions();
-        LocalDateTime consistencyNow = LocalDateTime.now(); // Mốc thời gian nhất quán
+        List<Note> missions = controller.getMissions(); // This already filters for isMission = true
 
-        missions.sort((n1, n2) -> {
-            boolean n1Completed = n1.isMissionCompleted();
-            boolean n2Completed = n2.isMissionCompleted();
+        // Apply filtering
+        String selectedFilter = (String) filterComboBox.getSelectedItem();
+        if (selectedFilter != null) {
+            missions = missions.stream().filter((Note note) -> { // Explicitly type 'note'
+                boolean isCompleted = note.isMissionCompleted();
+                boolean isOverdue = !isCompleted && note.getAlarm() != null &&
+                        !note.getAlarm().isRecurring() &&
+                        note.getAlarm().getAlarmTime().isBefore(consistencyNow);
+                switch (selectedFilter) {
+                    case FILTER_COMPLETED: return isCompleted;
+                    case FILTER_INCOMPLETE: return !isCompleted;
+                    case FILTER_OVERDUE: return isOverdue;
+                    case FILTER_ALL:
+                    default: return true;
+                }
+            }).collect(java.util.stream.Collectors.toList());
+        }
 
-            // Logic xác định task quá hạn dùng consistencyNow
-            boolean n1IsOverdue = !n1Completed && n1.getAlarm() != null && !n1.getAlarm().isRecurring() && n1.getAlarm().getAlarmTime().isBefore(consistencyNow);
-            boolean n2IsOverdue = !n2Completed && n2.getAlarm() != null && !n2.getAlarm().isRecurring() && n2.getAlarm().getAlarmTime().isBefore(consistencyNow);
 
-            // Xác định hạng mục của mỗi task: 1 (Còn hạn), 2 (Hết hạn), 3 (Done)
-            int category1 = n1Completed ? 3 : (n1IsOverdue ? 2 : 1);
-            int category2 = n2Completed ? 3 : (n2IsOverdue ? 2 : 1);
+        // Apply sorting
+        String selectedSort = (String) sortComboBox.getSelectedItem();
+        if (selectedSort != null) {
+            switch (selectedSort) {
+                case SORT_DUE_DATE_ASC:
+                    missions.sort(Comparator.comparing(
+                            (Note note) -> (note.getAlarm() != null && note.getAlarm().getAlarmTime() != null) ? note.getAlarm().getAlarmTime() : LocalDateTime.MAX, // Explicitly type 'note'
+                            Comparator.nullsLast(LocalDateTime::compareTo)
+                    ).thenComparing(Note::getModificationDate, Comparator.reverseOrder())); // Secondary sort by modified
+                    break;
+                case SORT_DUE_DATE_DESC:
+                    missions.sort(Comparator.comparing(
+                            (Note note) -> (note.getAlarm() != null && note.getAlarm().getAlarmTime() != null) ? note.getAlarm().getAlarmTime() : LocalDateTime.MIN, // Explicitly type 'note'
+                            Comparator.nullsFirst(LocalDateTime::compareTo)
+                    ).reversed().thenComparing(Note::getModificationDate, Comparator.reverseOrder()));
+                    break;
+                case SORT_MODIFIED_DATE_DESC:
+                    missions.sort(Comparator.comparing(Note::getModificationDate, Comparator.reverseOrder()));
+                    break;
+                case SORT_DEFAULT:
+                default:
+                    // Default sorting logic (Still Due (by alarm) -> Overdue (by alarm) -> Done (by modified))
+                    missions.sort((n1, n2) -> {
+                        boolean n1Completed = n1.isMissionCompleted();
+                        boolean n2Completed = n2.isMissionCompleted();
+                        boolean n1IsOverdue = !n1Completed && n1.getAlarm() != null && !n1.getAlarm().isRecurring() && n1.getAlarm().getAlarmTime().isBefore(consistencyNow);
+                        boolean n2IsOverdue = !n2Completed && n2.getAlarm() != null && !n2.getAlarm().isRecurring() && n2.getAlarm().getAlarmTime().isBefore(consistencyNow);
 
-            // Sắp xếp theo hạng mục chính
-            if (category1 != category2) {
-                return Integer.compare(category1, category2);
+                        int cat1 = n1Completed ? 3 : (n1IsOverdue ? 2 : 1);
+                        int cat2 = n2Completed ? 3 : (n2IsOverdue ? 2 : 1);
+
+                        if (cat1 != cat2) return Integer.compare(cat1, cat2);
+
+                        if (cat1 == 1) { // Both Still Due
+                            LocalDateTime t1 = (n1.getAlarm() != null && n1.getAlarm().getAlarmTime() != null) ? n1.getAlarm().getAlarmTime() : LocalDateTime.MAX;
+                            LocalDateTime t2 = (n2.getAlarm() != null && n2.getAlarm().getAlarmTime() != null) ? n2.getAlarm().getAlarmTime() : LocalDateTime.MAX;
+                            int alarmCompare = t1.compareTo(t2);
+                            if (alarmCompare != 0) return alarmCompare;
+                        } else if (cat1 == 2) { // Both Overdue
+                            LocalDateTime t1 = (n1.getAlarm() != null && n1.getAlarm().getAlarmTime() != null) ? n1.getAlarm().getAlarmTime() : LocalDateTime.MIN; // Should not be null if overdue
+                            LocalDateTime t2 = (n2.getAlarm() != null && n2.getAlarm().getAlarmTime() != null) ? n2.getAlarm().getAlarmTime() : LocalDateTime.MIN;
+                            int alarmCompare = t1.compareTo(t2);
+                            if (alarmCompare != 0) return alarmCompare;
+                        }
+                        // For Done, or if alarms are same for Still Due/Overdue, sort by modification date desc
+                        return n2.getModificationDate().compareTo(n1.getModificationDate());
+                    });
+                    break;
             }
+        }
 
-            // Nếu cùng hạng mục, sắp xếp phụ
-            switch (category1) {
-                case 1: // Cả hai đều CÒN HẠN (Chưa hoàn thành, Chưa quá hạn)
-                    boolean n1HasAlarm = n1.getAlarm() != null;
-                    boolean n2HasAlarm = n2.getAlarm() != null;
 
-                    if (n1HasAlarm && n2HasAlarm) { // Cả hai có alarm (trong tương lai)
-                        int alarmCompare = n1.getAlarm().getAlarmTime().compareTo(n2.getAlarm().getAlarmTime());
-                        if (alarmCompare != 0) return alarmCompare; // Alarm sớm hơn lên trước
-                    } else if (n1HasAlarm) { // Chỉ n1 có alarm
-                        return -1; // Task có alarm lên trước
-                    } else if (n2HasAlarm) { // Chỉ n2 có alarm
-                        return 1;
-                    }
-                    // Nếu không có alarm, hoặc alarm giống nhau: sắp xếp theo ngày sửa đổi (mới nhất trước)
-                    return n2.getModificationDate().compareTo(n1.getModificationDate());
-
-                case 2: // Cả hai đều HẾT HẠN (Chưa hoàn thành, Đã quá hạn)
-                    // Hết hạn thì chắc chắn có alarm. Sắp xếp theo thời gian alarm (sớm nhất/quá hạn lâu nhất trước)
-                    int alarmCompareOverdue = n1.getAlarm().getAlarmTime().compareTo(n2.getAlarm().getAlarmTime());
-                    if (alarmCompareOverdue != 0) return alarmCompareOverdue;
-                    // Nếu alarm quá hạn trùng nhau: sắp xếp theo ngày sửa đổi (mới nhất trước)
-                    return n2.getModificationDate().compareTo(n1.getModificationDate());
-
-                case 3: // Cả hai đều DONE
-                    // Sắp xếp theo ngày sửa đổi (hoàn thành/sửa đổi mới nhất lên trước trong nhóm done)
-                    return n2.getModificationDate().compareTo(n1.getModificationDate());
-            }
-            return 0; // Trường hợp không thể xảy ra nếu logic switch-case đầy đủ
-        });
-
-        System.out.println("Refreshing missions (Sorted by: Still Due -> Overdue -> Done): " + missions.size() + " missions.");
         for (Note note : missions) {
-            // Truyền consistencyNow vào để tô màu cũng dùng chung mốc thời gian này
             JPanel missionPanel = createMissionPanel(note, consistencyNow);
             missionContainer.add(missionPanel);
         }
@@ -118,35 +184,39 @@ public class MissionScreen extends JPanel {
         missionContainer.repaint();
     }
 
-    // Thay đổi signature để nhận currentTime
     private JPanel createMissionPanel(Note note, LocalDateTime currentTime) {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        panel.setPreferredSize(new Dimension(350, 180));
-        panel.setMaximumSize(new Dimension(350, 180));
+        JPanel panel = new JPanel(new BorderLayout(8, 8)); // Increased gaps
+        panel.setBorder(new CompoundBorder(
+                new LineBorder(UIManager.getColor("Component.borderColor"), 1, true), // Rounded border
+                new EmptyBorder(10, 10, 10, 10) // Padding inside
+        ));
+        // panel.setPreferredSize(new Dimension(350, 180)); // Keep for consistency if GridLayout is used
+        // panel.setMaximumSize(new Dimension(380, 200)); // Allow slightly more flexibility
 
         Color missionPanelBackgroundColor = UIManager.getColor("Panel.background");
         boolean isCompleted = note.isMissionCompleted();
-        // Sử dụng currentTime được truyền vào để xác định isOverdue
         boolean isOverdue = !isCompleted &&
                 note.getAlarm() != null &&
-                note.getAlarm().getAlarmTime().isBefore(currentTime) && // <- SỬ DỤNG currentTime
+                note.getAlarm().getAlarmTime().isBefore(currentTime) &&
                 !note.getAlarm().isRecurring();
 
+        Color titleColor = UIManager.getColor("Label.foreground");
+
         if (isCompleted) {
-            missionPanelBackgroundColor = new Color(220, 255, 220); // Xanh
+            missionPanelBackgroundColor = new Color(220, 255, 220); // Light green
+            titleColor = new Color(70, 150, 70); // Darker green for title
         } else if (isOverdue) {
-            missionPanelBackgroundColor = new Color(230, 230, 230); // Xám
+            missionPanelBackgroundColor = new Color(255, 220, 220); // Light red/pink
+            titleColor = new Color(180, 50, 50); // Darker red for title
         }
         panel.setBackground(missionPanelBackgroundColor);
 
-        // ... (Phần còn lại của createMissionPanel giữ nguyên) ...
-        JPanel controlPanel = new JPanel(new BorderLayout());
-        controlPanel.setBackground(missionPanelBackgroundColor);
-        controlPanel.setOpaque(true);
 
-        JCheckBox completeCheckbox = new JCheckBox("Done");
-        completeCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        JPanel controlPanel = new JPanel(new BorderLayout());
+        controlPanel.setOpaque(false); // Make it transparent to show panel's background
+
+        JCheckBox completeCheckbox = new JCheckBox("Hoàn thành");
+        completeCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         completeCheckbox.setSelected(note.isMissionCompleted());
         completeCheckbox.setOpaque(false);
         completeCheckbox.addActionListener(e -> {
@@ -156,227 +226,143 @@ public class MissionScreen extends JPanel {
         controlPanel.add(completeCheckbox, BorderLayout.WEST);
 
         if (deleteMode) {
-            JCheckBox deleteCheckbox = new JCheckBox("Delete");
-            deleteCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            JCheckBox deleteCheckbox = new JCheckBox("Xóa?");
+            deleteCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            deleteCheckbox.setForeground(Color.RED);
             deleteCheckbox.setOpaque(false);
             controlPanel.add(deleteCheckbox, BorderLayout.EAST);
             deleteCheckbox.addActionListener(e -> {
                 if (deleteCheckbox.isSelected()) {
                     int option = JOptionPane.showConfirmDialog(mainFrame,
-                            "Do you want to delete the entire note or just the mission?\n" +
-                                    "Yes: Delete note (including mission and alarm)\n" +
-                                    "No: Clear mission only\n" +
-                                    "Cancel: Do nothing",
-                            "Delete Confirmation", JOptionPane.YES_NO_CANCEL_OPTION);
+                            "Xóa toàn bộ ghi chú '" + note.getTitle() + "' hay chỉ xóa nhiệm vụ?\n" +
+                                    "Yes: Xóa toàn bộ ghi chú (bao gồm nhiệm vụ và báo thức)\n" +
+                                    "No: Chỉ xóa nội dung nhiệm vụ (giữ lại ghi chú và báo thức nếu có)\n" +
+                                    "Cancel: Không làm gì",
+                            "Xác Nhận Xóa", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
                     if (option == JOptionPane.YES_OPTION) {
-                        controller.deleteNote(note);
+                        controller.deleteNote(note); // This will delete the note and associated mission/alarm
                     } else if (option == JOptionPane.NO_OPTION) {
-                        controller.updateMission(note, "");
+                        controller.updateMission(note, ""); // Clear mission content, keeps the note
                     }
-                    toggleDeleteMode();
+                    // No matter the choice (unless cancel), refresh and potentially exit delete mode
+                    if (option != JOptionPane.CANCEL_OPTION) {
+                        toggleDeleteMode(); // Exit delete mode after action
+                    } else {
+                        deleteCheckbox.setSelected(false); // Uncheck if cancelled
+                    }
                 }
             });
         }
         panel.add(controlPanel, BorderLayout.NORTH);
 
-        JPanel contentPanel = new JPanel(new BorderLayout());
-        contentPanel.setBackground(missionPanelBackgroundColor);
-        contentPanel.setOpaque(true);
+        JPanel contentPanel = new JPanel(new BorderLayout(5,3));
+        contentPanel.setOpaque(false);
 
         JLabel titleLabel = new JLabel(note.getTitle());
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setForeground(titleColor);
         contentPanel.add(titleLabel, BorderLayout.NORTH);
 
-        JLabel contentLabel = new JLabel("<html>" + truncateText(note.getMissionContent(), 100) + "</html>");
-        contentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        contentPanel.add(contentLabel, BorderLayout.CENTER);
+        JTextArea contentArea = new JTextArea(truncateText(note.getMissionContent(), 120));
+        contentArea.setLineWrap(true);
+        contentArea.setWrapStyleWord(true);
+        contentArea.setEditable(false);
+        contentArea.setOpaque(false); // Transparent background
+        contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        contentArea.setForeground(UIManager.getColor("TextArea.foreground"));
+        // Add a bit of margin if it's not inheriting from panel border
+        contentArea.setBorder(BorderFactory.createEmptyBorder(2,0,2,0));
+        contentPanel.add(new JScrollPane(contentArea) {{
+            setOpaque(false);
+            getViewport().setOpaque(false);
+            setBorder(null);
+        }}, BorderLayout.CENTER);
 
-        JPanel infoPanel = new JPanel(new GridLayout(2, 1));
-        infoPanel.setBackground(missionPanelBackgroundColor);
-        infoPanel.setOpaque(true);
 
-        infoPanel.add(new JLabel("Created: " + note.getFormattedModificationDate()));
-        String alarmText = note.getAlarm() != null ? formatAlarm(note.getAlarm()) : "No Alarm";
-        JLabel alarmLabel = new JLabel("Alarm: " + alarmText);
-        alarmLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        alarmLabel.setForeground(Color.BLUE);
-        alarmLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        alarmLabel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (!note.isMissionCompleted() || note.getAlarm() != null) {
-                    showAlarmDialog(note);
+        JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2)); // Small vgap
+        infoPanel.setOpaque(false);
+
+        JLabel createdLabel = new JLabel("Sửa đổi: " + note.getFormattedModificationDate());
+        createdLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        infoPanel.add(createdLabel);
+
+        String alarmText = note.getAlarm() != null ? formatAlarm(note.getAlarm()) : "Chưa có báo thức";
+        JLabel alarmLabel = new JLabel("⏰ " + alarmText); // Added icon
+        alarmLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        alarmLabel.setForeground(UIManager.getColor("Label.foreground")); // Use theme color
+        if (note.getAlarm() != null) { // Only make it clickable if there's an alarm
+            alarmLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            alarmLabel.setToolTipText("Nhấn để sửa báo thức");
+            alarmLabel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (!note.isMissionCompleted() || note.getAlarm() != null) { // Allow editing alarm even if completed
+                        showAlarmDialog(note);
+                    }
                 }
-            }
-        });
+            });
+        }
         infoPanel.add(alarmLabel);
         contentPanel.add(infoPanel, BorderLayout.SOUTH);
         panel.add(contentPanel, BorderLayout.CENTER);
 
+        // Make the entire panel clickable to edit mission (if not in delete mode)
         panel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (!deleteMode && e.getButton() == MouseEvent.BUTTON1) {
-                    Component sourceParent = e.getComponent();
-                    Point pointInControlPanel = SwingUtilities.convertPoint(sourceParent, e.getPoint(), controlPanel);
-                    Point pointInInfoPanel = SwingUtilities.convertPoint(sourceParent, e.getPoint(), infoPanel);
+                if (deleteMode) return; // Do nothing if in delete mode
 
-                    if (controlPanel.contains(pointInControlPanel)) {
-                        return;
-                    }
-                    if (infoPanel.contains(pointInInfoPanel)) {
-                        Point pointInAlarmLabel = SwingUtilities.convertPoint(sourceParent, e.getPoint(), alarmLabel);
-                        if (alarmLabel.contains(pointInAlarmLabel)) {
-                            return;
-                        }
-                    }
+                // Check if click was on an interactive component within the panel
+                Component clickedComponent = panel.getComponentAt(e.getPoint());
+                if (clickedComponent instanceof JCheckBox || clickedComponent instanceof JButton) {
+                    return; // Let the checkbox/button handle its own action
+                }
+                if (alarmLabel.getBounds().contains(SwingUtilities.convertPoint(panel, e.getPoint(), alarmLabel.getParent())) && note.getAlarm() != null) {
+                    return; // Click was on alarm label, let its listener handle
+                }
 
-                    MissionDialog dialog = new MissionDialog(mainFrame);
-                    dialog.setMission(note.getMissionContent());
-                    dialog.setTitle("Edit Mission: " + note.getTitle());
-                    dialog.setVisible(true);
+
+                MissionDialog dialog = new MissionDialog(mainFrame);
+                if(mainFrame.getMouseEventDispatcher() != null) mainFrame.getMouseEventDispatcher().addMouseMotionListenerToWindow(dialog);
+                dialog.setMission(note.getMissionContent());
+                dialog.setTitle("Sửa Nhiệm vụ: " + note.getTitle());
+                dialog.setVisible(true);
+                if (dialog.isSaved()) {
                     String result = dialog.getResult();
-                    if (result != null) {
-                        controller.updateMission(note, result);
-                        refreshMissions();
-                    }
+                    controller.updateMission(note, result); // Controller handles null
+                    refreshMissions();
                 }
             }
         });
         return panel;
     }
 
-    // Các phương thức showAlarmDialog, formatAlarm, truncateText giữ nguyên
     private void showAlarmDialog(Note note) {
-        JDialog dialog = new JDialog(mainFrame, "Alarm Details", true);
-        dialog.setResizable(false);
-        dialog.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 10, 5, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.WEST;
+        // Using the AlarmDialog class now
+        AlarmDialog alarmDialog = new AlarmDialog(mainFrame, note.getAlarm());
+        if(mainFrame.getMouseEventDispatcher() != null) mainFrame.getMouseEventDispatcher().addMouseMotionListenerToWindow(alarmDialog);
+        alarmDialog.setVisible(true);
 
-        Alarm alarm = note.getAlarm();
-        LocalDateTime initialDateTime = alarm != null ? alarm.getAlarmTime() : LocalDateTime.now().withSecond(0).withNano(0);
-        String alarmType = alarm != null && alarm.isRecurring() ? alarm.getFrequency() : "ONCE";
-
-        JLabel currentAlarmLabel = new JLabel("Current: " + (alarm != null ? formatAlarm(alarm) : "No alarm set"));
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        dialog.add(currentAlarmLabel, gbc);
-
-        gbc.gridwidth = 1;
-        gbc.gridy = 1;
-        dialog.add(new JLabel("Set Alarm Type:"), gbc);
-        String[] alarmTypes = {"ONCE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"};
-        JComboBox<String> typeComboBox = new JComboBox<>(alarmTypes);
-        typeComboBox.setSelectedItem(alarmType);
-        gbc.gridx = 1;
-        dialog.add(typeComboBox, gbc);
-
-        JPanel dateTimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        JTextField dateField = new JTextField(10);
-        dateField.setText(initialDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-
-        SpinnerNumberModel hourModel = new SpinnerNumberModel(initialDateTime.getHour(), 0, 23, 1);
-        JSpinner hourSpinner = new JSpinner(hourModel);
-        ((JSpinner.DefaultEditor) hourSpinner.getEditor()).getTextField().setColumns(2);
-
-        SpinnerNumberModel minuteModel = new SpinnerNumberModel(initialDateTime.getMinute(), 0, 59, 1);
-        JSpinner minuteSpinner = new JSpinner(minuteModel);
-        ((JSpinner.DefaultEditor) minuteSpinner.getEditor()).getTextField().setColumns(2);
-
-        Runnable updateDateTimePanelLambda = () -> {
-            dateTimePanel.removeAll();
-            String selectedType = (String) typeComboBox.getSelectedItem();
-            if ("ONCE".equals(selectedType)) {
-                dateTimePanel.add(new JLabel("Date:"));
-                dateTimePanel.add(dateField);
-                dateField.setText(initialDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-            }
-            dateTimePanel.add(new JLabel(" H:"));
-            dateTimePanel.add(hourSpinner);
-            dateTimePanel.add(new JLabel(" M:"));
-            dateTimePanel.add(minuteSpinner);
-            dateTimePanel.revalidate();
-            dateTimePanel.repaint();
-            dialog.pack();
-        };
-
-        typeComboBox.addActionListener(e -> updateDateTimePanelLambda.run());
-        updateDateTimePanelLambda.run();
-
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
-        dialog.add(dateTimePanel, gbc);
-
-        JButton updateButton = new JButton(alarm != null ? "Update Alarm" : "Set Alarm");
-        updateButton.addActionListener(e -> {
-            try {
-                String selectedTypeStr = (String) typeComboBox.getSelectedItem();
-                boolean isRecurringFlag = !"ONCE".equals(selectedTypeStr);
-                LocalDateTime newTime;
-                int hour = (int) hourSpinner.getValue();
-                int minute = (int) minuteSpinner.getValue();
-
-                if ("ONCE".equals(selectedTypeStr)) {
-                    DateTimeFormatter inputDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                    LocalDate dateOnly = LocalDate.parse(dateField.getText(), inputDateFormatter);
-                    LocalDateTime datePart = dateOnly.atStartOfDay();
-                    newTime = datePart.withHour(hour).withMinute(minute).withSecond(0).withNano(0);
-                    if (newTime.isBefore(LocalDateTime.now())) {
-                        JOptionPane.showMessageDialog(dialog, "Alarm time for 'ONCE' type must be in the future.", "Warning", JOptionPane.WARNING_MESSAGE);
-                        return;
-                    }
-                } else {
-                    LocalDateTime baseDateForRecurring = (alarm != null && alarm.isRecurring()) ? alarm.getAlarmTime() : LocalDateTime.now();
-                    newTime = baseDateForRecurring.withHour(hour).withMinute(minute).withSecond(0).withNano(0);
-                }
-
-                Alarm newAlarm = new Alarm(newTime, isRecurringFlag, selectedTypeStr);
-                controller.setAlarm(note, newAlarm);
-                refreshMissions();
-                dialog.dispose();
-            } catch (java.time.format.DateTimeParseException ex) {
-                JOptionPane.showMessageDialog(dialog, "Invalid date format! Please use yyyy-MM-dd.", "Error", JOptionPane.ERROR_MESSAGE);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Error setting alarm: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
-            }
-        });
-        gbc.gridy = 3;
-        dialog.add(updateButton, gbc);
-
-        JButton deleteAlarmButton = new JButton("Delete Alarm");
-        deleteAlarmButton.setEnabled(alarm != null);
-        deleteAlarmButton.addActionListener(e -> {
-            controller.setAlarm(note, null);
-            refreshMissions();
-            dialog.dispose();
-        });
-        gbc.gridy = 4;
-        dialog.add(deleteAlarmButton, gbc);
-
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(e -> dialog.dispose());
-        gbc.gridy = 5;
-        dialog.add(cancelButton, gbc);
-
-        dialog.pack();
-        dialog.setLocationRelativeTo(mainFrame);
-        dialog.setVisible(true);
+        if (alarmDialog.isOkPressed()) {
+            Alarm resultAlarm = alarmDialog.getResult();
+            controller.setAlarm(note, resultAlarm); // Controller handles if resultAlarm is null (delete) or new/updated
+            refreshMissions(); // Refresh to show updated alarm status
+        }
     }
 
     private String formatAlarm(Alarm alarm) {
-        DateTimeFormatter formatterFull = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        if (alarm == null || alarm.getAlarmTime() == null) return "N/A";
+        DateTimeFormatter formatterFull = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm");
         DateTimeFormatter formatterShort = DateTimeFormatter.ofPattern("HH:mm");
         if (alarm.isRecurring()) {
-            return alarm.getAlarmTime().format(formatterShort) + " (" + alarm.getFrequency() + ")";
+            return alarm.getAlarmTime().format(formatterShort) + " (" + alarm.getRecurrencePattern() + ")";
         } else {
-            return alarm.getAlarmTime().format(formatterFull) + " (ONCE)";
+            return alarm.getAlarmTime().format(formatterFull);
         }
     }
 
     private String truncateText(String text, int maxLength) {
         if (text == null || text.length() <= maxLength) return text == null ? "" : text;
-        return text.substring(0, maxLength) + "...";
+        return text.substring(0, maxLength - 3) + "...";
     }
 }
