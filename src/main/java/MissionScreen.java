@@ -10,8 +10,8 @@ import java.time.LocalDate; // Keep this if showAlarmDialog or other parts use i
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Comparator; // Added this import
-import java.util.stream.Collectors; // Ensure this is present for Collectors.toList()
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 public class MissionScreen extends JPanel {
     private final NoteController controller;
@@ -21,6 +21,9 @@ public class MissionScreen extends JPanel {
     private boolean deleteMode = false;
     private JComboBox<String> filterComboBox;
     private JComboBox<String> sortComboBox;
+    private JLabel filterLabel;
+    private JLabel sortLabel;
+
 
     private static final String FILTER_ALL = "Tất cả Nhiệm vụ";
     private static final String FILTER_COMPLETED = "Đã Hoàn Thành";
@@ -41,50 +44,52 @@ public class MissionScreen extends JPanel {
 
     private void initializeUI() {
         setLayout(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); // Increased padding
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // Top Panel for controls
         JPanel topPanel = new JPanel(new BorderLayout(10, 5));
-        topPanel.setBorder(BorderFactory.createEmptyBorder(0,0,10,0)); // Bottom margin for top panel
+        topPanel.setBorder(BorderFactory.createEmptyBorder(0,0,10,0));
 
-        // Filter and Sort Panel
         JPanel filterSortPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        filterSortPanel.add(new JLabel("Lọc:"));
+
+        // --- Filter ---
+        filterLabel = new JLabel("🔍 Lọc:"); // Unicode for filter icon
+        filterLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        filterSortPanel.add(filterLabel);
         filterComboBox = new JComboBox<>(new String[]{FILTER_ALL, FILTER_INCOMPLETE, FILTER_OVERDUE, FILTER_COMPLETED});
+        filterComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         filterComboBox.addActionListener(e -> refreshMissions());
         filterSortPanel.add(filterComboBox);
 
-        filterSortPanel.add(Box.createHorizontalStrut(15)); // Spacer
+        filterSortPanel.add(Box.createHorizontalStrut(15));
 
-        filterSortPanel.add(new JLabel("Sắp xếp:"));
+        // --- Sort ---
+        sortLabel = new JLabel("↕️ Sắp xếp:"); // Unicode for sort icon
+        sortLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        filterSortPanel.add(sortLabel);
         sortComboBox = new JComboBox<>(new String[]{SORT_DEFAULT, SORT_DUE_DATE_ASC, SORT_DUE_DATE_DESC, SORT_MODIFIED_DATE_DESC});
+        sortComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         sortComboBox.addActionListener(e -> refreshMissions());
         filterSortPanel.add(sortComboBox);
 
         topPanel.add(filterSortPanel, BorderLayout.WEST);
 
-
-        deleteButton = new JButton("🗑 Xóa"); // Icon and text
+        deleteButton = new JButton("🗑 Xóa");
+        deleteButton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14)); // Use a font that supports emojis well
         deleteButton.setToolTipText("Chuyển sang chế độ xóa nhiệm vụ");
         deleteButton.addActionListener(e -> toggleDeleteMode());
         topPanel.add(deleteButton, BorderLayout.EAST);
         add(topPanel, BorderLayout.NORTH);
 
         missionContainer = new JPanel();
-        // Using MigLayout for more flexible grid-like layout that handles varying heights better
-        // For MigLayout, you need to add the MigLayout JAR to your project.
-        // If MigLayout is not available, fallback to GridLayout or another manager.
-        // For simplicity, let's stick to GridLayout for now and advise user if more complex layout is needed.
-        missionContainer.setLayout(new GridLayout(0, 3, 15, 15)); // rows, cols, hgap, vgap
+        missionContainer.setLayout(new GridLayout(0, 3, 15, 15));
         missionContainer.setBorder(BorderFactory.createEmptyBorder(5,0,5,0));
-
 
         JScrollPane scrollPane = new JScrollPane(missionContainer);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER); // Usually not needed
-        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove scrollpane border
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16); // Smoother scrolling
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.getVerticalScrollBar().setBlockIncrement(80);
 
         add(scrollPane, BorderLayout.CENTER);
@@ -93,21 +98,27 @@ public class MissionScreen extends JPanel {
 
     private void toggleDeleteMode() {
         deleteMode = !deleteMode;
-        deleteButton.setText(deleteMode ? "Hoàn Tất Xóa" : "🗑 Xóa");
+        deleteButton.setText(deleteMode ? "✅ Hoàn Tất Xóa" : "🗑 Xóa"); // Changed icon for "Done"
         deleteButton.setToolTipText(deleteMode ? "Hoàn tất và thoát chế độ xóa" : "Chuyển sang chế độ xóa nhiệm vụ");
-        refreshMissions(); // Re-render panels to show/hide delete checkboxes
+        if(deleteMode) {
+            deleteButton.setBackground(new Color(0xDC3545)); // A red color for delete mode
+            deleteButton.setForeground(Color.WHITE);
+        } else {
+            deleteButton.setBackground(UIManager.getColor("Button.background"));
+            deleteButton.setForeground(UIManager.getColor("Button.foreground"));
+        }
+        refreshMissions();
     }
 
     public void refreshMissions() {
         missionContainer.removeAll();
         LocalDateTime consistencyNow = LocalDateTime.now();
 
-        List<Note> missions = controller.getMissions(); // This already filters for isMission = true
+        List<Note> missions = controller.getMissions();
 
-        // Apply filtering
         String selectedFilter = (String) filterComboBox.getSelectedItem();
         if (selectedFilter != null) {
-            missions = missions.stream().filter((Note note) -> { // Explicitly type 'note'
+            missions = missions.stream().filter((Note note) -> {
                 boolean isCompleted = note.isMissionCompleted();
                 boolean isOverdue = !isCompleted && note.getAlarm() != null &&
                         !note.getAlarm().isRecurring() &&
@@ -119,23 +130,21 @@ public class MissionScreen extends JPanel {
                     case FILTER_ALL:
                     default: return true;
                 }
-            }).collect(java.util.stream.Collectors.toList());
+            }).collect(Collectors.toList());
         }
 
-
-        // Apply sorting
         String selectedSort = (String) sortComboBox.getSelectedItem();
         if (selectedSort != null) {
             switch (selectedSort) {
                 case SORT_DUE_DATE_ASC:
                     missions.sort(Comparator.comparing(
-                            (Note note) -> (note.getAlarm() != null && note.getAlarm().getAlarmTime() != null) ? note.getAlarm().getAlarmTime() : LocalDateTime.MAX, // Explicitly type 'note'
+                            (Note note) -> (note.getAlarm() != null && note.getAlarm().getAlarmTime() != null) ? note.getAlarm().getAlarmTime() : LocalDateTime.MAX,
                             Comparator.nullsLast(LocalDateTime::compareTo)
-                    ).thenComparing(Note::getModificationDate, Comparator.reverseOrder())); // Secondary sort by modified
+                    ).thenComparing(Note::getModificationDate, Comparator.reverseOrder()));
                     break;
                 case SORT_DUE_DATE_DESC:
                     missions.sort(Comparator.comparing(
-                            (Note note) -> (note.getAlarm() != null && note.getAlarm().getAlarmTime() != null) ? note.getAlarm().getAlarmTime() : LocalDateTime.MIN, // Explicitly type 'note'
+                            (Note note) -> (note.getAlarm() != null && note.getAlarm().getAlarmTime() != null) ? note.getAlarm().getAlarmTime() : LocalDateTime.MIN,
                             Comparator.nullsFirst(LocalDateTime::compareTo)
                     ).reversed().thenComparing(Note::getModificationDate, Comparator.reverseOrder()));
                     break;
@@ -144,7 +153,6 @@ public class MissionScreen extends JPanel {
                     break;
                 case SORT_DEFAULT:
                 default:
-                    // Default sorting logic (Still Due (by alarm) -> Overdue (by alarm) -> Done (by modified))
                     missions.sort((n1, n2) -> {
                         boolean n1Completed = n1.isMissionCompleted();
                         boolean n2Completed = n2.isMissionCompleted();
@@ -156,24 +164,22 @@ public class MissionScreen extends JPanel {
 
                         if (cat1 != cat2) return Integer.compare(cat1, cat2);
 
-                        if (cat1 == 1) { // Both Still Due
+                        if (cat1 == 1) {
                             LocalDateTime t1 = (n1.getAlarm() != null && n1.getAlarm().getAlarmTime() != null) ? n1.getAlarm().getAlarmTime() : LocalDateTime.MAX;
                             LocalDateTime t2 = (n2.getAlarm() != null && n2.getAlarm().getAlarmTime() != null) ? n2.getAlarm().getAlarmTime() : LocalDateTime.MAX;
                             int alarmCompare = t1.compareTo(t2);
                             if (alarmCompare != 0) return alarmCompare;
-                        } else if (cat1 == 2) { // Both Overdue
-                            LocalDateTime t1 = (n1.getAlarm() != null && n1.getAlarm().getAlarmTime() != null) ? n1.getAlarm().getAlarmTime() : LocalDateTime.MIN; // Should not be null if overdue
+                        } else if (cat1 == 2) {
+                            LocalDateTime t1 = (n1.getAlarm() != null && n1.getAlarm().getAlarmTime() != null) ? n1.getAlarm().getAlarmTime() : LocalDateTime.MIN;
                             LocalDateTime t2 = (n2.getAlarm() != null && n2.getAlarm().getAlarmTime() != null) ? n2.getAlarm().getAlarmTime() : LocalDateTime.MIN;
                             int alarmCompare = t1.compareTo(t2);
                             if (alarmCompare != 0) return alarmCompare;
                         }
-                        // For Done, or if alarms are same for Still Due/Overdue, sort by modification date desc
                         return n2.getModificationDate().compareTo(n1.getModificationDate());
                     });
                     break;
             }
         }
-
 
         for (Note note : missions) {
             JPanel missionPanel = createMissionPanel(note, consistencyNow);
@@ -185,13 +191,11 @@ public class MissionScreen extends JPanel {
     }
 
     private JPanel createMissionPanel(Note note, LocalDateTime currentTime) {
-        JPanel panel = new JPanel(new BorderLayout(8, 8)); // Increased gaps
+        JPanel panel = new JPanel(new BorderLayout(8, 8));
         panel.setBorder(new CompoundBorder(
-                new LineBorder(UIManager.getColor("Component.borderColor"), 1, true), // Rounded border
-                new EmptyBorder(10, 10, 10, 10) // Padding inside
+                new LineBorder(UIManager.getColor("Component.borderColor"), 1, true),
+                new EmptyBorder(10, 10, 10, 10)
         ));
-        // panel.setPreferredSize(new Dimension(350, 180)); // Keep for consistency if GridLayout is used
-        // panel.setMaximumSize(new Dimension(380, 200)); // Allow slightly more flexibility
 
         Color missionPanelBackgroundColor = UIManager.getColor("Panel.background");
         boolean isCompleted = note.isMissionCompleted();
@@ -203,17 +207,16 @@ public class MissionScreen extends JPanel {
         Color titleColor = UIManager.getColor("Label.foreground");
 
         if (isCompleted) {
-            missionPanelBackgroundColor = new Color(220, 255, 220); // Light green
-            titleColor = new Color(70, 150, 70); // Darker green for title
+            missionPanelBackgroundColor = new Color(220, 255, 220);
+            titleColor = new Color(70, 150, 70);
         } else if (isOverdue) {
-            missionPanelBackgroundColor = new Color(255, 220, 220); // Light red/pink
-            titleColor = new Color(180, 50, 50); // Darker red for title
+            missionPanelBackgroundColor = new Color(255, 220, 220);
+            titleColor = new Color(180, 50, 50);
         }
         panel.setBackground(missionPanelBackgroundColor);
 
-
         JPanel controlPanel = new JPanel(new BorderLayout());
-        controlPanel.setOpaque(false); // Make it transparent to show panel's background
+        controlPanel.setOpaque(false);
 
         JCheckBox completeCheckbox = new JCheckBox("Hoàn thành");
         completeCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
@@ -240,15 +243,14 @@ public class MissionScreen extends JPanel {
                                     "Cancel: Không làm gì",
                             "Xác Nhận Xóa", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
                     if (option == JOptionPane.YES_OPTION) {
-                        controller.deleteNote(note); // This will delete the note and associated mission/alarm
+                        controller.deleteNote(note);
                     } else if (option == JOptionPane.NO_OPTION) {
-                        controller.updateMission(note, ""); // Clear mission content, keeps the note
+                        controller.updateMission(note, "");
                     }
-                    // No matter the choice (unless cancel), refresh and potentially exit delete mode
                     if (option != JOptionPane.CANCEL_OPTION) {
-                        toggleDeleteMode(); // Exit delete mode after action
+                        toggleDeleteMode();
                     } else {
-                        deleteCheckbox.setSelected(false); // Uncheck if cancelled
+                        deleteCheckbox.setSelected(false);
                     }
                 }
             });
@@ -267,19 +269,18 @@ public class MissionScreen extends JPanel {
         contentArea.setLineWrap(true);
         contentArea.setWrapStyleWord(true);
         contentArea.setEditable(false);
-        contentArea.setOpaque(false); // Transparent background
+        contentArea.setOpaque(false);
         contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         contentArea.setForeground(UIManager.getColor("TextArea.foreground"));
-        // Add a bit of margin if it's not inheriting from panel border
         contentArea.setBorder(BorderFactory.createEmptyBorder(2,0,2,0));
-        contentPanel.add(new JScrollPane(contentArea) {{
-            setOpaque(false);
-            getViewport().setOpaque(false);
-            setBorder(null);
-        }}, BorderLayout.CENTER);
+        JScrollPane contentScrollPane = new JScrollPane(contentArea);
+        contentScrollPane.setOpaque(false);
+        contentScrollPane.getViewport().setOpaque(false);
+        contentScrollPane.setBorder(null);
+        contentPanel.add(contentScrollPane, BorderLayout.CENTER);
 
 
-        JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2)); // Small vgap
+        JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2));
         infoPanel.setOpaque(false);
 
         JLabel createdLabel = new JLabel("Sửa đổi: " + note.getFormattedModificationDate());
@@ -287,16 +288,16 @@ public class MissionScreen extends JPanel {
         infoPanel.add(createdLabel);
 
         String alarmText = note.getAlarm() != null ? formatAlarm(note.getAlarm()) : "Chưa có báo thức";
-        JLabel alarmLabel = new JLabel("⏰ " + alarmText); // Added icon
+        JLabel alarmLabel = new JLabel("⏰ " + alarmText);
         alarmLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        alarmLabel.setForeground(UIManager.getColor("Label.foreground")); // Use theme color
-        if (note.getAlarm() != null) { // Only make it clickable if there's an alarm
+        alarmLabel.setForeground(UIManager.getColor("Label.foreground"));
+        if (note.getAlarm() != null) {
             alarmLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
             alarmLabel.setToolTipText("Nhấn để sửa báo thức");
             alarmLabel.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    if (!note.isMissionCompleted() || note.getAlarm() != null) { // Allow editing alarm even if completed
+                    if (!note.isMissionCompleted() || note.getAlarm() != null) {
                         showAlarmDialog(note);
                     }
                 }
@@ -306,19 +307,21 @@ public class MissionScreen extends JPanel {
         contentPanel.add(infoPanel, BorderLayout.SOUTH);
         panel.add(contentPanel, BorderLayout.CENTER);
 
-        // Make the entire panel clickable to edit mission (if not in delete mode)
         panel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (deleteMode) return; // Do nothing if in delete mode
+                if (deleteMode) return;
 
-                // Check if click was on an interactive component within the panel
                 Component clickedComponent = panel.getComponentAt(e.getPoint());
                 if (clickedComponent instanceof JCheckBox || clickedComponent instanceof JButton) {
-                    return; // Let the checkbox/button handle its own action
+                    return;
                 }
+                // Check if the click is on the alarmLabel or its parent (infoPanel)
+                // This logic might need refinement if alarmLabel is deeply nested.
                 if (alarmLabel.getBounds().contains(SwingUtilities.convertPoint(panel, e.getPoint(), alarmLabel.getParent())) && note.getAlarm() != null) {
-                    return; // Click was on alarm label, let its listener handle
+                    if (alarmLabel.getBounds().contains(SwingUtilities.convertPoint(panel, e.getPoint(), alarmLabel))) { // More precise check
+                        return; // Click was specifically on alarm label
+                    }
                 }
 
 
@@ -329,7 +332,7 @@ public class MissionScreen extends JPanel {
                 dialog.setVisible(true);
                 if (dialog.isSaved()) {
                     String result = dialog.getResult();
-                    controller.updateMission(note, result); // Controller handles null
+                    controller.updateMission(note, result);
                     refreshMissions();
                 }
             }
@@ -338,15 +341,14 @@ public class MissionScreen extends JPanel {
     }
 
     private void showAlarmDialog(Note note) {
-        // Using the AlarmDialog class now
         AlarmDialog alarmDialog = new AlarmDialog(mainFrame, note.getAlarm());
         if(mainFrame.getMouseEventDispatcher() != null) mainFrame.getMouseEventDispatcher().addMouseMotionListenerToWindow(alarmDialog);
         alarmDialog.setVisible(true);
 
         if (alarmDialog.isOkPressed()) {
             Alarm resultAlarm = alarmDialog.getResult();
-            controller.setAlarm(note, resultAlarm); // Controller handles if resultAlarm is null (delete) or new/updated
-            refreshMissions(); // Refresh to show updated alarm status
+            controller.setAlarm(note, resultAlarm);
+            refreshMissions();
         }
     }
 

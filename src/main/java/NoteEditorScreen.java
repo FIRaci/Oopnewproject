@@ -475,26 +475,8 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private void showResultDialog(String title, String textContent) {
-        JTextArea resultArea = new JTextArea(textContent);
-        resultArea.setWrapStyleWord(true);
-        resultArea.setLineWrap(true);
-        resultArea.setEditable(false);
-        resultArea.setFont(new Font("Segoe UI", Font.PLAIN, 14)); // Consistent font
-        resultArea.setMargin(new Insets(5,5,5,5));
-        // Use UIManager color for dialog background consistency
-        resultArea.setBackground(UIManager.getColor("TextArea.background"));
-        resultArea.setForeground(UIManager.getColor("TextArea.foreground"));
-
-
-        JScrollPane scrollPane = new JScrollPane(resultArea);
-        scrollPane.setPreferredSize(new Dimension(550, 350)); // Slightly larger dialog
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
-        // Use a JPanel for the message to allow better control if needed in future
-        JPanel messagePanel = new JPanel(new BorderLayout());
-        messagePanel.add(scrollPane, BorderLayout.CENTER);
-
-        JOptionPane.showMessageDialog(mainFrame, messagePanel, title, JOptionPane.INFORMATION_MESSAGE);
+        // Now uses the new StyledResultDialog
+        StyledResultDialog.showDialog(mainFrame, title, textContent);
     }
 
     private void saveNote() {
