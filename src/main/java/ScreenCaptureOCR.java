@@ -86,7 +86,7 @@ public class ScreenCaptureOCR extends JWindow {
         File tessDataFolder = extractTessDataFolder();
         tesseract.setDatapath(tessDataFolder.getAbsolutePath());
 
-        tesseract.setLanguage("eng+vie+jpn");
+        tesseract.setLanguage("vie");
         return tesseract.doOCR(img);
     }
 
@@ -94,7 +94,7 @@ public class ScreenCaptureOCR extends JWindow {
         File tempDir = Files.createTempDirectory("tessdata").toFile();
         tempDir.deleteOnExit();
 
-        String[] trainedDataFiles = {"eng.traineddata", "vie.traineddata", "jpn.traineddata"}; // Thêm nếu cần
+        String[] trainedDataFiles = { "vie.traineddata"}; // Thêm nếu cần
 
         for (String fileName : trainedDataFiles) {
             try (InputStream is = getClass().getClassLoader().getResourceAsStream("tessdata/" + fileName)) {
