@@ -5,8 +5,8 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
 
 public class ScanWindow extends JFrame {
     private JTextArea resultArea;
@@ -61,7 +61,6 @@ public class ScanWindow extends JFrame {
             resultArea.setText("Scanning captured screen, please wait...");
             performOCRAsync(tempFile);
 
-            // Xóa file tạm sau khi OCR xong trong done() của SwingWorker
         } catch (AWTException | IOException e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error capturing screen: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -82,7 +81,9 @@ public class ScanWindow extends JFrame {
                     resultArea.setText(text);
                     // Nếu là file tạm, xóa ở đây
                     if (imageFile.getName().startsWith("screenshot")) {
-                        imageFile.delete();
+                        if (!imageFile.delete()) {
+                            System.err.println("Failed to delete temp screenshot file: " + imageFile.getAbsolutePath());
+                        }
                     }
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(ScanWindow.this,
@@ -97,14 +98,71 @@ public class ScanWindow extends JFrame {
 
     private String doOCR(File imageFile) {
         Tesseract tesseract = new Tesseract();
-        tesseract.setDatapath("C:/testdata");
-        tesseract.setLanguage("eng");
 
         try {
+            File tessDataFolder = TessDataUtil.extractTessDataFolder();
+            tesseract.setDatapath(tessDataFolder.getAbsolutePath());
+            tesseract.setLanguage("eng+vie+jpn");
+
             return tesseract.doOCR(imageFile);
-        } catch (TesseractException e) {
+        } catch (IOException | TesseractException e) {
             e.printStackTrace();
             return "OCR failed: " + e.getMessage();
+        }
+    }
+
+    // Tiện thể thêm main để chạy thử
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            ScanWindow window = new ScanWindow();
+            window.setVisible(true);
+        });
+    }
+}
+
+
+class TessDataUtil {
+
+    /**
+     * Copy thư mục tessdata từ resource ra thư mục temp ngoài file system.
+     * @return File thư mục tessdata temp
+     * @throws IOException nếu lỗi IO
+     */
+    public static File extractTessDataFolder() throws IOException {
+        File tempDir = Files.createTempDirectory("tessdata").toFile();
+        tempDir.deleteOnExit();
+
+        copyFolderFromResources("tessdata", tempDir);
+
+        return tempDir;
+    }
+
+    /**
+     * Copy các file trong resource folder tessdata ra thư mục targetFolder
+     */
+    private static void copyFolderFromResources(String resourceFolder, File targetFolder) throws IOException {
+        // Nếu bạn có nhiều file .traineddata thì thêm vào đây
+        String[] trainedDataFiles = {
+                "eng.traineddata"
+                //, "vie.traineddata" nếu bạn có thêm ngôn ngữ
+        };
+
+        for (String fileName : trainedDataFiles) {
+            try (InputStream is = TessDataUtil.class.getClassLoader().getResourceAsStream(resourceFolder + "/" + fileName)) {
+                if (is == null) {
+                    throw new FileNotFoundException("Resource not found: " + resourceFolder + "/" + fileName);
+                }
+
+                File outFile = new File(targetFolder, fileName);
+                try (OutputStream os = new FileOutputStream(outFile)) {
+                    byte[] buffer = new byte[4096];
+                    int len;
+                    while ((len = is.read(buffer)) != -1) {
+                        os.write(buffer, 0, len);
+                    }
+                }
+                outFile.deleteOnExit();
+            }
         }
     }
 }

@@ -6,7 +6,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
+import java.io.*;
+import java.nio.file.Files;
 
 public class ScanWindowWithSelection extends JFrame {
     private BufferedImage image;
@@ -53,7 +54,6 @@ public class ScanWindowWithSelection extends JFrame {
         }
     }
 
-    // Panel cho phép kéo chọn vùng
     private class ImageSelectionPanel extends JPanel {
         private BufferedImage image;
         private Rectangle selection = new Rectangle();
@@ -85,7 +85,6 @@ public class ScanWindowWithSelection extends JFrame {
                     if (selection.width > 5 && selection.height > 5) {
                         try {
                             BufferedImage cropped = image.getSubimage(selection.x, selection.y, selection.width, selection.height);
-                            // OCR ảnh crop
                             String ocrText = doOCR(cropped);
                             resultArea.setText(ocrText);
                         } catch (Exception ex) {
@@ -118,10 +117,48 @@ public class ScanWindowWithSelection extends JFrame {
         }
     }
 
-    private String doOCR(BufferedImage img) throws TesseractException {
+    private String doOCR(BufferedImage img) throws TesseractException, IOException {
         Tesseract tesseract = new Tesseract();
-        tesseract.setDatapath("C:/testdata"); // Thay thành thư mục tessdata trên máy bạn
-        tesseract.setLanguage("eng"); // Hoặc "eng+vie"
+
+        // Copy tessdata từ resource ra thư mục temp và lấy đường dẫn
+        File tessDataFolder = extractTessDataFolder();
+        tesseract.setDatapath(tessDataFolder.getAbsolutePath());
+
+        tesseract.setLanguage("eng+vie+jpn");
+
         return tesseract.doOCR(img);
+    }
+
+    private File extractTessDataFolder() throws IOException {
+        File tempDir = Files.createTempDirectory("tessdata").toFile();
+        tempDir.deleteOnExit();
+
+        String[] trainedDataFiles = {"eng.traineddata", "vie.traineddata", "jpn.traineddata"}; // Thêm file nếu cần
+
+        for (String fileName : trainedDataFiles) {
+            try (InputStream is = getClass().getClassLoader().getResourceAsStream("tessdata/" + fileName)) {
+                if (is == null) {
+                    throw new FileNotFoundException("Resource not found: tessdata/" + fileName);
+                }
+                File outFile = new File(tempDir, fileName);
+                try (OutputStream os = new FileOutputStream(outFile)) {
+                    byte[] buffer = new byte[4096];
+                    int len;
+                    while ((len = is.read(buffer)) != -1) {
+                        os.write(buffer, 0, len);
+                    }
+                }
+                outFile.deleteOnExit();
+            }
+        }
+
+        return tempDir;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            ScanWindowWithSelection window = new ScanWindowWithSelection();
+            window.setVisible(true);
+        });
     }
 }

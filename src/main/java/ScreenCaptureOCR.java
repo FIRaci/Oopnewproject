@@ -7,6 +7,8 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.io.*;
+import java.nio.file.Files;
 
 public class ScreenCaptureOCR extends JWindow {
     private Point startPoint;
@@ -78,10 +80,39 @@ public class ScreenCaptureOCR extends JWindow {
         }
     }
 
-    private String doOCR(BufferedImage img) throws TesseractException {
+    private String doOCR(BufferedImage img) throws TesseractException, IOException {
         Tesseract tesseract = new Tesseract();
-        tesseract.setDatapath("C:/testdata"); // Đường dẫn tessdata của bạn
-        tesseract.setLanguage("eng"); // hoặc "eng+vie"
+
+        File tessDataFolder = extractTessDataFolder();
+        tesseract.setDatapath(tessDataFolder.getAbsolutePath());
+
+        tesseract.setLanguage("eng+vie+jpn");
         return tesseract.doOCR(img);
+    }
+
+    private File extractTessDataFolder() throws IOException {
+        File tempDir = Files.createTempDirectory("tessdata").toFile();
+        tempDir.deleteOnExit();
+
+        String[] trainedDataFiles = {"eng.traineddata", "vie.traineddata", "jpn.traineddata"}; // Thêm nếu cần
+
+        for (String fileName : trainedDataFiles) {
+            try (InputStream is = getClass().getClassLoader().getResourceAsStream("tessdata/" + fileName)) {
+                if (is == null) {
+                    throw new FileNotFoundException("Resource not found: tessdata/" + fileName);
+                }
+                File outFile = new File(tempDir, fileName);
+                try (OutputStream os = new FileOutputStream(outFile)) {
+                    byte[] buffer = new byte[4096];
+                    int len;
+                    while ((len = is.read(buffer)) != -1) {
+                        os.write(buffer, 0, len);
+                    }
+                }
+                outFile.deleteOnExit();
+            }
+        }
+
+        return tempDir;
     }
 }

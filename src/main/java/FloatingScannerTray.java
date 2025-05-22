@@ -1,157 +1,90 @@
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
+import java.awt.event.*;
 
-public class FloatingScannerTray extends JWindow {
-
+public class FloatingScannerTray extends JFrame {
     private static FloatingScannerTray instance;
-    private Point initialClick;
-    private JLabel statusLabel;
-
-    private FloatingScannerTray(Frame owner) {
-        super(owner); // JWindow can take an owner Frame
-        initComponents();
-    }
 
     public static FloatingScannerTray getInstance() {
-        // Assuming MainFrame is the main application window and can be accessed
-        // Statically or passed around. For simplicity, let's assume it can be null
-        // or we find the active frame. This might need adjustment based on your app structure.
-        Frame mainAppFrame = null;
-        for (Frame frame : Frame.getFrames()) {
-            if (frame.isActive() && frame.isVisible() && "XiNoClo - Note App".equals(frame.getTitle())) { // Check title to identify MainFrame
-                mainAppFrame = frame;
-                break;
-            }
-        }
-
         if (instance == null) {
-            instance = new FloatingScannerTray(mainAppFrame);
-        } else if (instance.getOwner() == null && mainAppFrame != null) {
-            // If instance was created with null owner but now we have a frame
-            // This part is tricky as JWindow owner cannot be easily changed after creation.
-            // For simplicity, we might recreate or just update position.
-            // For now, let's assume the first owner (or null) is sufficient.
+            instance = new FloatingScannerTray();
         }
         return instance;
     }
 
+    private final JPopupMenu popupMenu;
+    private final Image iconImage;
 
-    private void initComponents() {
-        // --- Window Properties ---
-        setSize(300, 150); // Default size, can be adjusted
-        setLayout(new BorderLayout());
-        // Make it always on top
+    private FloatingScannerTray() {
+        setUndecorated(true);
         setAlwaysOnTop(true);
+        setSize(50, 50);  // kích thước icon window
 
-        // --- Panel for Content ---
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor"), 1, true), // Rounded border look
-                new EmptyBorder(10, 10, 10, 10) // Inner padding
-        ));
-        mainPanel.setBackground(UIManager.getColor("Panel.background"));
+        // Load ảnh và resize
+        iconImage = loadAndResizeImage("/images/scanner.jpg", 48, 48);
 
+        // Tạo label chứa icon, để click bắt sự kiện
+        JLabel iconLabel = new JLabel(new ImageIcon(iconImage));
+        iconLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        add(iconLabel);
 
-        // --- Title Bar (Custom) ---
-        JPanel titleBar = new JPanel(new BorderLayout());
-        titleBar.setBackground(UIManager.getColor("ToolBar.background")); // Or another suitable color
-        titleBar.setBorder(new EmptyBorder(5,5,5,5));
+        // Đặt vị trí cửa sổ: trên cùng bên phải
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int x = screenSize.width - getWidth() - 10;
+        int y = 10;
+        setLocation(x, y);
 
-        JLabel titleLabel = new JLabel("Scanner Tray");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        titleLabel.setForeground(UIManager.getColor("Label.foreground"));
-        titleBar.add(titleLabel, BorderLayout.CENTER);
+        // Tạo popup menu
+        popupMenu = new JPopupMenu();
 
-        JButton closeButton = new JButton("X");
-        closeButton.setMargin(new Insets(1, 4, 1, 4));
-        closeButton.setFont(new Font("Arial", Font.BOLD, 12));
-        closeButton.setFocusPainted(false);
-        closeButton.addActionListener(e -> setVisible(false)); // Hide the window
-        titleBar.add(closeButton, BorderLayout.EAST);
+        JMenuItem scanItem = new JMenuItem("Scan");
+        scanItem.addActionListener(e -> openScanWindow());
 
-        mainPanel.add(titleBar, BorderLayout.NORTH);
-
-        // --- Status/Content Area ---
-        statusLabel = new JLabel("Khay Scanner sẵn sàng.", SwingConstants.CENTER);
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        mainPanel.add(statusLabel, BorderLayout.CENTER);
-
-        // --- Placeholder for Scanner Functionality ---
-        JButton scanButton = new JButton("Bắt đầu Scan (Placeholder)");
-        scanButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        scanButton.addActionListener(e -> {
-            // TODO: Implement actual scanner logic or integration here
-            statusLabel.setText("Đang scan... (chức năng chưa có)");
-            JOptionPane.showMessageDialog(this, "Chức năng Scan chưa được triển khai.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-            statusLabel.setText("Khay Scanner sẵn sàng.");
-        });
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        buttonPanel.setOpaque(false);
-        buttonPanel.add(scanButton);
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-
-        add(mainPanel, BorderLayout.CENTER);
-
-        // --- Make the window draggable ---
-        titleBar.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent e) {
-                initialClick = e.getPoint();
-                getComponentAt(initialClick); // To handle clicks on components within titleBar
-            }
+        JMenuItem quitItem = new JMenuItem("Quit");
+        quitItem.addActionListener(e -> {
+            setVisible(false);
         });
 
-        titleBar.addMouseMotionListener(new MouseMotionAdapter() {
+        popupMenu.add(scanItem);
+        popupMenu.addSeparator();
+        popupMenu.add(quitItem);
+
+        // Khi click icon thì hiện popup menu
+        iconLabel.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseDragged(MouseEvent e) {
-                if (initialClick == null) return;
-                // get location of Window
-                int thisX = getLocation().x;
-                int thisY = getLocation().y;
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger() || SwingUtilities.isLeftMouseButton(e)) {
+                    popupMenu.show(iconLabel, e.getX(), e.getY());
+                }
+            }
 
-                // Determine how much the mouse moved since the initial click
-                int xMoved = e.getX() - initialClick.x;
-                int yMoved = e.getY() - initialClick.y;
-
-                // Move window to this position
-                int X = thisX + xMoved;
-                int Y = thisY + yMoved;
-                setLocation(X, Y);
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    popupMenu.show(iconLabel, e.getX(), e.getY());
+                }
             }
         });
 
-        // Center on screen initially, or relative to owner if owner exists
-        if (getOwner() != null) {
-            setLocationRelativeTo(getOwner());
-        } else {
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            setLocation(screenSize.width / 2 - getWidth() / 2, screenSize.height / 2 - getHeight() / 2);
-        }
+        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
     }
 
-    @Override
-    public void setVisible(boolean b) {
-        if (b) {
-            // Recenter or position appropriately when shown
-            if (getOwner() != null && getOwner().isVisible()) {
-                Point ownerLoc = getOwner().getLocationOnScreen();
-                // Position it near the owner, e.g., top-right or as a small floating panel
-                int xPos = ownerLoc.x + getOwner().getWidth() - getWidth() - 20; // Example: top right
-                int yPos = ownerLoc.y + 20;
-                setLocation(xPos, yPos);
-            } else {
-                Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-                setLocation(screenSize.width - getWidth() - 50, 50); // Default to top-right of screen
-            }
-        }
-        super.setVisible(b);
+    private Image loadAndResizeImage(String path, int width, int height) {
+        Image img = Toolkit.getDefaultToolkit().getImage(getClass().getResource(path));
+        Image scaled = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        return scaled;
     }
 
-    public void setStatus(String text) {
-        statusLabel.setText(text);
+    private void openScanWindow() {
+        SwingUtilities.invokeLater(() -> {
+            ScreenCaptureOCR captureOCR = new ScreenCaptureOCR();
+            captureOCR.setVisible(true);
+        });
     }
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            FloatingScannerTray.getInstance().setVisible(true);
+        });
+    }
+
 }
