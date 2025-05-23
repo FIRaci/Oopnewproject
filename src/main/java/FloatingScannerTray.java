@@ -1,6 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 
 public class FloatingScannerTray extends JFrame {
     private static FloatingScannerTray instance;
@@ -42,7 +43,11 @@ public class FloatingScannerTray extends JFrame {
 
         JMenuItem quitItem = new JMenuItem("Quit");
         quitItem.addActionListener(e -> {
-            setVisible(false);
+            // Thoát ứng dụng một cách an toàn hơn
+            // Có thể cần dispose các cửa sổ khác nếu có
+            // System.exit(0); // Cân nhắc nếu đây là cửa sổ chính
+            setVisible(false); // Chỉ ẩn cửa sổ này
+            dispose(); // Giải phóng tài nguyên của cửa sổ này
         });
 
         popupMenu.add(scanItem);
@@ -66,13 +71,27 @@ public class FloatingScannerTray extends JFrame {
             }
         });
 
-        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE); // Hoặc EXIT_ON_CLOSE nếu đây là cửa sổ chính duy nhất
     }
 
     private Image loadAndResizeImage(String path, int width, int height) {
-        Image img = Toolkit.getDefaultToolkit().getImage(getClass().getResource(path));
-        Image scaled = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        return scaled;
+        try {
+            java.net.URL imgUrl = getClass().getResource(path);
+            if (imgUrl == null) {
+                System.err.println("Không tìm thấy resource ảnh: " + path);
+                // Có thể trả về một ảnh mặc định hoặc ném lỗi
+                return new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB); // Ảnh trống
+            }
+            Image img = Toolkit.getDefaultToolkit().getImage(imgUrl);
+            Image scaled = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            // Đảm bảo ảnh được load hoàn toàn
+            ImageIcon tempIcon = new ImageIcon(scaled);
+            tempIcon.getImage().flush();
+            return tempIcon.getImage();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB); // Ảnh trống nếu lỗi
+        }
     }
 
     private void openScanWindow() {
@@ -81,10 +100,11 @@ public class FloatingScannerTray extends JFrame {
             captureOCR.setVisible(true);
         });
     }
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            FloatingScannerTray.getInstance().setVisible(true);
-        });
-    }
 
+    // Thêm main method để có thể chạy thử nghiệm độc lập nếu cần
+    // public static void main(String[] args) {
+    //     SwingUtilities.invokeLater(() -> {
+    //         FloatingScannerTray.getInstance().setVisible(true);
+    //     });
+    // }
 }

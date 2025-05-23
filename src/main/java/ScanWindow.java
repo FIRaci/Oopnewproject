@@ -7,6 +7,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class ScanWindow extends JFrame {
     private JTextArea resultArea;
@@ -30,6 +31,7 @@ public class ScanWindow extends JFrame {
         resultArea = new JTextArea();
         resultArea.setLineWrap(true);
         resultArea.setWrapStyleWord(true);
+        resultArea.setEditable(false);
 
         JScrollPane scrollPane = new JScrollPane(resultArea);
 
@@ -44,30 +46,45 @@ public class ScanWindow extends JFrame {
         if (res == JFileChooser.APPROVE_OPTION) {
             File file = chooser.getSelectedFile();
             resultArea.setText("Scanning image, please wait...");
-            performOCRAsync(file);
+            performOCRAsync(file, false); // false vì đây không phải file tạm
         }
     }
 
     private void captureScreenAndScan() {
         try {
+            // Ẩn cửa sổ ScanWindow trước khi chụp màn hình
+            this.setState(Frame.ICONIFIED); // Thu nhỏ cửa sổ
+            // Đợi một chút để việc thu nhỏ hoàn tất
+            Thread.sleep(250);
+
+
             Robot robot = new Robot();
             Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
             BufferedImage screenImage = robot.createScreenCapture(screenRect);
 
-            // Lưu tạm file ảnh
-            File tempFile = File.createTempFile("screenshot", ".png");
+            // Hiện lại cửa sổ
+            this.setState(Frame.NORMAL);
+
+
+            File tempFile = File.createTempFile("screenshot_", ".png");
             ImageIO.write(screenImage, "png", tempFile);
 
             resultArea.setText("Scanning captured screen, please wait...");
-            performOCRAsync(tempFile);
+            performOCRAsync(tempFile, true); // true vì đây là file tạm cần xóa
 
         } catch (AWTException | IOException e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error capturing screen: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            this.setState(Frame.NORMAL); // Đảm bảo cửa sổ hiện lại nếu có lỗi
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Screen capture interrupted: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            this.setState(Frame.NORMAL);
         }
     }
 
-    private void performOCRAsync(File imageFile) {
+    private void performOCRAsync(File imageFile, boolean deleteAfter) {
         SwingWorker<String, Void> worker = new SwingWorker<>() {
             @Override
             protected String doInBackground() {
@@ -79,17 +96,18 @@ public class ScanWindow extends JFrame {
                 try {
                     String text = get();
                     resultArea.setText(text);
-                    // Nếu là file tạm, xóa ở đây
-                    if (imageFile.getName().startsWith("screenshot")) {
+                } catch (Exception ex) {
+                    resultArea.setText("OCR Error: " + ex.getMessage());
+                    JOptionPane.showMessageDialog(ScanWindow.this,
+                            "Error during OCR: " + ex.getCause().getMessage(), // Hiển thị lỗi gốc từ Tesseract nếu có
+                            "OCR Error", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                } finally {
+                    if (deleteAfter && imageFile != null && imageFile.getName().startsWith("screenshot_")) {
                         if (!imageFile.delete()) {
                             System.err.println("Failed to delete temp screenshot file: " + imageFile.getAbsolutePath());
                         }
                     }
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(ScanWindow.this,
-                            "Error during OCR: " + ex.getMessage(),
-                            "OCR Error", JOptionPane.ERROR_MESSAGE);
-                    ex.printStackTrace();
                 }
             }
         };
@@ -98,62 +116,68 @@ public class ScanWindow extends JFrame {
 
     private String doOCR(File imageFile) {
         Tesseract tesseract = new Tesseract();
-
+        File tessDataParentDir = null;
         try {
-            File tessDataFolder = TessDataUtil.extractTessDataFolder();
-            tesseract.setDatapath(tessDataFolder.getAbsolutePath());
+            tessDataParentDir = TessDataUtil.extractTessDataFolder();
+            tesseract.setDatapath(tessDataParentDir.getAbsolutePath());
+            // Ngôn ngữ cần cho ScanWindow
             tesseract.setLanguage("eng+vie+jpn");
 
             return tesseract.doOCR(imageFile);
         } catch (IOException | TesseractException e) {
             e.printStackTrace();
             return "OCR failed: " + e.getMessage();
+        } finally {
+            // Dọn dẹp thư mục tạm chứa tessdata
+            if (tessDataParentDir != null) {
+                TessDataUtil.deleteDirectory(new File(tessDataParentDir, "tessdata"));
+                TessDataUtil.deleteDirectory(tessDataParentDir);
+            }
         }
-    }
-
-    // Tiện thể thêm main để chạy thử
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            ScanWindow window = new ScanWindow();
-            window.setVisible(true);
-        });
     }
 }
 
 
 class TessDataUtil {
 
-    /**
-     * Copy thư mục tessdata từ resource ra thư mục temp ngoài file system.
-     * @return File thư mục tessdata temp
-     * @throws IOException nếu lỗi IO
-     */
     public static File extractTessDataFolder() throws IOException {
-        File tempDir = Files.createTempDirectory("tessdata").toFile();
-        tempDir.deleteOnExit();
+        // Thư mục này sẽ là giá trị cho TESSDATA_PREFIX (đường dẫn cha của thư mục "tessdata")
+        File tessDataParentDir = Files.createTempDirectory("app_tessdata_prefix_").toFile();
+        // Không cần deleteOnExit cho thư mục cha ở đây, sẽ xóa thủ công sau
 
-        copyFolderFromResources("tessdata", tempDir);
+        // Tạo thư mục con "tessdata" bên trong thư mục cha ở trên
+        File actualTessdataSubDir = new File(tessDataParentDir, "tessdata");
+        if (!actualTessdataSubDir.mkdir()) {
+            // Nếu không tạo được, dọn dẹp thư mục cha đã tạo và báo lỗi
+            deleteDirectory(tessDataParentDir);
+            throw new IOException("Không thể tạo thư mục con tessdata: " + actualTessdataSubDir.getAbsolutePath());
+        }
+        // Không cần deleteOnExit cho thư mục con ở đây, sẽ xóa thủ công sau
 
-        return tempDir;
+        // "tessdata" là tên thư mục trong resources (src/main/resources/tessdata)
+        // actualTessdataSubDir là thư mục tạm thời (TEMP_DIR_PARENT/tessdata/) mà file sẽ được copy vào
+        copyTrainedDataFromResources("tessdata", actualTessdataSubDir);
+
+        return tessDataParentDir; // Trả về thư mục cha để làm TESSDATA_PREFIX
     }
 
-    /**
-     * Copy các file trong resource folder tessdata ra thư mục targetFolder
-     */
-    private static void copyFolderFromResources(String resourceFolder, File targetFolder) throws IOException {
-        // Nếu bạn có nhiều file .traineddata thì thêm vào đây
+    private static void copyTrainedDataFromResources(String resourceTessdataFolder, File targetTempTessdataFolder) throws IOException {
+        // Các file ngôn ngữ mà ScanWindow cần (và có trong src/main/resources/tessdata/)
         String[] trainedDataFiles = {
-                "eng.traineddata"
-                //, "vie.traineddata" nếu bạn có thêm ngôn ngữ
+                "eng.traineddata",
+                "vie.traineddata", // Đảm bảo file này có trong resources/tessdata
+                "jpn.traineddata"  // Đảm bảo file này có trong resources/tessdata
         };
 
         for (String fileName : trainedDataFiles) {
-            try (InputStream is = TessDataUtil.class.getClassLoader().getResourceAsStream(resourceFolder + "/" + fileName)) {
+            String resourcePath = resourceTessdataFolder + "/" + fileName;
+            try (InputStream is = TessDataUtil.class.getClassLoader().getResourceAsStream(resourcePath)) {
                 if (is == null) {
-                    throw new FileNotFoundException("Resource not found: " + resourceFolder + "/" + fileName);
+                    throw new FileNotFoundException("Resource không tìm thấy: " + resourcePath +
+                            ". Đảm bảo file '" + fileName + "' có trong 'src/main/resources/" + resourceTessdataFolder + "/'");
                 }
 
-                File outFile = new File(targetFolder, fileName);
+                File outFile = new File(targetTempTessdataFolder, fileName); // Copy vào thư mục đích (TEMP_DIR_PARENT/tessdata/fileName)
                 try (OutputStream os = new FileOutputStream(outFile)) {
                     byte[] buffer = new byte[4096];
                     int len;
@@ -161,8 +185,26 @@ class TessDataUtil {
                         os.write(buffer, 0, len);
                     }
                 }
-                outFile.deleteOnExit();
+                // Không cần outFile.deleteOnExit(); sẽ xóa cả thư mục sau
             }
         }
+    }
+
+    /**
+     * Xóa thư mục và tất cả nội dung bên trong nó.
+     * @param directoryToBeDeleted Thư mục cần xóa.
+     * @return true nếu xóa thành công, false nếu không.
+     */
+    public static boolean deleteDirectory(File directoryToBeDeleted) {
+        if (!directoryToBeDeleted.exists()) {
+            return true;
+        }
+        File[] allContents = directoryToBeDeleted.listFiles();
+        if (allContents != null) {
+            for (File file : allContents) {
+                deleteDirectory(file);
+            }
+        }
+        return directoryToBeDeleted.delete();
     }
 }
