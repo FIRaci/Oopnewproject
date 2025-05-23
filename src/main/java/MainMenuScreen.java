@@ -442,11 +442,6 @@ public class MainMenuScreen extends JPanel {
         if(currentAlarm != null && !currentAlarm.isRecurring()) initialTypeStr = "ONCE";
 
 
-        JLabel currentInfoLabel = new JLabel("Hiện tại: " + (currentAlarm != null ? currentAlarm.toString() : "Chưa đặt báo thức."));
-        currentInfoLabel.setFont(new Font("Segoe UI", Font.ITALIC, 13));
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        dialog.add(currentInfoLabel, gbc);
-
         gbc.gridy++; gbc.gridwidth = 1;
         dialog.add(new JLabel("Loại báo thức:"), gbc);
         String[] alarmTypes = {"ONCE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"};
