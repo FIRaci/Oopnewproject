@@ -129,7 +129,7 @@ public class HelpScreen extends JDialog {
                 "Shirin - AI Developer + UI Developer + Principal Funder",
                 "FIRaci - Frontend Developer + Backend Developer",
                 "Yui - Secondary Tester + Secondary Bug Fixer",
-                "Thanh - Main Bug Fixer",
+                "Drako - Main Bug Fixer + OCR Developer",
                 "Missing someone here bruh! Do you know where they are?" // Corrected typo
         };
 
