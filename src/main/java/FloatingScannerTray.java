@@ -96,15 +96,14 @@ public class FloatingScannerTray extends JFrame {
 
     private void openScanWindow() {
         SwingUtilities.invokeLater(() -> {
-            ScreenCaptureOCR captureOCR = new ScreenCaptureOCR();
-            captureOCR.setVisible(true);
+            new ScanWindowWithSelection().setVisible(true);
         });
     }
 
     // Thêm main method để có thể chạy thử nghiệm độc lập nếu cần
-    // public static void main(String[] args) {
-    //     SwingUtilities.invokeLater(() -> {
-    //         FloatingScannerTray.getInstance().setVisible(true);
-    //     });
-    // }
+     public static void main(String[] args) {
+       SwingUtilities.invokeLater(() -> {
+            FloatingScannerTray.getInstance().setVisible(true);
+        });
+    }
 }
