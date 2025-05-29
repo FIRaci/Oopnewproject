@@ -5,7 +5,7 @@
       "title": "Báo cáo tuần",
       "content": "Hoàn thành báo cáo công việc tuần này. Không có cái báo cáo nào cả",
       "createdAt": "2025-05-21T18:03:54.7457148",
-      "updatedAt": "2025-05-22T13:22:21.4558994",
+      "updatedAt": "2025-05-30T00:47:19.1394712",
       "isFavorite": false,
       "isMission": false,
       "isMissionCompleted": false,
@@ -28,7 +28,7 @@
       "title": "Mua sắm cuối tuần",
       "content": "�?i siêu thị mua đồ dùng cá nhân.",
       "createdAt": "2025-05-21T18:03:54.7497141",
-      "updatedAt": "2025-05-22T13:22:21.4558994",
+      "updatedAt": "2025-05-30T00:47:19.1394712",
       "isFavorite": true,
       "isMission": true,
       "isMissionCompleted": false,
@@ -47,7 +47,7 @@
       "title": "Học Java Swing",
       "content": "Ôn tập các khái niệm và LayoutManager và Event Handling.",
       "createdAt": "2025-05-21T18:03:54.7512222",
-      "updatedAt": "2025-05-22T13:22:21.4558994",
+      "updatedAt": "2025-05-30T00:47:19.1394712",
       "isFavorite": false,
       "isMission": true,
       "isMissionCompleted": false,
@@ -70,7 +70,7 @@
       "title": "Đọc sách",
       "content": "Đọc 1 chương sách \u0027Clean Code\u0027",
       "createdAt": "2025-05-21T18:03:54.7522348",
-      "updatedAt": "2025-05-22T13:22:48.9270172",
+      "updatedAt": "2025-05-30T00:47:19.1394712",
       "isFavorite": false,
       "isMission": true,
       "isMissionCompleted": false,
@@ -91,6 +91,20 @@
         }
       ],
       "noteType": "TEXT"
+    },
+    {
+      "id": 5,
+      "title": "laplace",
+      "createdAt": "2025-05-29T20:51:43.7247009",
+      "updatedAt": "2025-05-30T00:47:19.1394712",
+      "isFavorite": false,
+      "isMission": false,
+      "isMissionCompleted": false,
+      "missionContent": "",
+      "folderId": 1,
+      "tags": [],
+      "noteType": "DRAWING",
+      "drawingData": ""
     }
   ],
   "folders": [

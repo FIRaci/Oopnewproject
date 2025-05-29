@@ -380,43 +380,79 @@ public class MainMenuScreen extends JPanel {
         });
 
         noteTable.addMouseListener(new MouseAdapter() {
+
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    handleNoteDoubleClick(noteTable);
-                }
+                // Xử lý các sự kiện NHẤP CHUỘT (thường là TRÁI)
                 int row = noteTable.rowAtPoint(e.getPoint());
+                if (row == -1) { // Nhấp ra ngoài các hàng
+                    // noteTable.clearSelection(); // Tùy chọn
+                    return;
+                }
                 int col = noteTable.columnAtPoint(e.getPoint());
 
-                if (row < 0 || filteredNotes == null || row >= filteredNotes.size()) return;
-                Note selectedNote = filteredNotes.get(row);
+                if (filteredNotes == null || row >= filteredNotes.size()) {
+                    return;
+                }
+                Note selectedNote = filteredNotes.get(row); // Lấy note được chọn
 
-                if (e.getClickCount() == 1 && col == 2 && selectedNote.isMission()) {
-                    MissionDialog dialog = new MissionDialog(mainFrame);
-                    dialog.setMission(selectedNote.getMissionContent());
-                    dialog.setVisible(true);
-                    if (dialog.isSaved()) {
-                        String result = dialog.getResult();
-                        if (controller != null) controller.updateMission(selectedNote, result);
-                        populateNoteTableModel();
+                // CHỈ XỬ LÝ CHUỘT TRÁI TRONG MOUSECLICKED
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    if (e.getClickCount() == 2) {
+                        // --- Nhấp đúp chuột TRÁI ---
+                        handleNoteDoubleClick(noteTable); // Hoặc truyền selectedNote nếu cần
+                    } else if (e.getClickCount() == 1) {
+                        // --- Nhấp đơn chuột TRÁI ---
+
+                        // YÊU CẦU 1: Nhấp chuột TRÁI vào cột Mission (giả sử cột 2)
+                        if (col == 2 && selectedNote.isMission()) { // Nhớ thay đổi '2' nếu cột Mission của bạn khác
+                            MissionDialog dialog = new MissionDialog(mainFrame);
+                            dialog.setMission(selectedNote.getMissionContent());
+                            dialog.setVisible(true);
+
+                            if (dialog.isSaved()) {
+                                String result = dialog.getResult();
+                                if (controller != null) {
+                                    controller.updateMission(selectedNote, result);
+                                }
+                                populateNoteTableModel();
+                            }
+                        }
+                        // Ví dụ: Xử lý nhấp chuột trái vào cột Báo thức (giả sử cột 3)
+                        else if (col == 3) {
+                            showAlarmDialog(selectedNote);
+                        }
+                        // Thêm các hành động khác cho nhấp chuột TRÁI một lần nếu cần
                     }
-                } else if (e.getClickCount() == 1 && col == 3) { // Click on Alarm column
-                    showAlarmDialog(selectedNote);
                 }
+                // Các nút chuột khác không được xử lý trong mouseClicked cho các hành động này
             }
-            private void handleRightClick(MouseEvent e) {
-                int row = noteTable.rowAtPoint(e.getPoint());
-                if (row >= 0 && row < noteTable.getRowCount()) {
-                    noteTable.setRowSelectionInterval(row, row);
-                    if (filteredNotes != null && row < filteredNotes.size() && controller != null) {
-                        showNotePopup(e, filteredNotes.get(row));
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                // Xử lý sự kiện NHẤN CHUỘT PHẢI để hiển thị Menu
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    int row = noteTable.rowAtPoint(e.getPoint());
+
+                    // Đảm bảo nhấp chuột trong phạm vi các hàng của bảng
+                    if (row >= 0 && row < noteTable.getRowCount()) {
+                        // Quan trọng: Chọn hàng được nhấp chuột phải
+                        noteTable.setRowSelectionInterval(row, row);
+
+                        if (filteredNotes == null || row >= filteredNotes.size()) {
+                            return;
+                        }
+                        Note selectedNote = filteredNotes.get(row);
+
+                        // YÊU CẦU 2: Nhấp chuột PHẢI hiển thị Menu (showNotePopup)
+                        if (controller != null) {
+                            showNotePopup(e, selectedNote); // Hiển thị menu ngữ cảnh chung cho hàng được chọn
+                        }
                     }
                 }
+                // Sự kiện nhấn chuột TRÁI được JTable xử lý mặc định cho việc chọn hàng.
+                // Không cần thêm hành động ở đây trừ khi bạn muốn ghi đè hành vi chọn mặc định.
             }
-            @Override
-            public void mousePressed(MouseEvent e) { if (e.isPopupTrigger()) handleRightClick(e); }
-            @Override
-            public void mouseReleased(MouseEvent e) { if (e.isPopupTrigger()) handleRightClick(e); }
         });
         return noteTable;
     }
