@@ -132,10 +132,7 @@ public class MainFrame extends JFrame {
         // ... (Phần tải icon giữ nguyên) ...
         try {
             String[] iconNames = {
-                    "Acheron.jpg", "Aglaea.jpg", "BlackSwan.jpg", "Bronya.jpg", "Castroice.jpg", "Clara.jpg",
-                    "Feixiao.jpg", "Firefly.jpg", "Fugue.jpg", "FuXuan.jpg", "Hanabi.jpg", "Herta.jpg",
-                    "Himeko.jpg", "HuoHuo.jpg", "Jade.jpg", "Jingliu.jpg", "Kafka.jpg", "Lingsha.jpg",
-                    "Robin.jpg", "RuanMei.jpg", "Seele.jpg", "SilverWolf.jpg", "Tribbie.jpg", "Yunli.jpg"
+                    "spinner.jpg"
             };
             Random random = new Random();
             String randomIconName = iconNames[random.nextInt(iconNames.length)];

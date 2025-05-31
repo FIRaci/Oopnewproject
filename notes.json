@@ -5,20 +5,29 @@
       "title": "3 củ",
       "content": "trượt GT3\n",
       "createdAt": "2025-05-31T21:20:46.8383944",
-      "updatedAt": "2025-05-31T21:21:01.843",
+      "updatedAt": "2025-05-31T21:39:04.2359261",
       "isFavorite": false,
       "isMission": false,
       "isMissionCompleted": false,
       "missionContent": "",
       "folderId": 1,
-      "tags": [],
+      "tags": [
+        {
+          "id": 1,
+          "name": "task-management"
+        },
+        {
+          "id": 2,
+          "name": "decision-making"
+        }
+      ],
       "noteType": "TEXT"
     },
     {
       "id": 2,
       "title": "F!ck Laplace",
       "createdAt": "2025-05-31T21:21:06.1929493",
-      "updatedAt": "2025-05-31T21:21:27.4427742",
+      "updatedAt": "2025-05-31T21:37:50.4631736",
       "isFavorite": false,
       "isMission": false,
       "isMissionCompleted": false,
@@ -41,5 +50,14 @@
       "isFavorite": false
     }
   ],
-  "tags": []
+  "tags": [
+    {
+      "id": 1,
+      "name": "task-management"
+    },
+    {
+      "id": 2,
+      "name": "decision-making"
+    }
+  ]
 }
