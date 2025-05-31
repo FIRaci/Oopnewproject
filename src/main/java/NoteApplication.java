@@ -25,54 +25,17 @@ public class NoteApplication {
     }
 
     public static void main(String[] args) {
-        // Áp dụng theme ưu tiên (hoặc theme mặc định) NGAY TỪ ĐẦU
-        // Truyền null cho component to update vì frame chưa được tạo
         ThemeManager.loadAndApplyPreferredTheme(null);
-
-        // Thiết lập font sau khi LookAndFeel đã được áp dụng
-        // Điều này quan trọng vì LookAndFeel có thể ghi đè font.
-        // Tuy nhiên, FlatLaf thường tôn trọng các cài đặt UIManager.
-        // Nếu muốn chắc chắn, có thể gọi setUIFont sau khi frame được tạo và setVisible.
-        // Nhưng thường thì gọi ở đây là đủ.
         setUIFont(new javax.swing.plaf.FontUIResource("SansSerif", Font.PLAIN, 13));
-
 
         SwingUtilities.invokeLater(() -> {
             System.out.println("[NoteApplication] EDT: Bắt đầu khởi tạo ứng dụng...");
 
-            System.out.println("[NoteApplication] EDT: Đang tạo NoteManager...");
             NoteManager noteManager = new NoteManager();
-            System.out.println("[NoteApplication] EDT: NoteManager đã tạo.");
-
-            System.out.println("[NoteApplication] EDT: Đang tạo NoteService...");
             NoteService noteService = new NoteService(noteManager);
-            System.out.println("[NoteApplication] EDT: NoteService đã tạo.");
-
-            System.out.println("[NoteApplication] EDT: Đang tạo NoteController...");
-            NoteController controller = new NoteController(null, noteService); // mainFrameInstance là null ban đầu
-            System.out.println("[NoteApplication] EDT: NoteController đã tạo.");
-
-            System.out.println("[NoteApplication] EDT: Đang tạo MainFrame...");
+            NoteController controller = new NoteController(null, noteService);
             MainFrame mainFrame = new MainFrame(controller);
-            System.out.println("[NoteApplication] EDT: MainFrame đã tạo.");
-
-            controller.setMainFrameInstance(mainFrame); // Cập nhật tham chiếu frame cho controller
-            System.out.println("[NoteApplication] EDT: Đã đặt MainFrame instance cho NoteController.");
-
-            // Khởi tạo dữ liệu mẫu (nếu cần)
-            try {
-                if (noteManager.getAllNotes().isEmpty()) {
-                    System.out.println("[NoteApplication] EDT: Đang khởi tạo dữ liệu mẫu...");
-                    initializeSampleData(noteManager);
-                } else {
-                    System.out.println("[NoteApplication] EDT: Dữ liệu đã tồn tại. Bỏ qua khởi tạo dữ liệu mẫu.");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(mainFrame,
-                        "Lỗi trong quá trình khởi tạo dữ liệu mẫu: " + e.getMessage(),
-                        "Lỗi Khởi Tạo Dữ Liệu", JOptionPane.WARNING_MESSAGE);
-            }
+            controller.setMainFrameInstance(mainFrame);
 
             System.out.println("[NoteApplication] EDT: Đặt MainFrame thành visible.");
             mainFrame.setVisible(true);
@@ -81,6 +44,7 @@ public class NoteApplication {
                 System.out.println("[NoteApplication] EDT (inner): Đang làm mới MainMenuScreen.");
                 mainFrame.showMainMenuScreen();
             });
+
             System.out.println("[NoteApplication] EDT: Hoàn tất khởi tạo ứng dụng trên EDT.");
         });
     }
