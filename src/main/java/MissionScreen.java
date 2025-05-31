@@ -14,6 +14,7 @@ import java.util.Comparator;
 import java.util.stream.Collectors;
 
 public class MissionScreen extends JPanel {
+    private JButton refreshButton;
     private final NoteController controller;
     private final MainFrame mainFrame;
     private JPanel missionContainer;
@@ -42,20 +43,57 @@ public class MissionScreen extends JPanel {
         initializeUI();
     }
 
+    private Font getEmojiSupportedFont(int size) {
+        String[] fontFamilies = {"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji"};
+        for (String family : fontFamilies) {
+            Font font = new Font(family, Font.PLAIN, size);
+            if (font.canDisplayUpTo("🔍⏰") == -1) { // Bạn có thể thêm các emoji khác vào chuỗi
+                return font;
+            }
+        }
+        return new Font("Dialog", Font.PLAIN, size); // Fallback
+    }
+
+    private void setupRefreshButton() {
+        refreshButton = new JButton("🔄 Làm mới");
+        refreshButton.setFont(getEmojiSupportedFont(14));
+        refreshButton.setToolTipText("Làm mới danh sách nhiệm vụ");
+
+        refreshButton.addActionListener(e -> {
+            // Disable nút và đổi text khi đang làm mới
+            refreshButton.setEnabled(false);
+            refreshButton.setText("🔄 Đang làm mới...");
+
+            // Thực hiện làm mới
+            refreshMissions();
+
+            // Set timer để enable lại nút sau 500ms
+            Timer timer = new Timer(500, evt -> {
+                refreshButton.setEnabled(true);
+                refreshButton.setText("🔄 Làm mới");
+            });
+            timer.setRepeats(false);
+            timer.start();
+        });
+    }
+
     private void initializeUI() {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         JPanel topPanel = new JPanel(new BorderLayout(10, 5));
-        topPanel.setBorder(BorderFactory.createEmptyBorder(0,0,10,0));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
         JPanel filterSortPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
 
         // --- Filter ---
-        filterLabel = new JLabel("🔍 Lọc:"); // Unicode for filter icon
-        filterLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        filterLabel = new JLabel("🔍 Lọc:");
+        filterLabel.setFont(getEmojiSupportedFont(14));
         filterSortPanel.add(filterLabel);
-        filterComboBox = new JComboBox<>(new String[]{FILTER_ALL, FILTER_INCOMPLETE, FILTER_OVERDUE, FILTER_COMPLETED});
+
+        filterComboBox = new JComboBox<>(new String[]{
+                FILTER_ALL, FILTER_INCOMPLETE, FILTER_OVERDUE, FILTER_COMPLETED
+        });
         filterComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         filterComboBox.addActionListener(e -> refreshMissions());
         filterSortPanel.add(filterComboBox);
@@ -63,43 +101,63 @@ public class MissionScreen extends JPanel {
         filterSortPanel.add(Box.createHorizontalStrut(15));
 
         // --- Sort ---
-        sortLabel = new JLabel("↕️ Sắp xếp:"); // Unicode for sort icon
-        sortLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        sortLabel = new JLabel("↕️ Sắp xếp:");
+        sortLabel.setFont(getEmojiSupportedFont(14));
         filterSortPanel.add(sortLabel);
-        sortComboBox = new JComboBox<>(new String[]{SORT_DEFAULT, SORT_DUE_DATE_ASC, SORT_DUE_DATE_DESC, SORT_MODIFIED_DATE_DESC});
+
+        sortComboBox = new JComboBox<>(new String[]{
+                SORT_DEFAULT, SORT_DUE_DATE_ASC, SORT_DUE_DATE_DESC, SORT_MODIFIED_DATE_DESC
+        });
         sortComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         sortComboBox.addActionListener(e -> refreshMissions());
         filterSortPanel.add(sortComboBox);
 
         topPanel.add(filterSortPanel, BorderLayout.WEST);
 
+        // --- Buttons Panel ---
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+
+        // Khởi tạo deleteButton trước khi thêm
         deleteButton = new JButton("🗑 Xóa");
-        deleteButton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14)); // Use a font that supports emojis well
+        deleteButton.setFont(getEmojiSupportedFont(14));
         deleteButton.setToolTipText("Chuyển sang chế độ xóa nhiệm vụ");
         deleteButton.addActionListener(e -> toggleDeleteMode());
-        topPanel.add(deleteButton, BorderLayout.EAST);
+
+        setupRefreshButton(); // Khởi tạo refreshButton
+
+        buttonsPanel.add(refreshButton); // thêm đúng thứ tự
+        buttonsPanel.add(deleteButton);
+
+        topPanel.add(buttonsPanel, BorderLayout.EAST);
+
         add(topPanel, BorderLayout.NORTH);
 
+        // --- Mission Container ---
         missionContainer = new JPanel();
         missionContainer.setLayout(new GridLayout(0, 3, 15, 15));
-        missionContainer.setBorder(BorderFactory.createEmptyBorder(5,0,5,0));
+        missionContainer.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
 
         JScrollPane scrollPane = new JScrollPane(missionContainer);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.getVerticalScrollBar().setBlockIncrement(80);
 
         add(scrollPane, BorderLayout.CENTER);
+
+        // Hiển thị danh sách nhiệm vụ ban đầu
         refreshMissions();
     }
+
 
     private void toggleDeleteMode() {
         deleteMode = !deleteMode;
         deleteButton.setText(deleteMode ? "✅ Hoàn Tất Xóa" : "🗑 Xóa"); // Changed icon for "Done"
+        deleteButton.setFont(getEmojiSupportedFont(14));
         deleteButton.setToolTipText(deleteMode ? "Hoàn tất và thoát chế độ xóa" : "Chuyển sang chế độ xóa nhiệm vụ");
+        refreshButton.setEnabled(!deleteMode);
+
         if(deleteMode) {
             deleteButton.setBackground(new Color(0xDC3545)); // A red color for delete mode
             deleteButton.setForeground(Color.WHITE);
@@ -289,7 +347,7 @@ public class MissionScreen extends JPanel {
 
         String alarmText = note.getAlarm() != null ? formatAlarm(note.getAlarm()) : "Chưa có báo thức";
         JLabel alarmLabel = new JLabel("⏰ " + alarmText);
-        alarmLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        alarmLabel.setFont(getEmojiSupportedFont(12));
         alarmLabel.setForeground(UIManager.getColor("Label.foreground"));
         if (note.getAlarm() != null) {
             alarmLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
