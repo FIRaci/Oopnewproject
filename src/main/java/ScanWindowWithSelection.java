@@ -242,7 +242,19 @@ public class ScanWindowWithSelection extends JFrame {
             }
         }
     }
+    public static void scanBufferedImage(BufferedImage image) {
+        Tesseract tesseract = new Tesseract();
+        tesseract.setDatapath("tessdata"); // Đường dẫn tới thư mục chứa trained data
+        tesseract.setLanguage("eng+vie"); // Tùy chọn ngôn ngữ
 
+        try {
+            String result = tesseract.doOCR(image);
+            JOptionPane.showMessageDialog(null, result, "Kết quả OCR", JOptionPane.INFORMATION_MESSAGE);
+        } catch (TesseractException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Lỗi OCR: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+        }
+    }
     private static void deleteDirectoryTree(Path path) throws IOException {
         if (Files.isDirectory(path)) {
             File[] entries = path.toFile().listFiles();
