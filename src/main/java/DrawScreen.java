@@ -26,6 +26,8 @@ public class DrawScreen extends JPanel {
     private static final String CLEAR_LABEL = "Xóa Hết";
     private static final String ERASER_LABEL = "Tẩy";
     private static final String PENCIL_LABEL = "Bút Vẽ"; // Changed for clarity
+    private static final String SCAN_OCR_LABEL = "Quét Văn Bản";
+
 
     private final MainFrame mainFrame;
     private final NoteController controller;
@@ -38,7 +40,7 @@ public class DrawScreen extends JPanel {
     private JButton eraserButton;
     private JButton pencilButton;
     private JLabel currentStrokeLabel;
-    private JPanel toolbarInnerPanel; // Panel to hold tools for better alignment
+    // private JPanel toolbarInnerPanel; // Sẽ không cần trực tiếp nữa nếu dùng GridBagLayout cho toolbarOuterPanel
 
     private Color currentColor = Color.BLACK;
     private int currentStrokeSize = 3;
@@ -82,29 +84,31 @@ public class DrawScreen extends JPanel {
         add(topControlPanel, BorderLayout.NORTH);
 
         // Toolbar Panel (West)
-        JPanel toolbarOuterPanel = new JPanel(new BorderLayout()); // Use BorderLayout for TitledBorder padding
-        toolbarOuterPanel.setBorder(BorderFactory.createCompoundBorder(
+        // Sử dụng trực tiếp GridBagLayout cho panel chính của toolbar
+        JPanel toolbarPanel = new JPanel(new GridBagLayout());
+        toolbarPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder("Công cụ vẽ"),
                 new EmptyBorder(5, 8, 5, 8) // Padding inside TitledBorder
         ));
-        toolbarOuterPanel.setPreferredSize(new Dimension(180, 0)); // Slightly wider toolbar
+        toolbarPanel.setPreferredSize(new Dimension(200, 0)); // Điều chỉnh chiều rộng nếu cần
 
-        toolbarInnerPanel = new JPanel();
-        toolbarInnerPanel.setLayout(new BoxLayout(toolbarInnerPanel, BoxLayout.Y_AXIS));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER; // Mỗi component chiếm một hàng
+        gbc.fill = GridBagConstraints.HORIZONTAL;    // Cho component giãn theo chiều ngang
+        gbc.weightx = 1.0;                           // Cho phép giãn chiều ngang
+        gbc.insets = new Insets(5, 0, 5, 0);    // Padding trên dưới cho mỗi component
 
         // Color Chooser Button
         colorButton = new JButton("Chọn Màu");
         colorButton.setOpaque(true); // Necessary for background to show
-        colorButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         setButtonColor(currentColor);
         colorButton.addActionListener(e -> chooseColor());
-        toolbarInnerPanel.add(colorButton);
-        toolbarInnerPanel.add(Box.createRigidArea(new Dimension(0, 12)));
+        toolbarPanel.add(colorButton, gbc);
 
         // Stroke Size Slider
         JLabel strokeTitleLabel = new JLabel("Kích thước nét:");
-        strokeTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        toolbarInnerPanel.add(strokeTitleLabel);
+        // strokeTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Không cần với GridBagLayout
+        toolbarPanel.add(strokeTitleLabel, gbc);
 
         JPanel strokePanel = new JPanel(new BorderLayout(5,0));
         strokePanel.setOpaque(false); // Make transparent if toolbar has own bg
@@ -121,39 +125,59 @@ public class DrawScreen extends JPanel {
         });
         strokePanel.add(strokeSlider, BorderLayout.CENTER);
         strokePanel.add(currentStrokeLabel, BorderLayout.EAST);
-        strokePanel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        toolbarInnerPanel.add(strokePanel);
-        toolbarInnerPanel.add(Box.createRigidArea(new Dimension(0, 12)));
+        // strokePanel.setAlignmentX(Component.CENTER_ALIGNMENT); // Không cần
+        toolbarPanel.add(strokePanel, gbc);
 
         // Pencil Button
         pencilButton = new JButton(PENCIL_LABEL);
-        pencilButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // pencilButton.setAlignmentX(Component.CENTER_ALIGNMENT); // Không cần
         pencilButton.addActionListener(e -> setPencilMode());
-        toolbarInnerPanel.add(pencilButton);
-        toolbarInnerPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-
+        toolbarPanel.add(pencilButton, gbc);
 
         // Eraser Button
         eraserButton = new JButton(ERASER_LABEL);
-        eraserButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // eraserButton.setAlignmentX(Component.CENTER_ALIGNMENT); // Không cần
         eraserButton.addActionListener(e -> setEraserMode());
-        toolbarInnerPanel.add(eraserButton);
-        toolbarInnerPanel.add(Box.createRigidArea(new Dimension(0, 12)));
+        toolbarPanel.add(eraserButton, gbc);
 
-        JButton scanButton = new JButton("Quét Văn Bản");
+        // Scan Button
+        JButton scanButton = new JButton(SCAN_OCR_LABEL);
+        // scanButton.setAlignmentX(Component.CENTER_ALIGNMENT); // Không cần
         scanButton.addActionListener(e -> scanCanvasImageWithOCR());
-        toolbarInnerPanel.add(scanButton);
+        toolbarPanel.add(scanButton, gbc);
 
-        // Clear Button
+
+        // Clear Button - sẽ được đẩy xuống dưới cùng
         JButton clearButton = new JButton(CLEAR_LABEL);
-        clearButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        clearButton.addActionListener(e -> drawingPanel.clearDrawing());
-        toolbarInnerPanel.add(clearButton);
+        // clearButton.setAlignmentX(Component.CENTER_ALIGNMENT); // Không cần
 
-        toolbarInnerPanel.add(Box.createVerticalGlue()); // Pushes tools to the top if space available
+        clearButton.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "Bạn có chắc muốn xóa toàn bộ bản vẽ không?",
+                    "Xác nhận Xóa",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                drawingPanel.clearDrawing();
+            }
+        });
 
-        toolbarOuterPanel.add(toolbarInnerPanel, BorderLayout.NORTH); // Add inner panel to outer
-        add(toolbarOuterPanel, BorderLayout.WEST);
+        // Để đẩy nút Clear xuống dưới, ta thêm một component co giãn ở giữa
+        gbc.weighty = 1.0; // Cho phép component này co giãn theo chiều dọc
+        gbc.fill = GridBagConstraints.VERTICAL;
+        toolbarPanel.add(Box.createVerticalGlue(), gbc);
+        gbc.weighty = 0; // Reset weighty
+        gbc.fill = GridBagConstraints.HORIZONTAL; // Quay lại fill ngang cho nút Clear
+
+        toolbarPanel.add(clearButton, gbc); // Thêm nút Clear ở cuối
+
+        // Thêm toolbarPanel vào JScrollPane để có thể cuộn nếu nội dung quá dài
+        JScrollPane toolbarScrollPane = new JScrollPane(toolbarPanel);
+        toolbarScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        toolbarScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        toolbarScrollPane.setBorder(BorderFactory.createEmptyBorder()); // Bỏ viền của JScrollPane
+        add(toolbarScrollPane, BorderLayout.WEST);
+
 
         // Main Drawing Area
         drawingPanel = new DrawingPanel();
@@ -167,8 +191,11 @@ public class DrawScreen extends JPanel {
     }
 
     private BufferedImage preprocessImageForOCR(BufferedImage input) {
+        if (input == null) return null;
         int width = input.getWidth();
         int height = input.getHeight();
+        if (width <= 0 || height <= 0) return null;
+
 
         // Convert to grayscale
         BufferedImage gray = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
@@ -217,11 +244,10 @@ public class DrawScreen extends JPanel {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int grayVal = gray.getRaster().getSample(x, y, 0);
-                int binaryVal = grayVal > threshold ? 0xFFFFFF : 0x000000;
+                int binaryVal = grayVal > threshold ? 0xFFFFFF : 0x000000; // Trắng cho nền, đen cho chữ
                 binary.setRGB(x, y, binaryVal);
             }
         }
-
         return binary;
     }
 
@@ -239,19 +265,41 @@ public class DrawScreen extends JPanel {
     // Đây là phương thức trong lớp DrawScreen (không phải static!)
     private void scanCanvasImageWithOCR() {
         BufferedImage canvasRaw = drawingPanel.getCanvasImage();
-        BufferedImage canvas = preprocessImageForOCR(canvasRaw);
-        if (canvas == null || canvas.getWidth() <= 0 || canvas.getHeight() <= 0) {
-            JOptionPane.showMessageDialog(this, "Bản vẽ trống hoặc không hợp lệ.", "Lỗi", JOptionPane.WARNING_MESSAGE);
+        if (canvasRaw == null || canvasRaw.getWidth() <= 0 || canvasRaw.getHeight() <= 0) {
+            JOptionPane.showMessageDialog(this, "Bản vẽ trống hoặc không hợp lệ để quét.", "Lỗi OCR", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        BufferedImage canvasForOcr = preprocessImageForOCR(canvasRaw);
+        if (canvasForOcr == null) {
+            JOptionPane.showMessageDialog(this, "Không thể tiền xử lý ảnh cho OCR.", "Lỗi OCR", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+
         try {
             Tesseract tesseract = new Tesseract();
-            File tessDataFolder = new File(getClass().getClassLoader().getResource("tessdata").toURI()).getParentFile();
-            tesseract.setDatapath(tessDataFolder.getAbsolutePath());
-            tesseract.setLanguage("eng+vie");
+            // Giả sử thư mục tessdata nằm cùng cấp với thư mục classes của bạn sau khi build
+            // Hoặc bạn có thể đặt đường dẫn tuyệt đối hoặc cấu hình qua biến môi trường TESSDATA_PREFIX
+            File tessDataFolder = new File("tessdata"); // Cần đảm bảo đường dẫn này đúng
+            if (!tessDataFolder.exists() || !tessDataFolder.isDirectory()) {
+                // Thử tìm trong resources nếu chạy từ IDE hoặc JAR
+                try {
+                    tessDataFolder = new File(getClass().getClassLoader().getResource("tessdata").toURI());
+                } catch (Exception e) {
+                    tessDataFolder = null; // Reset nếu không tìm thấy
+                }
+            }
 
-            String result = tesseract.doOCR(canvas);
+            if (tessDataFolder == null || !tessDataFolder.exists()) {
+                JOptionPane.showMessageDialog(this, "Không tìm thấy thư mục tessdata. OCR không thể hoạt động.", "Lỗi Cấu Hình OCR", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            tesseract.setDatapath(tessDataFolder.getParentFile().getAbsolutePath()); // Tesseract cần thư mục cha của tessdata
+            tesseract.setLanguage("eng+vie"); // Đặt ngôn ngữ
+
+            String result = tesseract.doOCR(canvasForOcr);
             if (result.trim().isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Không phát hiện văn bản.", "Kết quả OCR", JOptionPane.INFORMATION_MESSAGE);
             } else {
@@ -266,8 +314,13 @@ public class DrawScreen extends JPanel {
                 JOptionPane.showMessageDialog(this, scrollPane, "Kết quả OCR (đã copy vào clipboard)", JOptionPane.INFORMATION_MESSAGE);
             }
 
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Lỗi khi quét OCR: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+        } catch (TesseractException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi Tesseract OCR: " + e.getMessage() + "\nKiểm tra cấu hình Tesseract và đường dẫn tessdata.", "Lỗi OCR", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+        catch (Exception e) { // Bắt các lỗi chung khác
+            JOptionPane.showMessageDialog(this, "Lỗi không xác định khi quét OCR: " + e.getMessage(), "Lỗi OCR", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }
 
@@ -320,7 +373,7 @@ public class DrawScreen extends JPanel {
                 drawingPanel.clearDrawing();
             }
         } else {
-            drawingPanel.clearDrawing();
+            drawingPanel.clearDrawing(); // Xóa canvas nếu không có dữ liệu hoặc note mới
         }
 
         currentColor = Color.BLACK;
@@ -328,42 +381,67 @@ public class DrawScreen extends JPanel {
         currentStrokeSize = 3;
         strokeSlider.setValue(currentStrokeSize);
         currentStrokeLabel.setText(String.valueOf(currentStrokeSize));
-        setPencilMode();
-        drawingPanel.setCurrentColor(currentColor);
-        drawingPanel.setCurrentStrokeSize(currentStrokeSize);
+        setPencilMode(); // Đặt lại chế độ bút vẽ
+        drawingPanel.setCurrentColor(currentColor); // Đảm bảo drawingPanel nhận màu mới
+        drawingPanel.setCurrentStrokeSize(currentStrokeSize); // và kích thước nét mới
     }
 
     private void saveDrawing() {
         String title = titleField.getText().trim();
         if (title.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Tiêu đề không được để trống.", "Lỗi Lưu", JOptionPane.WARNING_MESSAGE);
+            titleField.requestFocus();
             return;
         }
 
         try {
             String base64Image = drawingPanel.getImageAsBase64("png");
-            if (base64Image == null || base64Image.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Không có gì để lưu (bản vẽ trống).", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-            boolean isNew = (currentDrawingNote == null || currentDrawingNote.getId() == 0);
+            // Cho phép lưu bản vẽ trống nếu người dùng muốn, nhưng NoteController cần xử lý
+            // if (base64Image == null || base64Image.isEmpty()) {
+            //     JOptionPane.showMessageDialog(this, "Không có gì để lưu (bản vẽ trống).", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            //     return;
+            // }
+
+            boolean isNew = (currentDrawingNote.getId() == 0); // Kiểm tra ID để xác định note mới
+
+            currentDrawingNote.setTitle(title);
+            currentDrawingNote.setDrawingData(base64Image); // base64Image có thể là null nếu bản vẽ trống
+            currentDrawingNote.setNoteType(Note.NoteType.DRAWING); // Đảm bảo đúng loại
+            currentDrawingNote.setContent(null); // Bản vẽ không có content text
+
             if (isNew) {
-                // ... khởi tạo và thiết lập properties cho note mới ...
-                controller.addNote(currentDrawingNote);
+                // Đảm bảo note mới được gán vào một thư mục
+                if (currentDrawingNote.getFolderId() <= 0 && controller.getCurrentFolder() != null) {
+                    currentDrawingNote.setFolder(controller.getCurrentFolder());
+                } else if (currentDrawingNote.getFolderId() <= 0) {
+                    // Cố gắng lấy thư mục Root nếu không có current folder
+                    Folder rootFolder = controller.getFolderByName("Root").orElse(null);
+                    if (rootFolder != null) {
+                        currentDrawingNote.setFolder(rootFolder);
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Không thể xác định thư mục. Vui lòng tạo thư mục 'Root'.", "Lỗi Lưu", JOptionPane.ERROR_MESSAGE);
+                        return; // Không lưu nếu không có thư mục
+                    }
+                }
+                controller.addNote(currentDrawingNote); // Controller sẽ xử lý việc lưu note mới
             } else {
-                // ... cập nhật properties cho note cũ ...
-                controller.updateNote(currentDrawingNote, title, null);
+                controller.updateExistingNote(currentDrawingNote.getId(), currentDrawingNote); // Controller cập nhật note
             }
-            // Chỉ show 1 dialog chung
-            String message = isNew ? "Bản vẽ '" + title + "' đã được lưu!" : "Bản vẽ '" + title + "' đã được cập nhật!";JOptionPane.showMessageDialog(this, message, "Thành Công", JOptionPane.INFORMATION_MESSAGE);
+
+            String message = isNew ? "Bản vẽ '" + title + "' đã được lưu!" : "Bản vẽ '" + title + "' đã được cập nhật!";
+            JOptionPane.showMessageDialog(this, message, "Thành Công", JOptionPane.INFORMATION_MESSAGE);
             mainFrame.showMainMenuScreen(); // Quay về màn hình chính sau khi lưu
 
         } catch (IOException e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Lỗi khi lưu bản vẽ: " + e.getMessage(), "Lỗi Lưu", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) { // Bắt các lỗi khác có thể xảy ra từ controller
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Đã xảy ra lỗi không mong muốn khi lưu: " + e.getMessage(), "Lỗi Lưu", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    // Inner class DrawingPanel không thay đổi nhiều, giữ nguyên logic vẽ
     private static class DrawingPanel extends JPanel {
         private BufferedImage canvasImage;
         private Graphics2D g2dCanvas;
@@ -521,6 +599,5 @@ public class DrawScreen extends JPanel {
                 throw new IOException("Không thể giải mã dữ liệu ảnh từ Base64.");
             }
         }
-
     }
 }
