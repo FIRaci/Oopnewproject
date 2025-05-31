@@ -126,13 +126,13 @@ public class AlarmController {
         // System.out.println("    DEBUG: playSound() called.");
         stopAndCloseClip();
         try {
-            URL soundResourceUrl = getClass().getResource("/sound/Doctor.wav");
+            URL soundResourceUrl = getClass().getResource("/sound/sound.wav");
             if (soundResourceUrl == null) {
-                File soundFileDev = new File("src/main/resources/sound/Doctor.wav");
+                File soundFileDev = new File("src/main/resources/sound/sound.wav");
                 if (soundFileDev.exists()) {
                     soundResourceUrl = soundFileDev.toURI().toURL();
                 } else {
-                    System.err.println("    ERROR: Alarm sound file '/sound/Doctor.wav' not found.");
+                    System.err.println("    ERROR: Alarm sound file '/sound/sound.wav' not found.");
                     return;
                 }
             }
@@ -151,7 +151,7 @@ public class AlarmController {
             });
         } catch (UnsupportedAudioFileException e) {
             System.err.println("    ERROR: Could not play sound - Unsupported audio file format: " + e.getMessage());
-            System.err.println("           Please ensure 'Doctor.wav' is a standard PCM WAV file.");
+            System.err.println("           Please ensure 'sound.wav' is a standard PCM WAV file.");
         }
         catch (Exception e) {
             System.err.println("    ERROR: Could not play sound: " + e.getMessage());

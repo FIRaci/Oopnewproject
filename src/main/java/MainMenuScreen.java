@@ -1,6 +1,5 @@
 // File: MainMenuScreen.java
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
@@ -14,7 +13,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class MainMenuScreen extends JPanel {
@@ -42,28 +40,36 @@ public class MainMenuScreen extends JPanel {
     public MainMenuScreen(NoteController controller, MainFrame mainFrame) {
         this.controller = controller;
         this.mainFrame = mainFrame;
-        loadHourIcons();
+        loadAlarmIcons();
         initializeUI();
         setupShortcuts();
     }
 
-    private void loadHourIcons() {
+    private void loadAlarmIcons() {
         hourIcons = new ImageIcon[24];
-        for (int i = 0; i < 24; i++) {
-            try {
-                java.net.URL imgUrl = getClass().getResource("/icons/hour_" + i + ".jpg");
-                if (imgUrl != null) {
-                    hourIcons[i] = new ImageIcon(imgUrl);
-                    Image img = hourIcons[i].getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH);
-                    hourIcons[i] = new ImageIcon(img);
-                } else {
-                    System.err.println("Không tìm thấy tài nguyên: /icons/hour_" + i + ".jpg");
-                    hourIcons[i] = createDefaultIcon("H" + i);
-                }
-            } catch (Exception e) {
-                System.err.println("Không thể tải icon hour_" + i + ".jpg: " + e.getMessage());
-                hourIcons[i] = createDefaultIcon("E" + i);
+        ImageIcon spinnerIcon = null; // Biến để lưu trữ icon spinner đã tải
+
+        try {
+            // Tải icon spinner.jpg một lần
+            java.net.URL imgUrl = getClass().getResource("/images/spinner.jpg"); // Giả sử spinner.jpg nằm trong /images
+            if (imgUrl != null) {
+                ImageIcon originalIcon = new ImageIcon(imgUrl);
+                Image img = originalIcon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH);
+                spinnerIcon = new ImageIcon(img);
+            } else {
+                System.err.println("Không tìm thấy tài nguyên: /images/spinner.jpg");
+                // Nếu không tìm thấy spinner.jpg, tạo một icon mặc định
+                spinnerIcon = createDefaultIcon("S"); // "S" for Spinner or some placeholder
             }
+        } catch (Exception e) {
+            System.err.println("Không thể tải icon spinner.jpg: " + e.getMessage());
+            // Nếu có lỗi khi tải, tạo một icon mặc định
+            spinnerIcon = createDefaultIcon("E"); // "E" for Error
+        }
+
+        // Gán icon spinner đã tải (hoặc icon mặc định nếu có lỗi) cho tất cả 24 giờ
+        for (int i = 0; i < 24; i++) {
+            hourIcons[i] = spinnerIcon;
         }
     }
 
@@ -365,10 +371,11 @@ public class MainMenuScreen extends JPanel {
                 label.setIcon(null);
                 if (value instanceof Integer) {
                     int hour = (Integer) value;
-                    if (hour >= 0 && hour < 24 && hourIcons != null && hourIcons[hour] != null) {
-                        label.setIcon(hourIcons[hour]);
+                    // Since we only have one spinnerIcon now, we use it directly
+                    if (hourIcons != null && hourIcons.length > 0 && hourIcons[0] != null) { // Check if spinnerIcon was loaded
+                        label.setIcon(hourIcons[0]); // Use the single spinner icon
                     } else {
-                        label.setText("-");
+                        label.setText("-"); // Fallback if spinnerIcon is somehow null
                     }
                 } else {
                     label.setText("-");
