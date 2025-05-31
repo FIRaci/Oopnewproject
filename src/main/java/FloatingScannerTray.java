@@ -99,11 +99,4 @@ public class FloatingScannerTray extends JFrame {
             new ScanWindowWithSelection().setVisible(true);
         });
     }
-
-    // Thêm main method để có thể chạy thử nghiệm độc lập nếu cần
-     public static void main(String[] args) {
-       SwingUtilities.invokeLater(() -> {
-            FloatingScannerTray.getInstance().setVisible(true);
-        });
-    }
 }
