@@ -47,11 +47,11 @@ public class MissionScreen extends JPanel {
         String[] fontFamilies = {"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji"};
         for (String family : fontFamilies) {
             Font font = new Font(family, Font.PLAIN, size);
-            if (font.canDisplayUpTo("🔍⏰") == -1) { // Bạn có thể thêm các emoji khác vào chuỗi
+            if (font.canDisplay('🔍') && font.canDisplay('⏰')) {
                 return font;
             }
         }
-        return new Font("Dialog", Font.PLAIN, size); // Fallback
+        return new Font("Dialog", Font.PLAIN, size); // Font dự phòng
     }
 
     private void setupRefreshButton() {
