@@ -125,12 +125,12 @@ public class HelpScreen extends JDialog {
 
 
         String[] contributors = {
-                "Liem-san - Leader + Primary Tester",
-                "Shirin - AI Developer + UI Developer + Principal Funder",
-                "FIRaci - Frontend Developer + Backend Developer",
-                "Yui - Secondary Tester + Secondary Bug Fixer",
-                "Drako - Main Bug Fixer + OCR Developer",
-                "Missing someone here bruh! Do you know where they are?" // Corrected typo
+                "Liêm - Leader + Tester",
+                "Bách - AI Developer + Fullstack Developer",
+                "Thành - Fullstack Developer",
+                "Trung - Tester + Bug Fixer",
+                "Thanh - Bug Fixer + OCR Developer",
+                "Hoang - Report + Slide Maker"
         };
 
         Font contributorFont = new Font("Segoe UI", Font.PLAIN, 14); // Slightly larger
