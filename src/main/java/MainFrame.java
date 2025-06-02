@@ -7,10 +7,6 @@ import java.awt.event.*;
 import java.net.URL;
 import java.util.Objects;
 import java.util.Random;
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
-import org.jfree.data.category.DefaultCategoryDataset;
 
 public class MainFrame extends JFrame {
     private final NoteController controller;
@@ -303,56 +299,6 @@ public class MainFrame extends JFrame {
         if (missionScreen != null) {
             missionScreen.refreshMissions();
         }
-    }
-
-    public void openCanvasPanel() {
-        if (this.controller == null) {
-            JOptionPane.showMessageDialog(this, "Lỗi: Controller chưa sẵn sàng để hiển thị thống kê.", "Lỗi Controller", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        java.util.List<Folder> folders = controller.getFolders();
-        if (folders == null || folders.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No folders found to display statistics.", "Statistics", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        java.util.List<Note> allNotes = controller.getNotes();
-        if (allNotes == null) {
-            JOptionPane.showMessageDialog(this, "Could not retrieve notes for statistics.", "Statistics Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        for (Folder folder : folders) {
-            long noteCount = allNotes.stream()
-                    .filter(note -> note.getFolder() != null && note.getFolder().getId() == folder.getId())
-                    .count();
-            dataset.addValue(noteCount, "Notes", folder.getName());
-        }
-
-        JFreeChart chart = ChartFactory.createBarChart(
-                "Note Count by Folder", "Folder", "Number of Notes", dataset);
-
-        chart.setBackgroundPaint(UIManager.getColor("Panel.background"));
-        if (chart.getTitle() != null) chart.getTitle().setPaint(UIManager.getColor("Label.foreground"));
-        if (chart.getCategoryPlot() != null) {
-            chart.getCategoryPlot().getDomainAxis().setLabelPaint(UIManager.getColor("Label.foreground"));
-            chart.getCategoryPlot().getDomainAxis().setTickLabelPaint(UIManager.getColor("Label.foreground"));
-            chart.getCategoryPlot().getRangeAxis().setLabelPaint(UIManager.getColor("Label.foreground"));
-            chart.getCategoryPlot().getRangeAxis().setTickLabelPaint(UIManager.getColor("Label.foreground"));
-            chart.getCategoryPlot().setBackgroundPaint(UIManager.getColor("TextField.background"));
-        }
-        if (chart.getLegend() != null) chart.getLegend().setItemPaint(UIManager.getColor("Label.foreground"));
-
-        ChartPanel chartPanel = new ChartPanel(chart);
-        chartPanel.setPreferredSize(new Dimension(600, 400));
-        JDialog dialog = new JDialog(this, "Statistics", true);
-        dialog.setLayout(new BorderLayout());
-        dialog.add(chartPanel, BorderLayout.CENTER);
-        dialog.pack();
-        dialog.setLocationRelativeTo(this);
-        mouseEventDispatcher.addMouseMotionListenerToWindow(dialog);
-        dialog.setVisible(true);
     }
 
     private void confirmAndExit() {

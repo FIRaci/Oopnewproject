@@ -23,42 +23,9 @@
             <version>3.4.1</version> </dependency>
 
         <dependency>
-            <groupId>com.formdev</groupId>
-            <artifactId>flatlaf-extras</artifactId>
-            <version>3.4.1</version> </dependency>
-
-        <dependency>
-            <groupId>org.jfree</groupId>
-            <artifactId>jfreechart</artifactId>
-            <version>1.5.5</version> </dependency>
-
-        <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20240303</version> </dependency>
-
-        <dependency>
-            <groupId>org.swinglabs.swingx</groupId>
-            <artifactId>swingx-all</artifactId>
-            <version>1.6.5</version> </dependency>
-
-        <!--
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>42.2.18</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jcraft</groupId>
-            <artifactId>jsch</artifactId>
-            <version>0.1.54</version>
-        </dependency>
-        <dependency>
-            <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP</artifactId>
-            <version>3.1.0</version>
-        </dependency>
-         -->
 
         <dependency>
             <groupId>org.slf4j</groupId>
