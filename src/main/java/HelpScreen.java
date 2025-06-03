@@ -126,7 +126,7 @@ public class HelpScreen extends JDialog {
 
         String[] contributors = {
                 "Liêm - Leader + Tester",
-                "Bách - AI Developer + Fullstack Developer",
+                "Bách - AI Developer + UI Developer",
                 "Thành - Fullstack Developer",
                 "Trung - Tester + Bug Fixer",
                 "Thanh - Bug Fixer + OCR Developer",
