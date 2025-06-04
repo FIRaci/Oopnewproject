@@ -25,6 +25,18 @@ public class NoteApplication {
     }
 
     public static void main(String[] args) {
+        // Tự động chạy model gemma3:1b bằng lệnh hệ thống khi khởi động ứng dụng
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                "cmd.exe", "/c", "start /min ollama serve && timeout /t 2 && ollama run gemma3:1b"
+            );
+            pb.redirectErrorStream(true);
+            pb.start();
+            System.out.println("[NoteApplication] Đã khởi động ollama serve và model gemma3:1b (nếu chưa chạy).");
+        } catch (Exception ex) {
+            System.err.println("[NoteApplication] Lỗi khi khởi động ollama serve/model: " + ex.getMessage());
+        }
+
         ThemeManager.loadAndApplyPreferredTheme(null);
         setUIFont(new javax.swing.plaf.FontUIResource("SansSerif", Font.PLAIN, 13));
 

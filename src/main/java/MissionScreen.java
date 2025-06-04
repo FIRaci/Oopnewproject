@@ -45,13 +45,21 @@ public class MissionScreen extends JPanel {
 
     private Font getEmojiSupportedFont(int size) {
         String[] fontFamilies = {"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji"};
+        int[] codePoints = {0x1F50D, 0x23F0}; // Unicode code points for '🔍' and '⏰'
         for (String family : fontFamilies) {
             Font font = new Font(family, Font.PLAIN, size);
-            if (font.canDisplay('🔍') && font.canDisplay('⏰')) {
+            boolean allSupported = true;
+            for (int codePoint : codePoints) {
+                if (!font.canDisplay(codePoint)) {
+                    allSupported = false;
+                    break;
+                }
+            }
+            if (allSupported) {
                 return font;
             }
         }
-        return new Font("Dialog", Font.PLAIN, size); // Font dự phòng
+        return new Font("Dialog", Font.PLAIN, size); // Fallback font
     }
 
     private void setupRefreshButton() {

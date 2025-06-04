@@ -13,8 +13,8 @@ import java.util.function.Consumer;
 
 public class AIService {
 
-    private static final String API_URL = "http://203.113.132.109:11434/api/generate";
-    private static final String MODEL = "llama3.1"; // Hoặc mô hình bạn muốn sử dụng
+    private static final String API_URL = "http://localhost:11434/api/generate";
+    private static final String MODEL = "gemma3:4b"; // Đã đổi sang model gemma3:1b
 
     public interface TranslationCallback {
         void onSuccess(String translatedText);
@@ -36,7 +36,7 @@ public class AIService {
         SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
             @Override
             protected String doInBackground() throws Exception {
-                String prompt = "translate to " + targetLanguage + " without any comment: " + textToTranslate;
+                String prompt = "translate to " + targetLanguage + " without any comment this text: " + textToTranslate;
                 return sendPostRequest(API_URL, MODEL, prompt);
             }
 
