@@ -13,7 +13,7 @@ import java.util.function.Consumer;
 
 public class AIService {
 
-    private static final String API_URL = "http://203.113.132.109:11434/api/generate";
+    private static final String API_URL = "http://:11434/api/generate";
     private static final String MODEL = "llama3.1"; // Hoặc mô hình bạn muốn sử dụng
 
     public interface TranslationCallback {
