@@ -26,15 +26,15 @@ public class MissionScreen extends JPanel {
     private JLabel sortLabel;
 
 
-    private static final String FILTER_ALL = "Tất cả Nhiệm vụ";
-    private static final String FILTER_COMPLETED = "Đã Hoàn Thành";
-    private static final String FILTER_INCOMPLETE = "Chưa Hoàn Thành";
-    private static final String FILTER_OVERDUE = "Quá Hạn";
+    private static final String FILTER_ALL = "All Missions";
+    private static final String FILTER_COMPLETED = "Completed";
+    private static final String FILTER_INCOMPLETE = "Incomplete";
+    private static final String FILTER_OVERDUE = "Overdue";
 
-    private static final String SORT_DEFAULT = "Mặc định (Ưu tiên)";
-    private static final String SORT_DUE_DATE_ASC = "Theo Ngày Hạn (Gần nhất)";
-    private static final String SORT_DUE_DATE_DESC = "Theo Ngày Hạn (Xa nhất)";
-    private static final String SORT_MODIFIED_DATE_DESC = "Theo Ngày Sửa Đổi (Mới nhất)";
+    private static final String SORT_DEFAULT = "Default (Priority)";
+    private static final String SORT_DUE_DATE_ASC = "By Due Date (Nearest)";
+    private static final String SORT_DUE_DATE_DESC = "By Due Date (Furthest)";
+    private static final String SORT_MODIFIED_DATE_DESC = "By Modified Date (Newest)";
 
 
     public MissionScreen(NoteController controller, MainFrame mainFrame) {
@@ -63,14 +63,14 @@ public class MissionScreen extends JPanel {
     }
 
     private void setupRefreshButton() {
-        refreshButton = new JButton("🔄 Làm mới");
+        refreshButton = new JButton("🔄 Refresh");
         refreshButton.setFont(getEmojiSupportedFont(14));
-        refreshButton.setToolTipText("Làm mới danh sách nhiệm vụ");
+        refreshButton.setToolTipText("Refresh mission list");
 
         refreshButton.addActionListener(e -> {
             // Disable nút và đổi text khi đang làm mới
             refreshButton.setEnabled(false);
-            refreshButton.setText("🔄 Đang làm mới...");
+            refreshButton.setText("🔄 Refreshing...");
 
             // Thực hiện làm mới
             refreshMissions();
@@ -78,7 +78,7 @@ public class MissionScreen extends JPanel {
             // Set timer để enable lại nút sau 500ms
             Timer timer = new Timer(500, evt -> {
                 refreshButton.setEnabled(true);
-                refreshButton.setText("🔄 Làm mới");
+                refreshButton.setText("🔄 Refresh");
             });
             timer.setRepeats(false);
             timer.start();
@@ -95,28 +95,28 @@ public class MissionScreen extends JPanel {
         JPanel filterSortPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
 
         // --- Filter ---
-        filterLabel = new JLabel("🔍 Lọc:");
+        filterLabel = new JLabel("🔍 Filter:");
         filterLabel.setFont(getEmojiSupportedFont(14));
         filterSortPanel.add(filterLabel);
 
         filterComboBox = new JComboBox<>(new String[]{
                 FILTER_ALL, FILTER_INCOMPLETE, FILTER_OVERDUE, FILTER_COMPLETED
         });
-        filterComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        filterComboBox.setFont(new Font("Roboto Mono", Font.PLAIN, 13));
         filterComboBox.addActionListener(e -> refreshMissions());
         filterSortPanel.add(filterComboBox);
 
         filterSortPanel.add(Box.createHorizontalStrut(15));
 
         // --- Sort ---
-        sortLabel = new JLabel("↕️ Sắp xếp:");
+        sortLabel = new JLabel("↕️ Sort:");
         sortLabel.setFont(getEmojiSupportedFont(14));
         filterSortPanel.add(sortLabel);
 
         sortComboBox = new JComboBox<>(new String[]{
                 SORT_DEFAULT, SORT_DUE_DATE_ASC, SORT_DUE_DATE_DESC, SORT_MODIFIED_DATE_DESC
         });
-        sortComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        sortComboBox.setFont(new Font("Roboto Mono", Font.PLAIN, 13));
         sortComboBox.addActionListener(e -> refreshMissions());
         filterSortPanel.add(sortComboBox);
 
@@ -126,9 +126,9 @@ public class MissionScreen extends JPanel {
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
 
         // Khởi tạo deleteButton trước khi thêm
-        deleteButton = new JButton("🗑 Xóa");
+        deleteButton = new JButton("🗑 Delete");
         deleteButton.setFont(getEmojiSupportedFont(14));
-        deleteButton.setToolTipText("Chuyển sang chế độ xóa nhiệm vụ");
+        deleteButton.setToolTipText("Switch to delete mode");
         deleteButton.addActionListener(e -> toggleDeleteMode());
 
         setupRefreshButton(); // Khởi tạo refreshButton
@@ -161,9 +161,9 @@ public class MissionScreen extends JPanel {
 
     private void toggleDeleteMode() {
         deleteMode = !deleteMode;
-        deleteButton.setText(deleteMode ? "✅ Hoàn Tất Xóa" : "🗑 Xóa"); // Changed icon for "Done"
+        deleteButton.setText(deleteMode ? "✅ Done Deleting" : "🗑 Delete"); // Changed icon for "Done"
         deleteButton.setFont(getEmojiSupportedFont(14));
-        deleteButton.setToolTipText(deleteMode ? "Hoàn tất và thoát chế độ xóa" : "Chuyển sang chế độ xóa nhiệm vụ");
+        deleteButton.setToolTipText(deleteMode ? "Finish and exit delete mode" : "Switch to delete mode");
         refreshButton.setEnabled(!deleteMode);
 
         if(deleteMode) {
@@ -284,8 +284,8 @@ public class MissionScreen extends JPanel {
         JPanel controlPanel = new JPanel(new BorderLayout());
         controlPanel.setOpaque(false);
 
-        JCheckBox completeCheckbox = new JCheckBox("Hoàn thành");
-        completeCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        JCheckBox completeCheckbox = new JCheckBox("Completed");
+        completeCheckbox.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
         completeCheckbox.setSelected(note.isMissionCompleted());
         completeCheckbox.setOpaque(false);
         completeCheckbox.addActionListener(e -> {
@@ -295,19 +295,19 @@ public class MissionScreen extends JPanel {
         controlPanel.add(completeCheckbox, BorderLayout.WEST);
 
         if (deleteMode) {
-            JCheckBox deleteCheckbox = new JCheckBox("Xóa?");
-            deleteCheckbox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            JCheckBox deleteCheckbox = new JCheckBox("Delete?");
+            deleteCheckbox.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
             deleteCheckbox.setForeground(Color.RED);
             deleteCheckbox.setOpaque(false);
             controlPanel.add(deleteCheckbox, BorderLayout.EAST);
             deleteCheckbox.addActionListener(e -> {
                 if (deleteCheckbox.isSelected()) {
                     int option = JOptionPane.showConfirmDialog(mainFrame,
-                            "Xóa toàn bộ ghi chú '" + note.getTitle() + "' hay chỉ xóa nhiệm vụ?\n" +
-                                    "Yes: Xóa toàn bộ ghi chú (bao gồm nhiệm vụ và báo thức)\n" +
-                                    "No: Chỉ xóa nội dung nhiệm vụ (giữ lại ghi chú và báo thức nếu có)\n" +
-                                    "Cancel: Không làm gì",
-                            "Xác Nhận Xóa", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+                            "Delete the entire note '" + note.getTitle() + "' or just the mission?\n" +
+                                    "Yes: Delete the entire note (including mission and alarm)\n" +
+                                    "No: Only delete the mission content (keep note and alarm if any)\n" +
+                                    "Cancel: Do nothing",
+                            "Confirm Delete", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
                     if (option == JOptionPane.YES_OPTION) {
                         controller.deleteNote(note);
                     } else if (option == JOptionPane.NO_OPTION) {
@@ -327,7 +327,7 @@ public class MissionScreen extends JPanel {
         contentPanel.setOpaque(false);
 
         JLabel titleLabel = new JLabel(note.getTitle());
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font("Roboto Mono", Font.BOLD, 16));
         titleLabel.setForeground(titleColor);
         contentPanel.add(titleLabel, BorderLayout.NORTH);
 
@@ -336,7 +336,7 @@ public class MissionScreen extends JPanel {
         contentArea.setWrapStyleWord(true);
         contentArea.setEditable(false);
         contentArea.setOpaque(false);
-        contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        contentArea.setFont(new Font("Roboto Mono", Font.PLAIN, 13));
         contentArea.setForeground(UIManager.getColor("TextArea.foreground"));
         contentArea.setBorder(BorderFactory.createEmptyBorder(2,0,2,0));
         JScrollPane contentScrollPane = new JScrollPane(contentArea);
@@ -349,12 +349,13 @@ public class MissionScreen extends JPanel {
         JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2));
         infoPanel.setOpaque(false);
 
-        JLabel createdLabel = new JLabel("Sửa đổi: " + note.getFormattedModificationDate());
-        createdLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        JLabel createdLabel = new JLabel("Modified: " + note.getFormattedModificationDate());
+        createdLabel.setFont(new Font("Roboto Mono", Font.ITALIC, 11));
         infoPanel.add(createdLabel);
 
-        String alarmText = note.getAlarm() != null ? formatAlarm(note.getAlarm()) : "Chưa có báo thức";
+        String alarmText = note.getAlarm() != null ? formatAlarm(note.getAlarm()) : "No alarm set";
         JLabel alarmLabel = new JLabel("⏰ " + alarmText);
+        alarmLabel.setToolTipText("Click to edit alarm");
         alarmLabel.setFont(getEmojiSupportedFont(12));
         alarmLabel.setForeground(UIManager.getColor("Label.foreground"));
         if (note.getAlarm() != null) {
@@ -394,7 +395,7 @@ public class MissionScreen extends JPanel {
                 MissionDialog dialog = new MissionDialog(mainFrame);
                 if(mainFrame.getMouseEventDispatcher() != null) mainFrame.getMouseEventDispatcher().addMouseMotionListenerToWindow(dialog);
                 dialog.setMission(note.getMissionContent());
-                dialog.setTitle("Sửa Nhiệm vụ: " + note.getTitle());
+                dialog.setTitle("Edit Mission: " + note.getTitle());
                 dialog.setVisible(true);
                 if (dialog.isSaved()) {
                     String result = dialog.getResult();
