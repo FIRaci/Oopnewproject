@@ -1,15 +1,7 @@
-import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatLightLaf;
 import javax.swing.*;
 import java.awt.*;
-import java.nio.file.*;
-import java.io.*;
-import java.util.Enumeration; // Cho setUIFont
-import java.time.LocalDateTime; // Giữ lại nếu initializeSampleData dùng
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.Enumeration;
+
 
 public class NoteApplication {
 
@@ -25,7 +17,6 @@ public class NoteApplication {
     }
 
     public static void main(String[] args) {
-        // Tự động chạy model gemma3:1b bằng lệnh hệ thống khi khởi động ứng dụng
         try {
             ProcessBuilder pb = new ProcessBuilder(
                 "cmd.exe", "/c", "start /min ollama serve && timeout /t 2 && ollama run gemma3:1b"

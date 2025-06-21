@@ -1,12 +1,7 @@
-import java.awt.*;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-// FlatLaf imports không cần trực tiếp ở đây nữa nếu ThemeManager xử lý
-// import com.formdev.flatlaf.FlatDarkLaf;
-// import com.formdev.flatlaf.FlatLightLaf;
 
 import javax.swing.*;
 
@@ -14,7 +9,6 @@ public class NoteController {
     private final NoteService noteService;
     private Folder currentFolder;
     private JFrame mainFrameInstance;
-    // private boolean isDarkTheme = false; // Không cần biến này nữa, ThemeManager sẽ quản lý
 
     public NoteController(JFrame mainFrameInstance, NoteService noteService) {
         this.mainFrameInstance = mainFrameInstance;
@@ -56,35 +50,21 @@ public class NoteController {
         this.mainFrameInstance = mainFrameInstance;
     }
 
-    // ... (Các phương thức khác của NoteController giữ nguyên như phiên bản trước) ...
-    // getSortedNotes, searchNotes, selectFolder, getCurrentFolder, getFolders,
-    // addNewFolder, deleteFolder, renameFolder, setFolderFavorite,
-    // addNote, deleteNote, updateNote, renameNote, setNoteFavorite,
-    // addTag, removeTag, moveNoteToFolder, getNotes, getFolderByName,
-    // getMissions, updateMission, completeMission, setAlarm,
-    // getNoteService, updateExistingNoteInControllerList
-
-    public void changeTheme() { // Sửa lại để dùng ThemeManager
+    public void changeTheme() {
         ThemeManager.cycleNextTheme(mainFrameInstance);
-        // MainFrame.triggerThemeUpdate sẽ được gọi từ bên trong ThemeManager.applyTheme
-        // thông qua việc updateComponentTreeUI.
-        // Nếu cần thông báo cụ thể cho MainFrame, có thể thêm callback hoặc event.
-        // Hiện tại, việc cập nhật UI toàn cục là đủ.
-        // Gọi triggerThemeUpdate của MainFrame để nó có thể xử lý các thành phần đặc biệt (như ImageSpinner)
-        if (mainFrameInstance instanceof MainFrame) {
+       if (mainFrameInstance instanceof MainFrame) {
             ((MainFrame) mainFrameInstance).triggerThemeUpdate(ThemeManager.isCurrentThemeDark());
         }
     }
 
-    public String getCurrentThemeName() { // Trả về tên class của theme hiện tại
+    public String getCurrentThemeName() {
         return ThemeManager.getCurrentThemeInfo().getClassName();
     }
 
-    public boolean isCurrentThemeDark() { // Để MainFrame có thể hỏi
+    public boolean isCurrentThemeDark() {
         return ThemeManager.isCurrentThemeDark();
     }
 
-    // Các phương thức khác giữ nguyên
     public List<Note> getSortedNotes() {
         List<Note> notesToDisplay;
         Folder effectiveCurrentFolder = getCurrentFolder();
@@ -270,7 +250,6 @@ public class NoteController {
             }
 
             noteService.createNewNote(note);
-            //JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được thêm.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi thêm ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -305,7 +284,6 @@ public class NoteController {
 
         try {
             noteService.updateExistingNote(note);
-            //JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được cập nhật.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi cập nhật ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -363,7 +341,6 @@ public class NoteController {
             note.addTag(managedTag);
             note.updateUpdatedAt();
             noteService.updateExistingNote(note);
-            //JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + managedTag.getName() + "' đã được thêm vào ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(mainFrameInstance, "Lỗi khi thêm tag vào ghi chú: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -380,7 +357,6 @@ public class NoteController {
             note.updateUpdatedAt();
             try {
                 noteService.updateExistingNote(note);
-                //JOptionPane.showMessageDialog(mainFrameInstance, "Tag '" + tagToRemove.getName() + "' đã được xóa khỏi ghi chú.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {
                 note.addTag(tagToRemove);
                 e.printStackTrace();
@@ -555,15 +531,14 @@ public class NoteController {
 
     }
 
-    public void updateNote(Note note) { // Phương thức mới hoặc sửa tên từ updateExistingNote(long, Note)
+    public void updateNote(Note note) {
         if (note == null || note.getId() == 0) {
             JOptionPane.showMessageDialog(mainFrameInstance, "Không thể cập nhật ghi chú không hợp lệ hoặc chưa được lưu.", "Lỗi Thao Tác", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        // Không cần set title, content ở đây vì Note object đã được cập nhật từ DrawScreen
         note.updateUpdatedAt();
         try {
-            noteService.updateExistingNote(note); // Gọi service với object Note đã cập nhật
+            noteService.updateExistingNote(note);
             JOptionPane.showMessageDialog(mainFrameInstance, "Ghi chú '" + note.getTitle() + "' đã được cập nhật.", "Thành Công", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();

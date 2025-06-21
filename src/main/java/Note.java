@@ -9,15 +9,14 @@ public class Note {
         return updatedAt;
     }
 
-    // Thêm enum để phân biệt loại Note
     public enum NoteType {
-        TEXT, // Ghi chú văn bản thông thường
-        DRAWING // Ghi chú dạng bản vẽ
+        TEXT,
+        DRAWING
     }
 
     private long id;
     private String title;
-    private String content; // Sẽ dùng cho TEXT, có thể null cho DRAWING
+    private String content;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean isFavorite;
@@ -33,56 +32,43 @@ public class Note {
     private Long alarmId;
     private transient Alarm alarm;
 
-    // Trường mới cho loại Note và dữ liệu bản vẽ
     private NoteType noteType;
-    private String drawingData; // Dùng để lưu trữ dữ liệu bản vẽ, ví dụ Base64 của ảnh PNG
+    private String drawingData;
 
-    // Các trường folderName, tagNames không còn được sử dụng trực tiếp bởi DataStorage mới
-    // String folderName; // Sẽ được quản lý qua folderId và transient Folder
-    // List<String> tagNames; // Sẽ được quản lý qua List<Tag> và transient Tag
-
-    /**
-     * Constructor cho ghi chú văn bản mới.
-     */
     public Note(String title, String content, boolean isFavorite) {
         this(0L, title, content, LocalDateTime.now(), LocalDateTime.now(),
                 0L, isFavorite, false, false, "", null, new ArrayList<>(),
-                NoteType.TEXT, null); // Mặc định là TEXT, drawingData là null
+                NoteType.TEXT, null);
     }
 
     /**
      * Constructor để tạo Note mới với loại cụ thể (ví dụ khi tạo Draw Panel).
      */
     public Note(String title, NoteType type, Folder initialFolder) {
-        this(0L, title, (type == NoteType.TEXT ? "" : null), // content null cho DRAWING
+        this(0L, title, (type == NoteType.TEXT ? "" : null),
                 LocalDateTime.now(), LocalDateTime.now(),
                 (initialFolder != null ? initialFolder.getId() : 0L),
                 false, false, false, "", null, new ArrayList<>(),
-                type, (type == NoteType.DRAWING ? "" : null)); // drawingData rỗng cho DRAWING mới
+                type, (type == NoteType.DRAWING ? "" : null));
         if (initialFolder != null) {
             this.folder = initialFolder;
         }
     }
 
-
-    /**
-     * Constructor đầy đủ để tạo Note từ dữ liệu (ví dụ từ DataStorage).
-     */
     public Note(long id, String title, String content,
                 LocalDateTime createdAt, LocalDateTime updatedAt,
                 long folderId, boolean isFavorite,
                 boolean isMission, boolean isMissionCompleted, String missionContent,
                 Long alarmId, List<Tag> tags,
-                NoteType noteType, String drawingData // Thêm các trường mới
+                NoteType noteType, String drawingData
     ) {
         if (title == null || title.trim().isEmpty()) {
-            // Gán tiêu đề mặc định nếu title từ JSON là null/rỗng khi deserialize
             this.title = (id == 0) ? "Untitled Note" : "Note ID " + id;
         } else {
             this.title = title;
         }
         this.id = id;
-        this.content = content; // Có thể null nếu là DRAWING
+        this.content = content;
         this.createdAt = (createdAt != null) ? createdAt : LocalDateTime.now();
         this.updatedAt = (updatedAt != null) ? updatedAt : this.createdAt;
         this.folderId = folderId;
@@ -92,13 +78,11 @@ public class Note {
         this.missionContent = missionContent == null ? "" : missionContent;
         this.alarmId = alarmId;
         this.tags = (tags != null) ? new ArrayList<>(tags) : new ArrayList<>();
-        this.noteType = (noteType != null) ? noteType : NoteType.TEXT; // Mặc định là TEXT nếu null
-        this.drawingData = drawingData; // Có thể null nếu là TEXT
+        this.noteType = (noteType != null) ? noteType : NoteType.TEXT;
+        this.drawingData = drawingData;
     }
 
-
     // Getters and Setters
-
     public long getId() {
         return id;
     }
@@ -113,8 +97,7 @@ public class Note {
 
     public void setTitle(String title) {
         if (title == null || title.trim().isEmpty()) {
-            // Không throw exception, nhưng có thể log hoặc xử lý khác nếu cần
-            this.title = "Untitled"; // Hoặc giữ nguyên title cũ nếu đang update
+            this.title = "Untitled";
         } else {
             this.title = title;
         }
@@ -126,7 +109,7 @@ public class Note {
     }
 
     public void setContent(String content) {
-        this.content = content; // Cho phép content là null (ví dụ cho drawing note)
+        this.content = content;
         updateUpdatedAt();
     }
 
@@ -180,11 +163,7 @@ public class Note {
 
     public void setMissionCompleted(boolean missionCompleted) {
         isMissionCompleted = missionCompleted;
-        if (missionCompleted && this.alarm != null) { // Nếu hoàn thành mission và có alarm đang active
-            // Cân nhắc việc có nên tự động xóa alarm không.
-            // Hiện tại, logic này nằm trong NoteController.completeMission
-            // this.alarm = null;
-            // this.alarmId = null;
+        if (missionCompleted && this.alarm != null) {
         }
         updateUpdatedAt();
     }
@@ -244,7 +223,7 @@ public class Note {
     public boolean removeTag(Tag tag) {
         if (tag != null && getTags().remove(tag)) {
             updateUpdatedAt();
-            return true; // Sửa: trả về true nếu xóa thành công
+            return true;
         }
         return false;
     }
@@ -255,7 +234,7 @@ public class Note {
 
     public void setAlarmId(Long alarmId) {
         this.alarmId = alarmId;
-        if (alarmId == null && this.alarm != null) { // Nếu alarmId bị set thành null, cũng clear transient alarm
+        if (alarmId == null && this.alarm != null) {
             this.alarm = null;
         }
         updateUpdatedAt();
@@ -277,7 +256,7 @@ public class Note {
 
     // Getters and Setters cho các trường mới
     public NoteType getNoteType() {
-        if (noteType == null) return NoteType.TEXT; // Mặc định an toàn
+        if (noteType == null) return NoteType.TEXT;
         return noteType;
     }
 
@@ -315,11 +294,9 @@ public class Note {
         if (id != 0L && note.id != 0L) {
             return id == note.id;
         }
-        // Nếu một trong hai hoặc cả hai chưa có ID (note mới), so sánh dựa trên các thuộc tính khác
-        // Điều này có thể cần xem xét lại nếu title không phải là duy nhất
         return Objects.equals(title, note.title) &&
-                Objects.equals(createdAt, note.createdAt) && // Thêm createdAt để tăng tính duy nhất cho note mới
-                Objects.equals(noteType, note.noteType); // Phân biệt theo loại
+                Objects.equals(createdAt, note.createdAt) &&
+                Objects.equals(noteType, note.noteType);
     }
 
     @Override
@@ -327,11 +304,7 @@ public class Note {
         if (id != 0L) {
             return Objects.hash(id);
         }
-        return Objects.hash(title, createdAt, noteType); // Thêm noteType vào hashCode
+        return Objects.hash(title, createdAt, noteType);
     }
 
-    // Phương thức này có thể không còn cần thiết nếu getUpdatedAt() được dùng trực tiếp
-    // public LocalDateTime getModificationDate() {
-    //     return updatedAt;
-    // }
 }

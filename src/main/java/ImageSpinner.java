@@ -8,22 +8,19 @@ import java.io.IOException;
 public class ImageSpinner extends JPanel {
     private BufferedImage image;
     private Point currentMousePosition;
-    private int imageSize; // Kích thước hình ảnh (giả sử hình vuông)
+    private int imageSize;
 
     public ImageSpinner(int size, String imagePath) {
         this.imageSize = size;
-        this.currentMousePosition = new Point(size / 2, 0); // Hướng mặc định: lên trên
+        this.currentMousePosition = new Point(size / 2, 0);
 
-        // Tải hình ảnh từ tài nguyên
         try {
             image = ImageIO.read(getClass().getResource(imagePath));
-            // Đảm bảo hình ảnh được resize về kích thước yêu cầu
             if (image.getWidth() != size || image.getHeight() != size) {
                 image = resizeImage(image, size, size);
             }
         } catch (IOException e) {
             e.printStackTrace();
-            // Fallback: vẽ một hình tròn đỏ nếu không tải được hình
             image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g2d = image.createGraphics();
             g2d.setColor(Color.RED);
@@ -48,7 +45,6 @@ public class ImageSpinner extends JPanel {
     public void updateMousePosition(Point mousePosRelativeToThisPanel) {
         this.currentMousePosition = mousePosRelativeToThisPanel;
         if (this.currentMousePosition == null || getWidth() <= 0 || getHeight() <= 0) {
-            // Reset về hướng mặc định (lên trên) nếu không có vị trí chuột hoặc panel chưa sẵn sàng
             this.currentMousePosition = new Point(getWidth() / 2, 0);
         }
         repaint();

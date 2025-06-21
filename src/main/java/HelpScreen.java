@@ -1,4 +1,3 @@
-// File: HelpScreen.java
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -8,20 +7,17 @@ import java.util.Map;
 public class HelpScreen extends JDialog {
 
     public HelpScreen(Frame owner) {
-        super(owner, "Trợ giúp", true); // Modal dialog
+        super(owner, "Trợ giúp", true);
         initializeUI();
     }
 
     private void initializeUI() {
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        setLayout(new BorderLayout(10,10)); // Gaps for main layout
-        getRootPane().setBorder(new EmptyBorder(10,10,10,10)); // Padding for the dialog window
+        setLayout(new BorderLayout(10,10));
+        getRootPane().setBorder(new EmptyBorder(10,10,10,10));
 
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        // Add padding to the content area of each tab
-        // UIManager.put("TabbedPane.contentBorderInsets", new Insets(10, 10, 10, 10)); // May not work with all L&Fs
-        // Alternatively, add padding to each panel added to tabs.
 
         JScrollPane shortcutsPanel = createShortcutsPanel();
         tabbedPane.addTab("Phím tắt", shortcutsPanel);
@@ -29,7 +25,7 @@ public class HelpScreen extends JDialog {
         JScrollPane contributorsPanel = createContributorsPanel();
         tabbedPane.addTab("Người đóng góp", contributorsPanel);
 
-        JScrollPane guidePanel = createGuidePanel(); // Changed to JScrollPane
+        JScrollPane guidePanel = createGuidePanel();
         tabbedPane.addTab("Hướng dẫn", guidePanel);
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -37,14 +33,11 @@ public class HelpScreen extends JDialog {
         JButton closeButton = new JButton("Đóng");
         closeButton.addActionListener(e -> dispose());
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        // Removed border from buttonPanel as dialog root pane has padding
-        // buttonPanel.setBorder(new EmptyBorder(5, 10, 10, 10));
         buttonPanel.add(closeButton);
         add(buttonPanel, BorderLayout.SOUTH);
 
-        pack(); // Pack first
-        setMinimumSize(new Dimension(500, 400)); // Then set minimum
-        // Ensure preferred size is reasonable if content is large
+        pack();
+        setMinimumSize(new Dimension(500, 400));
         setPreferredSize(new Dimension(Math.min(700, getPreferredSize().width), Math.min(600, getPreferredSize().height)));
         setLocationRelativeTo(getOwner());
         setResizable(true);
@@ -53,17 +46,16 @@ public class HelpScreen extends JDialog {
     private JScrollPane createShortcutsPanel() {
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        // Padding applied to JScrollPane's viewport for better control with various L&Fs
         JScrollPane scrollPane = new JScrollPane(contentPanel);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove scrollpane border
-        contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15)); // Padding for the content itself
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         Map<String, String> shortcuts = new LinkedHashMap<>();
         shortcuts.put("Ctrl + S", "Lưu ghi chú hiện tại");
         shortcuts.put("Ctrl + N", "Thêm ghi chú mới (văn bản)");
         shortcuts.put("Ctrl + Shift + N", "Thêm bản vẽ mới");
         shortcuts.put("Ctrl + T", "Thêm tag vào ghi chú hiện tại");
-        shortcuts.put("Ctrl + G", "Đặt/Sửa báo thức cho ghi chú hiện tại"); // Note: Ctrl+G was Summary before, now Alarm
+        shortcuts.put("Ctrl + G", "Đặt/Sửa báo thức cho ghi chú hiện tại");
         shortcuts.put("Ctrl + M", "Đặt/Sửa nhiệm vụ cho ghi chú hiện tại");
         shortcuts.put("Ctrl + D", "Dịch nội dung ghi chú");
         shortcuts.put("Ctrl + U", "Tóm tắt nội dung ghi chú");
@@ -72,7 +64,7 @@ public class HelpScreen extends JDialog {
         shortcuts.put("Ctrl + Z", "Hoàn tác hành động cuối trong trình soạn thảo");
         shortcuts.put("Ctrl + Y", "Làm lại hành động cuối trong trình soạn thảo");
         shortcuts.put("Esc", "Quay lại / Đóng cửa sổ");
-        shortcuts.put("---", "---"); // Separator
+        shortcuts.put("---", "---");
         shortcuts.put("Ctrl + 1", "Chuyển sang màn hình Ghi chú");
         shortcuts.put("Ctrl + 2", "Chuyển sang màn hình Nhiệm vụ");
         shortcuts.put("Ctrl + W", "Chuyển đổi giao diện Sáng/Tối");
@@ -82,7 +74,7 @@ public class HelpScreen extends JDialog {
 
         Font keyFont = new Font("Segoe UI", Font.BOLD, 13);
         Font descriptionFont = new Font("Segoe UI", Font.PLAIN, 13);
-        Color keyColor = UIManager.getColor("Label.foreground"); // Use theme colors
+        Color keyColor = UIManager.getColor("Label.foreground");
         Color descriptionColor = UIManager.getColor("Label.foreground");
 
         for (Map.Entry<String, String> entry : shortcuts.entrySet()) {
@@ -95,12 +87,12 @@ public class HelpScreen extends JDialog {
                 continue;
             }
 
-            JPanel shortcutEntryPanel = new JPanel(new BorderLayout(15, 0)); // Increased gap
-            shortcutEntryPanel.setOpaque(false); // Make transparent if contentPanel has bg
+            JPanel shortcutEntryPanel = new JPanel(new BorderLayout(15, 0));
+            shortcutEntryPanel.setOpaque(false);
             JLabel keyLabel = new JLabel(entry.getKey());
             keyLabel.setFont(keyFont);
             keyLabel.setForeground(keyColor);
-            // Set a preferred width for keyLabel to align descriptions
+
             keyLabel.setPreferredSize(new Dimension(120, keyLabel.getPreferredSize().height));
 
 
@@ -111,7 +103,7 @@ public class HelpScreen extends JDialog {
             shortcutEntryPanel.add(keyLabel, BorderLayout.WEST);
             shortcutEntryPanel.add(descriptionLabel, BorderLayout.CENTER);
             contentPanel.add(shortcutEntryPanel);
-            contentPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Increased spacing
+            contentPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         }
         return scrollPane;
     }
@@ -133,17 +125,17 @@ public class HelpScreen extends JDialog {
                 "Hoang - Report + Slide Maker"
         };
 
-        Font contributorFont = new Font("Segoe UI", Font.PLAIN, 14); // Slightly larger
+        Font contributorFont = new Font("Segoe UI", Font.PLAIN, 14);
         Color contributorColor = UIManager.getColor("Label.foreground");
 
         JLabel titleLabel = new JLabel("Những người đóng góp:");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLabel.setBorder(new EmptyBorder(0,0,10,0)); // Margin below title
+        titleLabel.setBorder(new EmptyBorder(0,0,10,0));
         contentPanel.add(titleLabel);
 
 
         for (String contributor : contributors) {
-            JLabel contributorLabel = new JLabel("• " + contributor); // Added bullet point
+            JLabel contributorLabel = new JLabel("• " + contributor);
             contributorLabel.setFont(contributorFont);
             contributorLabel.setForeground(contributorColor);
             contentPanel.add(contributorLabel);
@@ -152,22 +144,21 @@ public class HelpScreen extends JDialog {
         return scrollPane;
     }
 
-    private JScrollPane createGuidePanel() { // Changed to JScrollPane
+    private JScrollPane createGuidePanel() {
         JPanel contentPanel = new JPanel(new BorderLayout());
-        // Padding applied to JScrollPane's viewport
         JScrollPane scrollPane = new JScrollPane(contentPanel);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         JTextArea guideText = new JTextArea();
-        guideText.setFont(new Font("Segoe UI", Font.PLAIN, 14)); // Consistent font size
+        guideText.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         guideText.setLineWrap(true);
         guideText.setWrapStyleWord(true);
         guideText.setEditable(false);
-        guideText.setOpaque(false); // Make transparent to use panel's background
-        guideText.setBackground(UIManager.getColor("TextArea.background")); // Use theme color
+        guideText.setOpaque(false);
+        guideText.setBackground(UIManager.getColor("TextArea.background"));
         guideText.setForeground(UIManager.getColor("TextArea.foreground"));
-        guideText.setMargin(new Insets(5,5,5,5)); // Internal padding for text area
+        guideText.setMargin(new Insets(5,5,5,5));
 
         guideText.setText(
                 "Chào mừng đến với XiNoClo!\n\n" +

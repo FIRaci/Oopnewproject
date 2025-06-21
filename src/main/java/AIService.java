@@ -1,7 +1,5 @@
-// File: AIService.java
 import javax.swing.SwingWorker;
-import org.json.JSONObject; // Bạn cần thư viện org.json.
-
+import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,7 +12,7 @@ import java.util.function.Consumer;
 public class AIService {
 
     private static final String API_URL = "http://localhost:11434/api/generate";
-    private static final String MODEL = "gemma3:4b"; // Đã đổi sang model gemma3:1b
+    private static final String MODEL = "gemma3:4b";
 
     public interface TranslationCallback {
         void onSuccess(String translatedText);
@@ -26,9 +24,9 @@ public class AIService {
         void onError(String errorMessage);
     }
 
-    // NEW: Callback for Tag Generation
+
     public interface TagGenerationCallback {
-        void onSuccess(String generatedTagsString); // Returns a comma-separated string of tags
+        void onSuccess(String generatedTagsString);
         void onError(String errorMessage);
     }
 
@@ -43,7 +41,7 @@ public class AIService {
             @Override
             protected void done() {
                 try {
-                    String rawResponse = get(); // Đây là một chuỗi JSON hoàn chỉnh
+                    String rawResponse = get();
                     String processedResponse = processApiResponse(rawResponse);
                     callback.onSuccess(processedResponse);
                 } catch (Exception e) {
@@ -65,7 +63,7 @@ public class AIService {
             @Override
             protected void done() {
                 try {
-                    String rawResponse = get(); // Đây là một chuỗi JSON hoàn chỉnh
+                    String rawResponse = get();
                     String processedResponse = processApiResponse(rawResponse);
                     callback.onSuccess(processedResponse);
                 } catch (Exception e) {
@@ -76,12 +74,12 @@ public class AIService {
         worker.execute();
     }
 
-    // NEW: Method for Tag Generation
+
     public static void generateTags(final String textToAnalyze, final TagGenerationCallback callback) {
         SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
             @Override
             protected String doInBackground() throws Exception {
-                // Prompt designed to get comma-separated tags
+
                 String prompt = "Identify the core actions or most critical topics in the following text. " +
                         "Represent these as a few concise, comma-separated tags. " +
                         "Output ONLY the tags (e.g., task-delegation, market-research, urgent-deadline), " +
@@ -93,9 +91,9 @@ public class AIService {
             @Override
             protected void done() {
                 try {
-                    String rawResponse = get(); // This is a complete JSON string
-                    String processedResponse = processApiResponse(rawResponse); // Extracts the "response" field
-                    callback.onSuccess(processedResponse.trim()); // Trim to remove any leading/trailing whitespace
+                    String rawResponse = get();
+                    String processedResponse = processApiResponse(rawResponse);
+                    callback.onSuccess(processedResponse.trim());
                 } catch (Exception e) {
                     handleException(e, "Lỗi tạo tag AI: ", callback::onError);
                 }
@@ -105,7 +103,7 @@ public class AIService {
     }
 
 
-    // Xử lý khi stream = false, API trả về một JSON object duy nhất
+
     private static String processApiResponse(String rawJsonResponse) throws IOException {
         try {
             JSONObject jsonObject = new JSONObject(rawJsonResponse);
@@ -114,7 +112,7 @@ public class AIService {
             } else if (jsonObject.has("error")) {
                 throw new IOException("Lỗi từ API: " + jsonObject.getString("error"));
             } else {
-                // Nếu không có "response" hoặc "error", có thể là định dạng không mong đợi
+
                 System.err.println("Phản hồi không hợp lệ từ API (thiếu 'response' hoặc 'error'): " + rawJsonResponse);
                 throw new IOException("Phản hồi không hợp lệ từ API. Chi tiết: " + rawJsonResponse.substring(0, Math.min(rawJsonResponse.length(), 100)));
             }
@@ -125,7 +123,7 @@ public class AIService {
     }
 
     private static void handleException(Exception e, String errorPrefix, Consumer<String> onErrorCallback) {
-        // e.printStackTrace(); // Uncomment for debugging
+
         String errorMessage = e.getMessage();
         if (e.getCause() != null) {
             errorMessage = e.getCause().getMessage();
@@ -150,13 +148,13 @@ public class AIService {
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
         con.setRequestMethod("POST");
         con.setRequestProperty("Content-Type", "application/json");
-        con.setConnectTimeout(15000); // 15 giây timeout kết nối
-        con.setReadTimeout(60000);    // 60 giây timeout đọc
+        con.setConnectTimeout(15000);
+        con.setReadTimeout(60000);
 
         JSONObject jsonInputString = new JSONObject();
         jsonInputString.put("model", model);
         jsonInputString.put("prompt", prompt);
-        jsonInputString.put("stream", false); // Yêu cầu phản hồi không stream
+        jsonInputString.put("stream", false);
 
         con.setDoOutput(true);
         try (DataOutputStream os = new DataOutputStream(con.getOutputStream())) {
@@ -167,14 +165,14 @@ public class AIService {
         StringBuilder response = new StringBuilder();
         int responseCode = con.getResponseCode();
 
-        if (responseCode == HttpURLConnection.HTTP_OK) { // success
+        if (responseCode == HttpURLConnection.HTTP_OK) {
             try (BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     response.append(line);
                 }
             }
-        } else { // error
+        } else {
             StringBuilder errorResponse = new StringBuilder();
             if (con.getErrorStream() != null) {
                 try (BufferedReader brError = new BufferedReader(new InputStreamReader(con.getErrorStream(), StandardCharsets.UTF_8))) {
@@ -190,6 +188,6 @@ public class AIService {
         }
 
         con.disconnect();
-        return response.toString(); // Trả về chuỗi JSON
+        return response.toString();
     }
 }

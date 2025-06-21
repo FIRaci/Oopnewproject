@@ -20,13 +20,13 @@ public class DataStorage {
         this.file = new File(filePath);
         GsonBuilder builder = new GsonBuilder();
         builder.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter());
-        builder.registerTypeAdapter(Note.class, new NoteAdapter()); // NoteAdapter sẽ được cập nhật
+        builder.registerTypeAdapter(Note.class, new NoteAdapter());
         builder.registerTypeAdapter(Folder.class, new FolderAdapter());
         builder.registerTypeAdapter(Tag.class, new TagAdapter());
         this.gson = builder.setPrettyPrinting().create();
     }
 
-    // ... (các phương thức save, load, handleCorruptedFile, Data class, LocalDateTimeAdapter, FolderAdapter, TagAdapter giữ nguyên như phiên bản trước) ...
+
     public void save(NoteManager noteManager) {
         try (Writer writer = new FileWriter(file)) {
             Data data = new Data();
@@ -131,13 +131,11 @@ public class DataStorage {
             JsonObject json = new JsonObject();
             json.addProperty("id", src.getId());
             json.addProperty("title", src.getTitle());
-            // Chỉ serialize content nếu là TEXT note và content không null
             if (src.getNoteType() == Note.NoteType.TEXT && src.getContent() != null) {
                 json.addProperty("content", src.getContent());
-            } else if (src.getNoteType() == Note.NoteType.TEXT) { // TEXT note nhưng content là null
+            } else if (src.getNoteType() == Note.NoteType.TEXT) {
                 json.add("content", JsonNull.INSTANCE);
             }
-            // Không serialize content cho DRAWING note
 
             json.add("createdAt", context.serialize(src.getCreatedAt()));
             json.add("updatedAt", context.serialize(src.getUpdatedAt()));
@@ -157,15 +155,12 @@ public class DataStorage {
                 json.add("alarm", JsonNull.INSTANCE);
             }
 
-            // Serialize các trường mới
-            json.addProperty("noteType", src.getNoteType().name()); // Lưu tên của enum
+            json.addProperty("noteType", src.getNoteType().name());
             if (src.getNoteType() == Note.NoteType.DRAWING && src.getDrawingData() != null) {
                 json.addProperty("drawingData", src.getDrawingData());
-            } else if (src.getNoteType() == Note.NoteType.DRAWING) { // DRAWING note nhưng drawingData là null
+            } else if (src.getNoteType() == Note.NoteType.DRAWING) {
                 json.add("drawingData", JsonNull.INSTANCE);
             }
-            // Không serialize drawingData cho TEXT note
-
             return json;
         }
 
@@ -201,9 +196,7 @@ public class DataStorage {
             }
             Long alarmId = (alarm != null) ? alarm.getId() : null;
 
-
-            // Deserialize các trường mới
-            Note.NoteType noteType = Note.NoteType.TEXT; // Mặc định
+            Note.NoteType noteType = Note.NoteType.TEXT;
             if (obj.has("noteType") && !obj.get("noteType").isJsonNull()) {
                 try {
                     noteType = Note.NoteType.valueOf(obj.get("noteType").getAsString());
@@ -221,14 +214,11 @@ public class DataStorage {
             String drawingData = null;
             if (noteType == Note.NoteType.DRAWING) {
                 drawingData = obj.has("drawingData") && !obj.get("drawingData").isJsonNull() ?
-                        obj.get("drawingData").getAsString() : null; // Cho phép drawingData là null
+                        obj.get("drawingData").getAsString() : null;
             }
-
-            // Sử dụng constructor đầy đủ của Note
             Note note = new Note(id, title, content, createdAt, updatedAt, folderId, isFavorite,
                     isMission, isMissionCompleted, missionContent, alarmId, tags,
                     noteType, drawingData);
-            // Gán lại đối tượng alarm đã deserialize (nếu có) vào note
             if (alarm != null) {
                 note.setAlarm(alarm);
             }

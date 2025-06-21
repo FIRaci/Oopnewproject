@@ -1,11 +1,9 @@
-// Các import khác giữ nguyên...
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.net.URL;
-import java.util.Objects;
 import java.util.Random;
 
 public class MainFrame extends JFrame {
@@ -14,7 +12,7 @@ public class MainFrame extends JFrame {
     private MainMenuScreen mainMenuScreen;
     private MissionScreen missionScreen;
     private NoteEditorScreen noteEditorScreen;
-    private DrawScreen drawScreen; // Thêm DrawScreen
+    private DrawScreen drawScreen;
     private JPanel contentPanel;
     private CardLayout cardLayout;
     private ImageSpinner imageSpinner;
@@ -57,7 +55,6 @@ public class MainFrame extends JFrame {
         setLocationRelativeTo(null);
 
         JPanel topBarPanel = new JPanel(new BorderLayout(0, 0));
-        // ... (Các nút Notes, Missions, ImageSpinner giữ nguyên) ...
         JButton notesButton = new JButton("📝 Notes");
         notesButton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
         notesButton.setFocusPainted(false);
@@ -100,18 +97,16 @@ public class MainFrame extends JFrame {
             System.out.println("[MainFrame initializeUI] Đang tạo MissionScreen với controller: " + this.controller);
             missionScreen = new MissionScreen(this.controller, this);
 
-            // Khởi tạo DrawScreen (sẽ được tạo khi cần hoặc ở đây luôn)
-            // Tạm thời tạo ở đây để dễ quản lý
             System.out.println("[MainFrame initializeUI] Đang tạo DrawScreen với controller: " + this.controller);
             drawScreen = new DrawScreen(this, this.controller);
 
             contentPanel.add(mainMenuScreen, "Notes");
             contentPanel.add(missionScreen, "Missions");
-            contentPanel.add(drawScreen, "DrawScreen"); // Thêm DrawScreen vào CardLayout
+            contentPanel.add(drawScreen, "DrawScreen");
 
             mouseEventDispatcher.addMouseMotionListener(mainMenuScreen);
             mouseEventDispatcher.addMouseMotionListener(missionScreen);
-            mouseEventDispatcher.addMouseMotionListener(drawScreen); // Thêm listener cho DrawScreen
+            mouseEventDispatcher.addMouseMotionListener(drawScreen);
 
         } else {
             System.err.println("[MainFrame initializeUI] LỖI: controller là null, không thể tạo các màn hình chính.");
@@ -125,7 +120,6 @@ public class MainFrame extends JFrame {
         add(contentPanel, BorderLayout.CENTER);
         applyTheme(false);
 
-        // ... (Phần tải icon giữ nguyên) ...
         try {
             String[] iconNames = {
                     "spinner.jpg"
@@ -164,7 +158,6 @@ public class MainFrame extends JFrame {
     }
 
     private void showScreen(String screenName) {
-        // Kiểm tra null cho các màn hình trước khi cố gắng hiển thị
         if ("Notes".equals(screenName) && mainMenuScreen == null) {
             System.err.println("Lỗi: MainMenuScreen là null, không thể hiển thị 'Notes'.");
             if (controller == null) cardLayout.show(contentPanel, "ErrorScreen");
@@ -189,7 +182,6 @@ public class MainFrame extends JFrame {
 
         System.out.println("[MainFrame showScreen] Hiển thị màn hình: " + screenName);
         cardLayout.show(contentPanel, screenName);
-        // Yêu cầu focus cho panel được hiển thị (nếu nó là JComponent)
         for (Component comp : contentPanel.getComponents()) {
             if (comp.isVisible() && comp instanceof JComponent) {
                 ((JComponent)comp).requestFocusInWindow();
@@ -198,7 +190,6 @@ public class MainFrame extends JFrame {
         }
     }
 
-    // Phương thức để lấy hoặc tạo NoteEditorScreen (giữ nguyên logic, chỉ thêm kiểm tra controller)
     private NoteEditorScreen getNoteEditorScreenInstance() {
         if (this.controller == null) {
             System.err.println("LỖI: Không thể tạo NoteEditorScreen vì controller là null.");
@@ -212,28 +203,25 @@ public class MainFrame extends JFrame {
             }
         }
         if (noteEditorScreen == null || !found) {
-            // Đảm bảo controller được truyền vào đây không null
             noteEditorScreen = new NoteEditorScreen(this, this.controller, null);
             contentPanel.add(noteEditorScreen, "NoteEditor");
-            // Không cần revalidate và repaint ở đây, CardLayout.show sẽ xử lý
         }
         return noteEditorScreen;
     }
 
-    public void showAddNoteScreen() { // Cho note văn bản
+    public void showAddNoteScreen() {
         NoteEditorScreen editor = getNoteEditorScreenInstance();
         if (editor != null) {
-            editor.setNote(null); // setNote(null) trong NoteEditorScreen sẽ tạo NoteType.TEXT mới
+            editor.setNote(null);
             showScreen("NoteEditor");
         }
     }
 
-    public void showNoteDetailScreen(Note note) { // Cho note văn bản
+    public void showNoteDetailScreen(Note note) {
         if (note == null || note.getNoteType() != Note.NoteType.TEXT) {
             System.err.println("Lỗi: showNoteDetailScreen chỉ dành cho TEXT notes.");
-            // Có thể hiển thị thông báo lỗi hoặc không làm gì cả
             if (note != null && note.getNoteType() == Note.NoteType.DRAWING) {
-                showEditDrawScreen(note); // Nếu là drawing thì mở màn hình vẽ
+                showEditDrawScreen(note);
             }
             return;
         }
@@ -246,7 +234,7 @@ public class MainFrame extends JFrame {
 
     // Phương thức mới để hiển thị màn hình vẽ cho bản vẽ mới
     public void showNewDrawScreen() {
-        if (drawScreen == null) { // Nếu chưa được khởi tạo trong initializeUI (ví dụ controller null)
+        if (drawScreen == null) {
             if (this.controller != null) {
                 drawScreen = new DrawScreen(this, this.controller);
                 contentPanel.add(drawScreen, "DrawScreen");
@@ -257,7 +245,7 @@ public class MainFrame extends JFrame {
                 return;
             }
         }
-        drawScreen.setDrawingNote(null); // Chuẩn bị cho bản vẽ mới
+        drawScreen.setDrawingNote(null);
         showScreen("DrawScreen");
     }
 
@@ -278,7 +266,7 @@ public class MainFrame extends JFrame {
                 return;
             }
         }
-        drawScreen.setDrawingNote(drawingNote); // Tải bản vẽ đã có
+        drawScreen.setDrawingNote(drawingNote);
         showScreen("DrawScreen");
     }
 
@@ -292,8 +280,6 @@ public class MainFrame extends JFrame {
         }
     }
 
-    // ... (Các phương thức còn lại: showMissionsScreen, openCanvasPanel, confirmAndExit, setupShortcuts, triggerThemeUpdate, getMouseEventDispatcher, getAppController giữ nguyên)
-    // Đảm bảo các phương thức này cũng kiểm tra this.controller nếu cần
     public void showMissionsScreen() {
         showScreen("Missions");
         if (missionScreen != null) {
@@ -371,7 +357,7 @@ public class MainFrame extends JFrame {
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, KeyEvent.CTRL_DOWN_MASK), "addNoteGlobal");
         actionMap.put("addNoteGlobal", new AbstractAction() {
             @Override
-            public void actionPerformed(ActionEvent e) { showAddNoteScreen(); } // Này là cho TEXT note
+            public void actionPerformed(ActionEvent e) { showAddNoteScreen(); }
         });
 
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, KeyEvent.CTRL_DOWN_MASK), "addFolderGlobal");

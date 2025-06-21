@@ -19,17 +19,17 @@ public class FloatingScannerTray extends JFrame {
     private FloatingScannerTray() {
         setUndecorated(true);
         setAlwaysOnTop(true);
-        setSize(50, 50);  // kích thước icon window
+        setSize(50, 50);
 
         // Load ảnh và resize
         iconImage = loadAndResizeImage("/images/scanner.jpg", 48, 48);
 
-        // Tạo label chứa icon, để click bắt sự kiện
+        // Tạo label chứa icon
         JLabel iconLabel = new JLabel(new ImageIcon(iconImage));
         iconLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         add(iconLabel);
 
-        // Đặt vị trí cửa sổ: trên cùng bên phải
+        // Đặt vị trí cửa sổ
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         int x = screenSize.width - getWidth() - 10;
         int y = 10;
@@ -43,18 +43,15 @@ public class FloatingScannerTray extends JFrame {
 
         JMenuItem quitItem = new JMenuItem("Quit");
         quitItem.addActionListener(e -> {
-            // Thoát ứng dụng một cách an toàn hơn
-            // Có thể cần dispose các cửa sổ khác nếu có
-            // System.exit(0); // Cân nhắc nếu đây là cửa sổ chính
-            setVisible(false); // Chỉ ẩn cửa sổ này
-            dispose(); // Giải phóng tài nguyên của cửa sổ này
+            setVisible(false);
+            dispose();
         });
 
         popupMenu.add(scanItem);
         popupMenu.addSeparator();
         popupMenu.add(quitItem);
 
-        // Khi click icon thì hiện popup menu
+        // Hiện popup menu
         iconLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -71,7 +68,7 @@ public class FloatingScannerTray extends JFrame {
             }
         });
 
-        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE); // Hoặc EXIT_ON_CLOSE nếu đây là cửa sổ chính duy nhất
+        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
     }
 
     private Image loadAndResizeImage(String path, int width, int height) {
@@ -79,18 +76,16 @@ public class FloatingScannerTray extends JFrame {
             java.net.URL imgUrl = getClass().getResource(path);
             if (imgUrl == null) {
                 System.err.println("Không tìm thấy resource ảnh: " + path);
-                // Có thể trả về một ảnh mặc định hoặc ném lỗi
-                return new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB); // Ảnh trống
+                return new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
             }
             Image img = Toolkit.getDefaultToolkit().getImage(imgUrl);
             Image scaled = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-            // Đảm bảo ảnh được load hoàn toàn
             ImageIcon tempIcon = new ImageIcon(scaled);
             tempIcon.getImage().flush();
             return tempIcon.getImage();
         } catch (Exception e) {
             e.printStackTrace();
-            return new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB); // Ảnh trống nếu lỗi
+            return new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         }
     }
 

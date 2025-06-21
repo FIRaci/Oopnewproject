@@ -244,8 +244,8 @@ public class ScanWindowWithSelection extends JFrame {
     }
     public static void scanBufferedImage(BufferedImage image) {
         Tesseract tesseract = new Tesseract();
-        tesseract.setDatapath("tessdata"); // Đường dẫn tới thư mục chứa trained data
-        tesseract.setLanguage("eng+vie"); // Tùy chọn ngôn ngữ
+        tesseract.setDatapath("tessdata");
+        tesseract.setLanguage("eng+vie");
 
         try {
             String result = tesseract.doOCR(image);

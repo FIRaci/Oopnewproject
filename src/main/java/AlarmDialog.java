@@ -1,4 +1,4 @@
-// File: AlarmDialog.java
+
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDate;
@@ -25,12 +25,9 @@ public class AlarmDialog extends JDialog {
 
     private Alarm alarmToEdit = null;
 
-    // Constructor for new alarm
     public AlarmDialog(Frame owner) {
-        this(owner, null); // Call the main constructor with null alarmToEdit
+        this(owner, null);
     }
-
-    // Main constructor for new or editing alarm
     public AlarmDialog(Frame owner, Alarm alarmToEdit) {
         super(owner, (alarmToEdit == null || alarmToEdit.getId() == 0) ? "Đặt Báo thức Mới" : "Sửa Báo thức", true);
         this.alarmToEdit = alarmToEdit;
@@ -41,14 +38,14 @@ public class AlarmDialog extends JDialog {
             setInitialDefaults();
         }
         updatePanelsVisibility();
-        pack(); // Pack after UI is built and populated
-        setMinimumSize(new Dimension(420, getHeight())); // Ensure minimum width after packing
-        setLocationRelativeTo(owner); // Center after packing and sizing
+        pack();
+        setMinimumSize(new Dimension(420, getHeight()));
+        setLocationRelativeTo(owner);
     }
 
 
     private void initializeUI() {
-        setLayout(new BorderLayout(10,10)); // Main layout with gaps
+        setLayout(new BorderLayout(10,10));
         getRootPane().setBorder(new EmptyBorder(15, 15, 15, 15)); // Padding for the whole dialog
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
@@ -67,11 +64,11 @@ public class AlarmDialog extends JDialog {
         // Panel for radio buttons themselves
         JPanel radioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 5));
         radioPanel.add(specificDateTimeRadio);
-        radioPanel.add(Box.createHorizontalStrut(20)); // Space between radio buttons
+        radioPanel.add(Box.createHorizontalStrut(20));
         radioPanel.add(recurringTimeRadio);
         radioPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         mainControlsPanel.add(radioPanel);
-        mainControlsPanel.add(Box.createRigidArea(new Dimension(0,10))); // Spacer
+        mainControlsPanel.add(Box.createRigidArea(new Dimension(0,10)));
 
 
         specificDateTimeRadio.addActionListener(e -> updatePanelsVisibility());
@@ -124,7 +121,7 @@ public class AlarmDialog extends JDialog {
 
         // 4. Buttons Panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 5));
-        buttonPanel.setBorder(new EmptyBorder(10,0,0,0)); // Top padding for button panel
+        buttonPanel.setBorder(new EmptyBorder(10,0,0,0));
         JButton okButton = new JButton("OK");
         okButton.addActionListener(e -> handleOkAction());
         JButton cancelButton = new JButton("Hủy");
@@ -144,7 +141,6 @@ public class AlarmDialog extends JDialog {
         specificDateTimeRadio.setSelected(true);
         LocalDateTime defaultDateTime = LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0);
         dateTimeSpinner.setValue(Date.from(defaultDateTime.atZone(ZoneId.systemDefault()).toInstant()));
-        // Set timeOnlySpinner to a sensible default time, e.g., current hour, 0 minutes
         LocalDateTime defaultTimeOnly = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
         timeOnlySpinner.setValue(Date.from(defaultTimeOnly.atZone(ZoneId.systemDefault()).toInstant()));
         recurrenceTypeComboBox.setSelectedItem("DAILY");
@@ -164,7 +160,7 @@ public class AlarmDialog extends JDialog {
             } else {
                 recurrenceTypeComboBox.setSelectedItem("DAILY");
             }
-        } else { // ONCE
+        } else {
             specificDateTimeRadio.setSelected(true);
             if (alarm.getAlarmTime() != null) {
                 dateTimeSpinner.setValue(Date.from(alarm.getAlarmTime().atZone(ZoneId.systemDefault()).toInstant()));
@@ -178,8 +174,8 @@ public class AlarmDialog extends JDialog {
     private void updatePanelsVisibility() {
         specificDateTimePanel.setVisible(specificDateTimeRadio.isSelected());
         recurringPanel.setVisible(recurringTimeRadio.isSelected());
-        pack(); // Repack when visibility changes to adjust dialog size
-        // setMinimumSize(new Dimension(400, getHeight())); // Re-apply min width
+        pack();
+
     }
 
     private void handleOkAction() {
@@ -196,7 +192,7 @@ public class AlarmDialog extends JDialog {
                 JOptionPane.showMessageDialog(this, "Thời gian báo thức phải ở trong tương lai.", "Thời gian không hợp lệ", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-        } else { // recurringTimeRadio is selected
+        } else {
             isRecurring = true;
             Date spinnerTime = (Date) timeOnlySpinner.getValue();
             LocalTime timePart = spinnerTime.toInstant().atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0);
@@ -205,11 +201,11 @@ public class AlarmDialog extends JDialog {
             if (alarmToEdit != null && alarmToEdit.isRecurring() && alarmToEdit.getAlarmTime() != null) {
                 datePart = alarmToEdit.getAlarmTime().toLocalDate();
             } else {
-                datePart = LocalDate.now(); // Default to today for new recurring alarms
+                datePart = LocalDate.now();
             }
             selectedAlarmTime = LocalDateTime.of(datePart, timePart);
             recurrencePattern = (String) recurrenceTypeComboBox.getSelectedItem();
-            if (recurrencePattern == null) recurrencePattern = "DAILY"; // Default if somehow null
+            if (recurrencePattern == null) recurrencePattern = "DAILY";
         }
 
         if (currentAlarmId > 0 && alarmToEdit != null) {
@@ -219,7 +215,6 @@ public class AlarmDialog extends JDialog {
             this.resultAlarm.setRecurrencePattern(isRecurring ? recurrencePattern : null);
         } else {
             this.resultAlarm = new Alarm(selectedAlarmTime, isRecurring, recurrencePattern);
-            // ID will be 0L, NoteController/Service will assign a new ID when saving
         }
         this.okPressed = true;
         dispose();
@@ -233,7 +228,7 @@ public class AlarmDialog extends JDialog {
         return okPressed;
     }
 
-    // This method might be redundant if using the constructor that takes alarmToEdit
+
     public void setAlarmToEdit(Alarm alarm) {
         this.alarmToEdit = alarm;
         setTitle((alarm == null || alarm.getId() == 0) ? "Đặt Báo thức Mới" : "Sửa Báo thức");

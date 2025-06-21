@@ -1,11 +1,8 @@
-// File: NoteEditorScreen.java
 import javax.swing.*;
 import javax.swing.undo.UndoManager;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-// Assuming Note, Tag, MainFrame, NoteController, AIService,
-// AlarmDialog, Alarm, MissionDialog, Folder are correctly defined and imported.
 
 public class NoteEditorScreen extends JPanel {
     private static final String SAVE_LABEL = "Lưu";
@@ -25,8 +22,8 @@ public class NoteEditorScreen extends JPanel {
 
     private JTextField titleField;
     private JTextArea contentField;
-    private JPanel tagPanelContainer; // Renamed for clarity, this will hold the JScrollPane
-    private JPanel actualTagDisplayPanel; // The panel with FlowLayout for tags
+    private JPanel tagPanelContainer;
+    private JPanel actualTagDisplayPanel;
     private JLabel wordCountLabel;
     private JLabel modifiedLabel;
     private UndoManager undoManager;
@@ -47,7 +44,6 @@ public class NoteEditorScreen extends JPanel {
     }
 
     public void setNote(Note noteToSet) {
-        // If null is passed, create a new TEXT note associated with the current folder in controller
         this.note = (noteToSet != null) ? noteToSet : new Note("Ghi chú mới", Note.NoteType.TEXT, controller.getCurrentFolder());
         setNoteFields(this.note);
     }
@@ -84,12 +80,11 @@ public class NoteEditorScreen extends JPanel {
         actualTagDisplayPanel.removeAll();
         if (note != null && note.getTags() != null && !note.getTags().isEmpty()) {
             for (Tag tag : note.getTags()) {
-                JPanel tagItem = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 1)); // Tighter spacing
+                JPanel tagItem = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 1));
                 tagItem.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(Color.GRAY),
-                        BorderFactory.createEmptyBorder(1, 3, 1, 1) // Inner padding
+                        BorderFactory.createEmptyBorder(1, 3, 1, 1)
                 ));
-                // Use UIManager color for consistency with theme
                 tagItem.setBackground(UIManager.getColor("Panel.background"));
 
 
@@ -97,10 +92,9 @@ public class NoteEditorScreen extends JPanel {
                 tagLabel.setFont(tagLabel.getFont().deriveFont(11f));
 
                 JButton removeButton = new JButton("x");
-                removeButton.setMargin(new Insets(0, 1, 0, 1)); // Minimal margin
+                removeButton.setMargin(new Insets(0, 1, 0, 1));
                 removeButton.setFont(removeButton.getFont().deriveFont(9f));
                 removeButton.setFocusPainted(false);
-                // Make button less visually intrusive
                 removeButton.setContentAreaFilled(false);
                 removeButton.setBorderPainted(false);
                 removeButton.setForeground(Color.RED);
@@ -117,12 +111,11 @@ public class NoteEditorScreen extends JPanel {
         } else {
             JLabel noTagsLabel = new JLabel("Chưa có tag nào.");
             noTagsLabel.setForeground(Color.GRAY);
-            noTagsLabel.setBorder(BorderFactory.createEmptyBorder(5,5,5,5)); // Padding for the label
+            noTagsLabel.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
             actualTagDisplayPanel.add(noTagsLabel);
         }
         actualTagDisplayPanel.revalidate();
         actualTagDisplayPanel.repaint();
-        // Also revalidate the scroll pane container if it's separate
         if (tagPanelContainer != null) {
             tagPanelContainer.revalidate();
             tagPanelContainer.repaint();
@@ -147,15 +140,15 @@ public class NoteEditorScreen extends JPanel {
 
     private void initializeUI() {
         setLayout(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); // More padding
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // Top Panel: Title and Back Button
-        JPanel topPanel = new JPanel(new BorderLayout(15, 0)); // Increased gap
+        JPanel topPanel = new JPanel(new BorderLayout(15, 0));
         titleField = new JTextField();
-        titleField.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18)); // Larger title font
+        titleField.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
         JLabel titleLabel = new JLabel("Tiêu đề:");
         titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(0,0,0,5)); // Margin for label
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0,0,0,5));
         topPanel.add(titleLabel, BorderLayout.WEST);
         topPanel.add(titleField, BorderLayout.CENTER);
 
@@ -167,10 +160,10 @@ public class NoteEditorScreen extends JPanel {
 
         // Center Panel: Content Area
         contentField = new JTextArea();
-        contentField.setFont(new Font("Segoe UI", Font.PLAIN, 15)); // Slightly larger content font
+        contentField.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         contentField.setLineWrap(true);
         contentField.setWrapStyleWord(true);
-        contentField.setMargin(new Insets(5,5,5,5)); // Padding inside text area
+        contentField.setMargin(new Insets(5,5,5,5));
         contentField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
@@ -187,7 +180,7 @@ public class NoteEditorScreen extends JPanel {
         add(contentScrollPane, BorderLayout.CENTER);
 
         // Bottom Panel: Status, Tags, Buttons
-        JPanel bottomOuterPanel = new JPanel(new BorderLayout(0, 10)); // Increased gap
+        JPanel bottomOuterPanel = new JPanel(new BorderLayout(0, 10));
 
         // Status Panel
         JPanel statusPanel = new JPanel(new BorderLayout());
@@ -202,14 +195,14 @@ public class NoteEditorScreen extends JPanel {
         tagPanelContainer = new JPanel(new BorderLayout());
         tagPanelContainer.setBorder(BorderFactory.createTitledBorder("Tags"));
 
-        actualTagDisplayPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 3)); // Panel that actually holds tags
+        actualTagDisplayPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 3));
         actualTagDisplayPanel.setBorder(BorderFactory.createEmptyBorder(2,2,2,2));
 
         JScrollPane tagScrollPane = new JScrollPane(actualTagDisplayPanel);
         tagScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        tagScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER); // Usually not needed for tags
-        tagScrollPane.setPreferredSize(new Dimension(0, 55)); // Adjusted preferred height
-        tagScrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove scrollpane border if TitledBorder is on container
+        tagScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        tagScrollPane.setPreferredSize(new Dimension(0, 55));
+        tagScrollPane.setBorder(BorderFactory.createEmptyBorder());
 
         tagPanelContainer.add(tagScrollPane, BorderLayout.CENTER);
         bottomOuterPanel.add(tagPanelContainer, BorderLayout.CENTER);
@@ -221,11 +214,10 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private JPanel createButtonPanel() {
-        // Using GridBagLayout for more control over button sizes and spacing
         JPanel buttonPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 4, 5, 4); // Padding around buttons
-        gbc.fill = GridBagConstraints.HORIZONTAL; // Make buttons expand horizontally a bit
+        gbc.insets = new Insets(5, 4, 5, 4);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int gridx = 0;
 
@@ -259,17 +251,16 @@ public class NoteEditorScreen extends JPanel {
         summaryButtonReference.addActionListener(e -> handleSummaryAction());
         gbc.gridx = gridx++; buttonPanel.add(summaryButtonReference, gbc);
 
-        // Add a flexible spacer to push the Save button to the right
         gbc.gridx = gridx++;
-        gbc.weightx = 1.0; // This component will take up extra horizontal space
+        gbc.weightx = 1.0;
         buttonPanel.add(Box.createHorizontalGlue(), gbc);
-        gbc.weightx = 0; // Reset weight
+        gbc.weightx = 0;
 
         JButton saveButton = new JButton(SAVE_LABEL);
         saveButton.setToolTipText("Lưu các thay đổi (Ctrl+S)");
         saveButton.addActionListener(e -> saveNote());
         gbc.gridx = gridx++;
-        gbc.anchor = GridBagConstraints.EAST; // Anchor save button to the right
+        gbc.anchor = GridBagConstraints.EAST;
         buttonPanel.add(saveButton, gbc);
 
         return buttonPanel;
@@ -298,7 +289,7 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private void handleAiAutoTagAction() {
-        if (note == null || note.getId() <= 0) { // Check if note is saved
+        if (note == null || note.getId() <= 0) {
             JOptionPane.showMessageDialog(mainFrame, "Vui lòng lưu ghi chú trước khi sử dụng AI Auto Tag.", "Ghi chú chưa được lưu", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -323,7 +314,6 @@ public class NoteEditorScreen extends JPanel {
                         for (String tagName : tagNames) {
                             String trimmedTagName = tagName.trim();
                             if (!trimmedTagName.isEmpty()) {
-                                // Check if tag already exists on the note before adding
                                 boolean tagExists = note.getTags().stream().anyMatch(t -> t.getName().equalsIgnoreCase(trimmedTagName));
                                 if (!tagExists) {
                                     controller.addTag(note, new Tag(trimmedTagName));
@@ -365,12 +355,12 @@ public class NoteEditorScreen extends JPanel {
             return;
         }
 
-        AlarmDialog alarmDialog = new AlarmDialog(mainFrame, note.getAlarm()); // Pass current alarm
+        AlarmDialog alarmDialog = new AlarmDialog(mainFrame, note.getAlarm());
         alarmDialog.setVisible(true);
 
         if (alarmDialog.isOkPressed()) {
             Alarm resultAlarm = alarmDialog.getResult();
-            controller.setAlarm(note, resultAlarm); // Controller handles if resultAlarm is null (delete) or new/updated
+            controller.setAlarm(note, resultAlarm);
         }
         updateDynamicButtonTexts();
     }
@@ -391,7 +381,7 @@ public class NoteEditorScreen extends JPanel {
 
         if (missionDialog.isSaved()) {
             String resultMissionContent = missionDialog.getResult();
-            controller.updateMission(note, resultMissionContent); // Controller handles null or empty content
+            controller.updateMission(note, resultMissionContent);
         }
         updateDynamicButtonTexts();
     }
@@ -470,7 +460,6 @@ public class NoteEditorScreen extends JPanel {
     }
 
     private void showResultDialog(String title, String textContent) {
-        // Now uses the new StyledResultDialog
         StyledResultDialog.showDialog(mainFrame, title, textContent);
     }
 
@@ -486,14 +475,14 @@ public class NoteEditorScreen extends JPanel {
 
         this.note.setTitle(newTitle);
         this.note.setContent(newContent);
-        this.note.updateUpdatedAt(); // Ensure modification date is updated
+        this.note.updateUpdatedAt();
 
         try {
             if (this.note.getId() > 0) {
                 controller.updateExistingNote(this.note.getId(), this.note);
             } else {
                 if (this.note.getFolderId() <= 0 && controller.getCurrentFolder() != null) {
-                    this.note.setFolder(controller.getCurrentFolder()); // This will also set folderId
+                    this.note.setFolder(controller.getCurrentFolder());
                 } else if (this.note.getFolderId() <= 0) {
                     Folder rootFolder = controller.getFolderByName("Root").orElse(null);
                     if (rootFolder != null) {

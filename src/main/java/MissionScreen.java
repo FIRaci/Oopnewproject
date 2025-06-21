@@ -1,4 +1,3 @@
-// File: MissionScreen.java
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -6,7 +5,6 @@ import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.time.LocalDate; // Keep this if showAlarmDialog or other parts use it
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -45,7 +43,7 @@ public class MissionScreen extends JPanel {
 
     private Font getEmojiSupportedFont(int size) {
         String[] fontFamilies = {"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji"};
-        int[] codePoints = {0x1F50D, 0x23F0}; // Unicode code points for '🔍' and '⏰'
+        int[] codePoints = {0x1F50D, 0x23F0};
         for (String family : fontFamilies) {
             Font font = new Font(family, Font.PLAIN, size);
             boolean allSupported = true;
@@ -59,7 +57,7 @@ public class MissionScreen extends JPanel {
                 return font;
             }
         }
-        return new Font("Dialog", Font.PLAIN, size); // Fallback font
+        return new Font("Dialog", Font.PLAIN, size);
     }
 
     private void setupRefreshButton() {
@@ -68,14 +66,11 @@ public class MissionScreen extends JPanel {
         refreshButton.setToolTipText("Refresh mission list");
 
         refreshButton.addActionListener(e -> {
-            // Disable nút và đổi text khi đang làm mới
             refreshButton.setEnabled(false);
             refreshButton.setText("🔄 Refreshing...");
 
-            // Thực hiện làm mới
             refreshMissions();
 
-            // Set timer để enable lại nút sau 500ms
             Timer timer = new Timer(500, evt -> {
                 refreshButton.setEnabled(true);
                 refreshButton.setText("🔄 Refresh");
@@ -131,9 +126,9 @@ public class MissionScreen extends JPanel {
         deleteButton.setToolTipText("Switch to delete mode");
         deleteButton.addActionListener(e -> toggleDeleteMode());
 
-        setupRefreshButton(); // Khởi tạo refreshButton
+        setupRefreshButton();
 
-        buttonsPanel.add(refreshButton); // thêm đúng thứ tự
+        buttonsPanel.add(refreshButton);
         buttonsPanel.add(deleteButton);
 
         topPanel.add(buttonsPanel, BorderLayout.EAST);
@@ -154,20 +149,19 @@ public class MissionScreen extends JPanel {
 
         add(scrollPane, BorderLayout.CENTER);
 
-        // Hiển thị danh sách nhiệm vụ ban đầu
         refreshMissions();
     }
 
 
     private void toggleDeleteMode() {
         deleteMode = !deleteMode;
-        deleteButton.setText(deleteMode ? "✅ Done Deleting" : "🗑 Delete"); // Changed icon for "Done"
+        deleteButton.setText(deleteMode ? "✅ Done Deleting" : "🗑 Delete");
         deleteButton.setFont(getEmojiSupportedFont(14));
         deleteButton.setToolTipText(deleteMode ? "Finish and exit delete mode" : "Switch to delete mode");
         refreshButton.setEnabled(!deleteMode);
 
         if(deleteMode) {
-            deleteButton.setBackground(new Color(0xDC3545)); // A red color for delete mode
+            deleteButton.setBackground(new Color(0xDC3545));
             deleteButton.setForeground(Color.WHITE);
         } else {
             deleteButton.setBackground(UIManager.getColor("Button.background"));
@@ -383,11 +377,9 @@ public class MissionScreen extends JPanel {
                 if (clickedComponent instanceof JCheckBox || clickedComponent instanceof JButton) {
                     return;
                 }
-                // Check if the click is on the alarmLabel or its parent (infoPanel)
-                // This logic might need refinement if alarmLabel is deeply nested.
                 if (alarmLabel.getBounds().contains(SwingUtilities.convertPoint(panel, e.getPoint(), alarmLabel.getParent())) && note.getAlarm() != null) {
-                    if (alarmLabel.getBounds().contains(SwingUtilities.convertPoint(panel, e.getPoint(), alarmLabel))) { // More precise check
-                        return; // Click was specifically on alarm label
+                    if (alarmLabel.getBounds().contains(SwingUtilities.convertPoint(panel, e.getPoint(), alarmLabel))) {
+                        return;
                     }
                 }
 

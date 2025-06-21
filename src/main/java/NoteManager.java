@@ -1,4 +1,3 @@
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -21,15 +20,10 @@ public class NoteManager {
         dataStorage = new DataStorage("notes.json");
 
         System.out.println("[NoteManager Constructor] Đang tải dữ liệu từ DataStorage...");
-        dataStorage.load(this); // Điền dữ liệu thô vào notes, folders, tags
+        dataStorage.load(this);
 
-        // Bước 1: Khởi tạo và chuẩn hóa ID cho các đối tượng đã tải
         initializeAndSanitizeIds();
-
-        // Bước 2: Đảm bảo thư mục Root tồn tại và hợp lệ
         ensureRootFolderExists();
-
-        // Bước 3: Tái liên kết các đối tượng (Note với Folder, Note với Tags, v.v.)
         relinkObjects();
 
         System.out.println("[NoteManager Constructor] Khởi tạo hoàn tất. Notes: " + notes.size() +
@@ -63,11 +57,8 @@ public class NoteManager {
                 ", Folder=" + nextFolderId + ", Tag=" + nextTagId + ", Alarm=" + nextAlarmId);
 
         // Gán ID cho các đối tượng chưa có ID hợp lệ (ID = 0)
-        for (Folder folder : new ArrayList<>(folders)) { // Duyệt trên bản sao nếu có thể xóa/thay thế
+        for (Folder folder : new ArrayList<>(folders)) {
             if (folder.getId() == 0) {
-                // Nếu tên là "Root" nhưng ID là 0, vẫn gán ID mới để đảm bảo nó duy nhất
-                // (trừ khi có logic đặc biệt để giữ ID 0 cho Root mới tạo chưa lưu)
-                // Tốt nhất là mọi folder được quản lý đều có ID > 0.
                 System.out.println("[NoteManager] Folder '" + folder.getName() + "' có ID 0. Đang gán ID mới...");
                 folder.setId(generateNewFolderId());
                 System.out.println("[NoteManager] ID mới cho '" + folder.getName() + "': " + folder.getId());
@@ -101,7 +92,7 @@ public class NoteManager {
 
         if (dataModified) {
             System.out.println("[NoteManager] Dữ liệu đã được sửa đổi trong quá trình chuẩn hóa ID, đang lưu lại...");
-            saveData(); // Lưu lại ngay nếu có thay đổi ID
+            saveData();
         }
         System.out.println("[NoteManager] Hoàn tất initializeAndSanitizeIds.");
     }
@@ -116,42 +107,40 @@ public class NoteManager {
         if (root == null) {
             System.out.println("[NoteManager] Thư mục Root không tồn tại, đang tạo mới...");
             root = new Folder("Root");
-            root.setId(generateNewFolderId()); // ID mới nếu chưa có
-            folders.add(0, root); // Thêm vào đầu danh sách
+            root.setId(generateNewFolderId());
+            folders.add(0, root);
             System.out.println("[NoteManager] Đã tạo thư mục Root với ID: " + root.getId());
             rootModifiedOrCreated = true;
         } else {
-            if (root.getId() == 0) { // Root tồn tại nhưng ID = 0 (không nên xảy ra nếu sanitizeIds chạy đúng)
+            if (root.getId() == 0) {
                 System.out.println("[NoteManager] Thư mục Root có ID 0, đang gán ID mới: " + root.getName());
                 root.setId(generateNewFolderId());
                 System.out.println("[NoteManager] ID mới cho Root: " + root.getId());
                 rootModifiedOrCreated = true;
             }
-            // Đảm bảo Root luôn ở vị trí đầu tiên
             if (folders.indexOf(root) != 0) {
                 folders.remove(root);
                 folders.add(0, root);
-                // Không cần đánh dấu dataModified ở đây vì chỉ thay đổi thứ tự trong bộ nhớ
+
             }
             System.out.println("[NoteManager] Thư mục Root đã tồn tại với ID: " + root.getId());
         }
         if (rootModifiedOrCreated) {
-            saveData(); // Lưu nếu Root được tạo mới hoặc ID của nó được cập nhật
+            saveData();
         }
     }
 
     private void relinkObjects() {
         System.out.println("[NoteManager] Đang tái liên kết các đối tượng...");
         Map<Long, Folder> folderMapById = folders.stream()
-                .filter(f -> f.getId() != 0) // Chỉ map các folder có ID hợp lệ
-                .collect(Collectors.toMap(Folder::getId, f -> f, (f1, f2) -> f1)); // Xử lý key trùng (không nên có)
+                .filter(f -> f.getId() != 0)
+                .collect(Collectors.toMap(Folder::getId, f -> f, (f1, f2) -> f1));
         Map<Long, Tag> tagMapById = tags.stream()
                 .filter(t -> t.getId() != 0)
                 .collect(Collectors.toMap(Tag::getId, t -> t, (t1, t2) -> t1));
-        Folder rootFolder = getRootFolder(); // Phải có Root ở đây
+        Folder rootFolder = getRootFolder();
 
         for (Note note : notes) {
-            // Liên kết Folder cho Note
             Folder associatedFolder = null;
             if (note.getFolderId() != 0) {
                 associatedFolder = folderMapById.get(note.getFolderId());
@@ -163,10 +152,10 @@ public class NoteManager {
                     associatedFolder.addNote(note);
                 }
             } else {
-                if (note.getFolderId() != 0) { // Có folderId nhưng không tìm thấy folder tương ứng
+                if (note.getFolderId() != 0) {
                     System.err.println("[NoteManager relink] Cảnh báo: Note '" + note.getTitle() + "' có folderId " + note.getFolderId() + " nhưng không tìm thấy folder. Gán vào Root.");
                 }
-                note.setFolder(rootFolder); // Gán vào Root
+                note.setFolder(rootFolder);
                 if (rootFolder != null && !rootFolder.getNotes().contains(note)) {
                     rootFolder.addNote(note);
                 }
@@ -174,14 +163,13 @@ public class NoteManager {
 
             // Liên kết Tags cho Note
             List<Tag> resolvedTags = new ArrayList<>();
-            if (note.getTags() != null) { // Giả sử NoteAdapter deserialize tags với ID nếu có
+            if (note.getTags() != null) {
                 for (Tag tagStub : note.getTags()) {
                     Tag resolvedTag = null;
                     if (tagStub.getId() != 0) {
                         resolvedTag = tagMapById.get(tagStub.getId());
                     }
                     if (resolvedTag == null && tagStub.getName() != null && !tagStub.getName().isEmpty()) {
-                        // Nếu không tìm thấy bằng ID, thử tìm bằng tên trong danh sách tag đã được chuẩn hóa ID
                         resolvedTag = tags.stream()
                                 .filter(t -> t.getName().equalsIgnoreCase(tagStub.getName()))
                                 .findFirst().orElse(null);
@@ -195,15 +183,16 @@ public class NoteManager {
             }
             note.setTags(resolvedTags);
         }
+
         // Liên kết subFolders cho Folders (nếu dùng subFolderNames)
         for (Folder folder : folders) {
             if (folder.getSubFolderNames() != null && !folder.getSubFolderNames().isEmpty()) {
-                folder.getSubFolders().clear(); // Xóa subfolders cũ trước khi link lại
+                folder.getSubFolders().clear();
                 for (String subFolderName : folder.getSubFolderNames()) {
                     Folder subFolder = folders.stream()
                             .filter(f -> f.getName().equalsIgnoreCase(subFolderName))
                             .findFirst().orElse(null);
-                    if (subFolder != null && subFolder.getId() != folder.getId()) { // Đảm bảo không tự làm subfolder của chính nó
+                    if (subFolder != null && subFolder.getId() != folder.getId()) {
                         folder.addSubFolder(subFolder);
                     } else if (subFolder != null && subFolder.getId() == folder.getId()){
                         System.err.println("[NoteManager relink] Cảnh báo: Folder '" + folder.getName() + "' không thể là subfolder của chính nó.");
@@ -215,39 +204,29 @@ public class NoteManager {
     }
 
 
-    // --- Các phương thức generate ID ---
+
     public long generateNewNoteId() { return nextNoteId.getAndIncrement(); }
     public long generateNewFolderId() { return nextFolderId.getAndIncrement(); }
     public long generateNewTagId() { return nextTagId.getAndIncrement(); }
     public long generateNewAlarmId() { return nextAlarmId.getAndIncrement(); }
 
-    // --- Các phương thức CRUD và logic khác giữ nguyên như trước ---
-    // ... (addNote, updateNote, deleteNote, getNoteById, getAllNotes, etc.)
-    // ... (addFolder, updateFolder, deleteFolder, getRootFolder, getAllFolders, getFolderById, getFolderByName, etc.)
-    // ... (getOrCreateTag, addTagToNote, removeTagFromNote, getAllTags, getTagById, getTagByName, updateTag, deleteTag, etc.)
-    // ... (searchNotes, moveNoteToFolder, getSortedNotes, saveData, getModifiable...List)
-
-    // Ví dụ: addFolder cần đảm bảo ID
     public void addFolder(Folder folder) {
         if (folder == null) {
             throw new IllegalArgumentException("Folder cannot be null");
         }
-        if (folder.getId() == 0) { // Gán ID nếu là folder mới
-            // Kiểm tra tên trùng trước khi gán ID mới cho folder mới hoàn toàn
+        if (folder.getId() == 0) {
+
             Optional<Folder> existingByName = folders.stream()
                     .filter(f -> f.getName().equalsIgnoreCase(folder.getName()))
                     .findFirst();
             if (existingByName.isPresent()) {
                 System.out.println("[NoteManager addFolder] Thư mục '" + folder.getName() + "' đã tồn tại với ID " + existingByName.get().getId() + ". Không thêm mới.");
-                // Cập nhật tham chiếu của folder truyền vào thành folder đã tồn tại
-                // (Điều này có thể không cần thiết nếu UI luôn tạo folder mới và controller xử lý)
-                // folder.setId(existingByName.get().getId()); // Hoặc throw lỗi, hoặc trả về folder đã tồn tại
-                return; // Không thêm nếu tên đã có
+               return;
             }
             folder.setId(generateNewFolderId());
         }
 
-        // Chỉ thêm nếu folder (với ID đó) chưa có trong danh sách
+
         final long folderIdToAdd = folder.getId();
         boolean alreadyExistsById = folders.stream().anyMatch(f -> f.getId() == folderIdToAdd);
 
@@ -255,20 +234,14 @@ public class NoteManager {
             folders.add(folder);
             System.out.println("[NoteManager addFolder] Đã thêm thư mục: " + folder.getName() + " với ID: " + folder.getId());
             saveData();
-        } else if (!folders.contains(folder)) { // Cùng ID nhưng khác instance (không nên xảy ra nếu quản lý tốt)
-            // Cập nhật instance trong list nếu cần
+        } else if (!folders.contains(folder)) {
+
             folders.removeIf(f -> f.getId() == folderIdToAdd);
             folders.add(folder);
             System.out.println("[NoteManager addFolder] Đã cập nhật instance cho thư mục: " + folder.getName() + " với ID: " + folder.getId());
             saveData();
         }
     }
-
-    // Các phương thức khác giữ nguyên...
-    // (updateNote, deleteNote, getNoteById, getAllNotes, etc.)
-    // (updateFolder, deleteFolder, getRootFolder, getAllFolders, getFolderById, getFolderByName, etc.)
-    // (getOrCreateTag, addTagToNote, removeTagFromNote, getAllTags, getTagById, getTagByName, updateTag, deleteTag, etc.)
-    // (searchNotes, moveNoteToFolder, getSortedNotes, saveData, getModifiable...List)
 
     // --- Note Management ---
     public void addNote(Note note) {
@@ -294,12 +267,12 @@ public class NoteManager {
         if (parentFolder == null || parentFolder.getId() == 0) {
             parentFolder = getRootFolder();
             note.setFolder(parentFolder);
-        } else { // Đảm bảo parentFolder là instance được quản lý
+        } else {
             Folder managedParentFolder = getFolderById(parentFolder.getId());
             if (managedParentFolder != null) {
                 parentFolder = managedParentFolder;
                 note.setFolder(parentFolder);
-            } else { // Folder không tìm thấy, gán vào Root
+            } else {
                 System.err.println("Cảnh báo: Folder ID " + parentFolder.getId() + " cho note '" + note.getTitle() + "' không tìm thấy. Gán vào Root.");
                 parentFolder = getRootFolder();
                 note.setFolder(parentFolder);
@@ -314,7 +287,7 @@ public class NoteManager {
                 parentFolder.addNote(note);
             }
         } else {
-            updateNote(note); // Gọi update nếu note đã tồn tại (dựa trên ID)
+            updateNote(note);
             return;
         }
         System.out.println("[NoteManager addNote] Đã thêm/cập nhật note: " + note.getTitle() + " với ID: " + note.getId());
@@ -387,7 +360,7 @@ public class NoteManager {
         Note noteToRemove = getNoteById(noteId);
         if (noteToRemove != null) {
             if (noteToRemove.getFolder() != null) {
-                Folder parent = getFolderById(noteToRemove.getFolder().getId()); // Lấy instance được quản lý
+                Folder parent = getFolderById(noteToRemove.getFolder().getId());
                 if(parent != null) parent.removeNote(noteToRemove);
             }
             notes.remove(noteToRemove);
@@ -416,7 +389,6 @@ public class NoteManager {
             System.err.println("[NoteManager getNotesInFolder] Không tìm thấy folder được quản lý với ID: " + folder.getId() + ". Trả về danh sách rỗng.");
             return new ArrayList<>();
         }
-        // Trả về một bản sao của danh sách notes của folder đó
         return new ArrayList<>(managedFolder.getNotes());
     }
 
@@ -444,7 +416,7 @@ public class NoteManager {
             if (conflictingFolder.isPresent()) {
                 throw new IllegalArgumentException("Another folder with the name '" + folderToUpdate.getName() + "' already exists.");
             }
-            folders.set(index, folderToUpdate); // Cập nhật folder trong danh sách
+            folders.set(index, folderToUpdate);
             System.out.println("[NoteManager updateFolder] Đã cập nhật folder: " + folderToUpdate.getName() + " với ID: " + folderToUpdate.getId());
             saveData();
         } else {
@@ -472,10 +444,8 @@ public class NoteManager {
             if (root == null) throw new IllegalStateException("Root folder not found, cannot move notes.");
             List<Note> notesToMoveCopy = new ArrayList<>(folderToRemove.getNotes());
             for (Note note : notesToMoveCopy) {
-                // folderToRemove.removeNote(note); // Sẽ được xử lý trong note.setFolder và updateNote
                 note.setFolder(root);
                 note.setFolderId(root.getId());
-                // root.addNote(note); // updateNote sẽ xử lý việc thêm vào danh sách của folder mới
                 updateNote(note);
             }
         }
@@ -487,18 +457,16 @@ public class NoteManager {
     public Folder getRootFolder() {
         if (folders.isEmpty() || !"Root".equalsIgnoreCase(folders.get(0).getName()) || folders.get(0).getId() == 0) {
             System.err.println("[NoteManager getRootFolder] Root folder không hợp lệ hoặc không ở vị trí đầu. Đang thử đảm bảo lại...");
-            ensureRootFolderExists(); // Thử đảm bảo lại Root
+            ensureRootFolderExists();
             if (folders.isEmpty() || !"Root".equalsIgnoreCase(folders.get(0).getName()) || folders.get(0).getId() == 0) {
                 System.err.println("[NoteManager getRootFolder] LỖI NGHIÊM TRỌNG: Không thể đảm bảo Root folder hợp lệ!");
-                // Fallback cuối cùng: tạo một Root tạm thời nếu list rỗng
                 if (folders.isEmpty()) {
                     Folder tempRoot = new Folder("Root (Fallback Cấp Cứu)");
-                    tempRoot.setId(generateNewFolderId()); // Gán ID
+                    tempRoot.setId(generateNewFolderId());
                     folders.add(0, tempRoot);
                     saveData();
                     return tempRoot;
                 }
-                // Nếu list không rỗng nhưng folder đầu tiên không phải Root, đây là vấn đề logic nghiêm trọng
             }
         }
         return folders.get(0);
@@ -509,7 +477,7 @@ public class NoteManager {
     }
 
     public Folder getFolderById(long folderId) {
-        if (folderId == 0) return null; // ID 0 không phải là ID hợp lệ cho folder được quản lý
+        if (folderId == 0) return null;
         return folders.stream().filter(folder -> folder.getId() == folderId).findFirst().orElse(null);
     }
 
@@ -540,7 +508,7 @@ public class NoteManager {
 
     public void addTagToNote(Note note, String tagName) {
         if (note == null || note.getId() == 0) throw new IllegalArgumentException("Note cannot be null or unsaved.");
-        Note managedNote = getNoteById(note.getId()); // Lấy instance được quản lý
+        Note managedNote = getNoteById(note.getId());
         if(managedNote == null) throw new IllegalArgumentException("Note not found in manager.");
 
         Tag tag = getOrCreateTag(tagName);
@@ -619,7 +587,6 @@ public class NoteManager {
         for (Note note : notes) {
             boolean modified = note.getTags().removeIf(t -> t.getId() == tagId);
             if (modified) {
-                // Không gọi updateNote(note) ở đây để tránh save nhiều lần, saveData() cuối cùng sẽ xử lý
             }
         }
         tags.remove(tagToDelete);
@@ -660,23 +627,22 @@ public class NoteManager {
             throw new IllegalArgumentException("Note or Folder not found in manager for move operation.");
         }
 
-        Folder oldFolder = noteInManager.getFolder(); // Đây là instance được quản lý
+        Folder oldFolder = noteInManager.getFolder();
 
         if (oldFolder != null && oldFolder.getId() == folderInManager.getId()) {
             System.out.println("[NoteManager moveNoteToFolder] Note đã ở trong thư mục đích.");
-            return; // Không cần làm gì thêm
+            return;
         }
 
         if (oldFolder != null) {
-            oldFolder.removeNote(noteInManager); // Xóa khỏi danh sách note của folder cũ
+            oldFolder.removeNote(noteInManager);
         }
 
-        noteInManager.setFolder(folderInManager); // Cập nhật tham chiếu folder trên note
-        noteInManager.setFolderId(folderInManager.getId()); // Cập nhật folderId
-        if (!folderInManager.getNotes().contains(noteInManager)) { // Thêm vào danh sách note của folder mới
+        noteInManager.setFolder(folderInManager);
+        noteInManager.setFolderId(folderInManager.getId());
+        if (!folderInManager.getNotes().contains(noteInManager)) {
             folderInManager.addNote(noteInManager);
         }
-        // Không cần gọi updateNote() ở đây vì noteInManager là tham chiếu trực tiếp, thay đổi đã ảnh hưởng
         System.out.println("[NoteManager moveNoteToFolder] Đã chuyển note '" + noteInManager.getTitle() + "' sang thư mục '" + folderInManager.getName() + "'.");
         saveData();
     }

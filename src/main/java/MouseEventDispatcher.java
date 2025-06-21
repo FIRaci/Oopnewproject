@@ -15,14 +15,12 @@ public class MouseEventDispatcher {
         this.mouseMotionListener = new MouseAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                // Chuyển vị trí chuột sang tọa độ tương đối với imageSpinner
                 Point mousePos = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), imageSpinner);
                 imageSpinner.updateMousePosition(mousePos);
             }
         };
     }
 
-    // Thêm MouseMotionListener vào một component và tất cả các thành phần con của nó
     public void addMouseMotionListener(Component component) {
         if (component instanceof JComponent) {
             ((JComponent) component).addMouseMotionListener(mouseMotionListener);
@@ -34,7 +32,6 @@ public class MouseEventDispatcher {
         }
     }
 
-    // Thêm listener vào dialog hoặc frame
     public void addMouseMotionListenerToWindow(Window window) {
         if (window instanceof JFrame) {
             addMouseMotionListener(((JFrame) window).getContentPane());
@@ -44,7 +41,6 @@ public class MouseEventDispatcher {
         window.addMouseMotionListener(mouseMotionListener);
     }
 
-    // Gỡ listener nếu cần (không bắt buộc trong trường hợp này)
     public void removeMouseMotionListener(Component component) {
         if (component instanceof JComponent) {
             ((JComponent) component).removeMouseMotionListener(mouseMotionListener);

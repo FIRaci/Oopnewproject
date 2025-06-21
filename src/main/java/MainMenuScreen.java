@@ -1,4 +1,3 @@
-// File: MainMenuScreen.java
 import javax.swing.*;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -47,27 +46,23 @@ public class MainMenuScreen extends JPanel {
 
     private void loadAlarmIcons() {
         hourIcons = new ImageIcon[24];
-        ImageIcon spinnerIcon = null; // Biến để lưu trữ icon spinner đã tải
+        ImageIcon spinnerIcon = null;
 
         try {
-            // Tải icon spinner.jpg một lần
-            java.net.URL imgUrl = getClass().getResource("/images/spinner.jpg"); // Giả sử spinner.jpg nằm trong /images
+            java.net.URL imgUrl = getClass().getResource("/images/spinner.jpg");
             if (imgUrl != null) {
                 ImageIcon originalIcon = new ImageIcon(imgUrl);
                 Image img = originalIcon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH);
                 spinnerIcon = new ImageIcon(img);
             } else {
                 System.err.println("Không tìm thấy tài nguyên: /images/spinner.jpg");
-                // Nếu không tìm thấy spinner.jpg, tạo một icon mặc định
-                spinnerIcon = createDefaultIcon("S"); // "S" for Spinner or some placeholder
+                spinnerIcon = createDefaultIcon("S");
             }
         } catch (Exception e) {
             System.err.println("Không thể tải icon spinner.jpg: " + e.getMessage());
-            // Nếu có lỗi khi tải, tạo một icon mặc định
-            spinnerIcon = createDefaultIcon("E"); // "E" for Error
+            spinnerIcon = createDefaultIcon("E");
         }
 
-        // Gán icon spinner đã tải (hoặc icon mặc định nếu có lỗi) cho tất cả 24 giờ
         for (int i = 0; i < 24; i++) {
             hourIcons[i] = spinnerIcon;
         }
@@ -89,8 +84,8 @@ public class MainMenuScreen extends JPanel {
     }
 
     private void initializeUI() {
-        setLayout(new BorderLayout(10, 10)); // Increased gap between main areas
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Overall padding
+        setLayout(new BorderLayout(10, 10));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         add(buildFolderPanel(), BorderLayout.WEST);
         add(buildNotesPanel(), BorderLayout.CENTER);
     }
@@ -100,9 +95,9 @@ public class MainMenuScreen extends JPanel {
         folderPanel.setLayout(new BoxLayout(folderPanel, BoxLayout.Y_AXIS));
         folderPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder(FOLDERS_TITLE),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5) // Padding inside titled border
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
         ));
-        folderPanel.setPreferredSize(new Dimension(220, 0)); // Slightly wider folder panel
+        folderPanel.setPreferredSize(new Dimension(220, 0));
 
         folderListModel = new DefaultListModel<>();
         folderList = new JList<>(folderListModel);
@@ -116,7 +111,6 @@ public class MainMenuScreen extends JPanel {
                     StringBuilder displayText = new StringBuilder(folder.getName());
                     if (folder.isFavorite()) displayText.append(" ★");
                     setText(displayText.toString());
-                    // Add padding to list items
                     setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
                 }
                 return c;
@@ -145,13 +139,12 @@ public class MainMenuScreen extends JPanel {
         folderList.addListSelectionListener(folderListSelectionHandler);
 
         JScrollPane scrollPane = new JScrollPane(folderList);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove default border of JScrollPane if any
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
         folderPanel.add(scrollPane);
 
         JButton addFolderButton = createAddFolderButton();
-        // Panel to hold the button and provide some margin
         JPanel buttonHolder = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        buttonHolder.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0)); // Top margin for the button
+        buttonHolder.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
         buttonHolder.add(addFolderButton);
         folderPanel.add(buttonHolder);
 
@@ -233,7 +226,6 @@ public class MainMenuScreen extends JPanel {
         if (folderListSelectionHandler != null) {
             folderList.addListSelectionListener(folderListSelectionHandler);
         }
-        // populateNoteTableModel(); // Listener will handle this
     }
 
     private void showFolderPopupMenu(MouseEvent e) {
@@ -292,14 +284,14 @@ public class MainMenuScreen extends JPanel {
     }
 
     private JPanel buildNotesPanel() {
-        JPanel notesPanel = new JPanel(new BorderLayout(5, 10)); // Increased vgap
+        JPanel notesPanel = new JPanel(new BorderLayout(5, 10));
         notesPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder("Ghi chú & Bản vẽ"),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5) // Padding inside titled border
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
         ));
         noteTable = createNoteTable();
         JScrollPane tableScrollPane = new JScrollPane(noteTable);
-        tableScrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove default border of JScrollPane
+        tableScrollPane.setBorder(BorderFactory.createEmptyBorder());
         notesPanel.add(tableScrollPane, BorderLayout.CENTER);
         notesPanel.add(createNoteControlPanel(), BorderLayout.NORTH);
         populateNoteTableModel();
@@ -311,12 +303,11 @@ public class MainMenuScreen extends JPanel {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         noteTable = new JTable(model);
-        noteTable.setRowHeight(28); // Slightly taller rows for better touch targets and readability
+        noteTable.setRowHeight(28);
         noteTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-        noteTable.setFillsViewportHeight(true); // Table uses entire height of scroll pane
-        noteTable.setIntercellSpacing(new Dimension(5, 2)); // Spacing between cells
+        noteTable.setFillsViewportHeight(true);
+        noteTable.setIntercellSpacing(new Dimension(5, 2));
 
-        // Column widths
         noteTable.getColumnModel().getColumn(0).setPreferredWidth(250); // Title
         noteTable.getColumnModel().getColumn(1).setMaxWidth(70);      // Favorite
         noteTable.getColumnModel().getColumn(1).setMinWidth(60);
@@ -335,16 +326,16 @@ public class MainMenuScreen extends JPanel {
                     Note note = (Note) value;
                     String titleText = note.getTitle();
                     if (note.getNoteType() == Note.NoteType.DRAWING) {
-                        titleText = "🎨 " + titleText; // Icon for drawing
+                        titleText = "🎨 " + titleText;
                     } else {
-                        titleText = "📄 " + titleText; // Icon for text note
+                        titleText = "📄 " + titleText;
                     }
                     setText(titleText);
                 } else {
                     setText(value != null ? value.toString() : "");
                 }
                 setHorizontalAlignment(JLabel.LEFT);
-                setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5)); // Padding in title cell
+                setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
                 return this;
             }
         };
@@ -353,13 +344,13 @@ public class MainMenuScreen extends JPanel {
         DefaultTableCellRenderer centerRendererAll = new DefaultTableCellRenderer();
         centerRendererAll.setHorizontalAlignment(JLabel.CENTER);
         noteTable.getColumnModel().getColumn(1).setCellRenderer(centerRendererAll); // Favorite
-        noteTable.getColumnModel().getColumn(3).setCellRenderer(centerRendererAll); // Alarm (icon will be centered)
+        noteTable.getColumnModel().getColumn(3).setCellRenderer(centerRendererAll); // Alarm
         noteTable.getColumnModel().getColumn(4).setCellRenderer(centerRendererAll); // Modified
 
 
         DefaultTableCellRenderer missionRenderer = new DefaultTableCellRenderer();
         missionRenderer.setHorizontalAlignment(JLabel.LEFT);
-        missionRenderer.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5)); // Padding in mission cell
+        missionRenderer.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
         noteTable.getColumnModel().getColumn(2).setCellRenderer(missionRenderer);
 
 
@@ -371,11 +362,10 @@ public class MainMenuScreen extends JPanel {
                 label.setIcon(null);
                 if (value instanceof Integer) {
                     int hour = (Integer) value;
-                    // Since we only have one spinnerIcon now, we use it directly
-                    if (hourIcons != null && hourIcons.length > 0 && hourIcons[0] != null) { // Check if spinnerIcon was loaded
-                        label.setIcon(hourIcons[0]); // Use the single spinner icon
+                    if (hourIcons != null && hourIcons.length > 0 && hourIcons[0] != null) {
+                        label.setIcon(hourIcons[0]);
                     } else {
-                        label.setText("-"); // Fallback if spinnerIcon is somehow null
+                        label.setText("-");
                     }
                 } else {
                     label.setText("-");
@@ -389,10 +379,9 @@ public class MainMenuScreen extends JPanel {
 
             @Override
             public void mouseClicked(MouseEvent e) {
-                // Xử lý các sự kiện NHẤP CHUỘT (thường là TRÁI)
+
                 int row = noteTable.rowAtPoint(e.getPoint());
-                if (row == -1) { // Nhấp ra ngoài các hàng
-                    // noteTable.clearSelection(); // Tùy chọn
+                if (row == -1) {
                     return;
                 }
                 int col = noteTable.columnAtPoint(e.getPoint());
@@ -400,18 +389,14 @@ public class MainMenuScreen extends JPanel {
                 if (filteredNotes == null || row >= filteredNotes.size()) {
                     return;
                 }
-                Note selectedNote = filteredNotes.get(row); // Lấy note được chọn
+                Note selectedNote = filteredNotes.get(row);
 
-                // CHỈ XỬ LÝ CHUỘT TRÁI TRONG MOUSECLICKED
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     if (e.getClickCount() == 2) {
-                        // --- Nhấp đúp chuột TRÁI ---
-                        handleNoteDoubleClick(noteTable); // Hoặc truyền selectedNote nếu cần
+                        handleNoteDoubleClick(noteTable);
                     } else if (e.getClickCount() == 1) {
-                        // --- Nhấp đơn chuột TRÁI ---
 
-                        // YÊU CẦU 1: Nhấp chuột TRÁI vào cột Mission (giả sử cột 2)
-                        if (col == 2 && selectedNote.isMission()) { // Nhớ thay đổi '2' nếu cột Mission của bạn khác
+                        if (col == 2 && selectedNote.isMission()) {
                             MissionDialog dialog = new MissionDialog(mainFrame);
                             dialog.setMission(selectedNote.getMissionContent());
                             dialog.setVisible(true);
@@ -424,40 +409,28 @@ public class MainMenuScreen extends JPanel {
                                 populateNoteTableModel();
                             }
                         }
-                        // Ví dụ: Xử lý nhấp chuột trái vào cột Báo thức (giả sử cột 3)
                         else if (col == 3) {
                             showAlarmDialog(selectedNote);
                         }
-                        // Thêm các hành động khác cho nhấp chuột TRÁI một lần nếu cần
                     }
                 }
-                // Các nút chuột khác không được xử lý trong mouseClicked cho các hành động này
             }
 
             @Override
             public void mousePressed(MouseEvent e) {
-                // Xử lý sự kiện NHẤN CHUỘT PHẢI để hiển thị Menu
                 if (SwingUtilities.isRightMouseButton(e)) {
                     int row = noteTable.rowAtPoint(e.getPoint());
-
-                    // Đảm bảo nhấp chuột trong phạm vi các hàng của bảng
                     if (row >= 0 && row < noteTable.getRowCount()) {
-                        // Quan trọng: Chọn hàng được nhấp chuột phải
                         noteTable.setRowSelectionInterval(row, row);
-
                         if (filteredNotes == null || row >= filteredNotes.size()) {
                             return;
                         }
                         Note selectedNote = filteredNotes.get(row);
-
-                        // YÊU CẦU 2: Nhấp chuột PHẢI hiển thị Menu (showNotePopup)
                         if (controller != null) {
-                            showNotePopup(e, selectedNote); // Hiển thị menu ngữ cảnh chung cho hàng được chọn
+                            showNotePopup(e, selectedNote);
                         }
                     }
                 }
-                // Sự kiện nhấn chuột TRÁI được JTable xử lý mặc định cho việc chọn hàng.
-                // Không cần thêm hành động ở đây trừ khi bạn muốn ghi đè hành vi chọn mặc định.
             }
         });
         return noteTable;
@@ -470,7 +443,7 @@ public class MainMenuScreen extends JPanel {
         if(mainFrame.getMouseEventDispatcher() != null) mainFrame.getMouseEventDispatcher().addMouseMotionListenerToWindow(dialog);
         dialog.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 12, 10, 12); // Increased insets
+        gbc.insets = new Insets(10, 12, 10, 12);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
@@ -497,8 +470,8 @@ public class MainMenuScreen extends JPanel {
         gbc.gridx = 1;
         dialog.add(typeComboBox, gbc);
 
-        JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0)); // Reduced hgap
-        datePanel.setOpaque(false); // Make panel transparent if dialog bg is set
+        JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        datePanel.setOpaque(false);
         JLabel dateLabelComponent = new JLabel("Ngày (yyyy-MM-dd):");
         JTextField dateField = new JTextField(10);
         dateField.setText(initialDateTimeToShow.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
@@ -521,12 +494,12 @@ public class MainMenuScreen extends JPanel {
         Runnable updatePanelsVisibility = () -> {
             boolean isOnce = "ONCE".equals(typeComboBox.getSelectedItem());
             datePanel.setVisible(isOnce);
-            dialog.pack(); // Repack dialog when visibility changes
+            dialog.pack();
         };
         typeComboBox.addActionListener(e -> updatePanelsVisibility.run());
         updatePanelsVisibility.run();
 
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8)); // Increased hgap
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8));
         buttonsPanel.setOpaque(false);
         JButton updateButton = new JButton(existingAlarmId > 0 ? "Cập Nhật" : "Đặt Báo Thức");
         updateButton.addActionListener(e -> {
@@ -589,11 +562,11 @@ public class MainMenuScreen extends JPanel {
         buttonsPanel.add(cancelButton);
 
         gbc.gridx = 0; gbc.gridy++; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
-        gbc.fill = GridBagConstraints.NONE; // Don't stretch button panel
+        gbc.fill = GridBagConstraints.NONE;
         dialog.add(buttonsPanel, gbc);
 
         dialog.pack();
-        dialog.setMinimumSize(new Dimension(400, dialog.getHeight())); // Ensure min width
+        dialog.setMinimumSize(new Dimension(400, dialog.getHeight()));
         dialog.setLocationRelativeTo(mainFrame);
         dialog.setVisible(true);
     }
@@ -602,8 +575,8 @@ public class MainMenuScreen extends JPanel {
     private JPanel createNoteControlPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5); // Padding around components
-        gbc.anchor = GridBagConstraints.WEST; // Default anchor
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
 
         // Add Note Button
         JButton addNoteButton = new JButton(ADD_NOTE_LABEL);
@@ -621,7 +594,7 @@ public class MainMenuScreen extends JPanel {
 
         // Scanner Button
         try {
-            ImageIcon scannerIcon = new ImageIcon(getClass().getResource("/images/Clara.jpg")); // Ensure path is correct
+            ImageIcon scannerIcon = new ImageIcon(getClass().getResource("/images/Clara.jpg"));
             Image scaledIcon = scannerIcon.getImage().getScaledInstance(24, 24, Image.SCALE_SMOOTH);
             JButton scannerButton = new JButton(new ImageIcon(scaledIcon));
             scannerButton.setToolTipText("Mở công cụ Scanner");
@@ -630,7 +603,6 @@ public class MainMenuScreen extends JPanel {
             panel.add(scannerButton, gbc);
         } catch (Exception ex) {
             System.err.println("Không thể tải icon scanner: " + ex.getMessage());
-            // Optionally add a placeholder or text button if icon fails
             JButton scannerFallbackButton = new JButton("Scan");
             scannerFallbackButton.setToolTipText("Mở công cụ Scanner (icon lỗi)");
             scannerFallbackButton.addActionListener(e -> FloatingScannerTray.getInstance().setVisible(true));
@@ -639,7 +611,7 @@ public class MainMenuScreen extends JPanel {
         }
 
         // Spacer
-        gbc.gridx = 3; gbc.weightx = 0.1; // Add some weight to push subsequent items
+        gbc.gridx = 3; gbc.weightx = 0.1;
         panel.add(Box.createHorizontalStrut(10), gbc);
         gbc.weightx = 0;
 
@@ -693,10 +665,10 @@ public class MainMenuScreen extends JPanel {
         panel.add(tagSearchField, gbc);
 
         // Spacer to push stats and refresh to the right
-        gbc.gridx = 6; gbc.weightx = 1.0; // This will take up remaining space
+        gbc.gridx = 6; gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(Box.createHorizontalGlue(), gbc);
-        gbc.weightx = 0; // Reset weight
+        gbc.weightx = 0;
         gbc.fill = GridBagConstraints.NONE;
 
 
@@ -707,7 +679,7 @@ public class MainMenuScreen extends JPanel {
         gbc.gridx = 8; gbc.gridy = 0;
         panel.add(refreshButton, gbc);
 
-        panel.setBorder(BorderFactory.createEmptyBorder(5,0,5,0)); // Add some vertical padding to the panel itself
+        panel.setBorder(BorderFactory.createEmptyBorder(5,0,5,0));
 
         return panel;
     }
@@ -759,7 +731,7 @@ public class MainMenuScreen extends JPanel {
                     }
                 }
                 model.addRow(new Object[]{
-                        note, // Pass the whole Note object to the renderer
+                        note,
                         note.isFavorite() ? "★" : "",
                         missionDisplay,
                         alarmValue,
@@ -831,17 +803,14 @@ public class MainMenuScreen extends JPanel {
             List<Folder> allFolders = controller.getFolders();
             Folder currentNoteFolder = note.getFolder();
 
-            // Filter out the current folder from the list of target folders
-            final Folder finalCurrentNoteFolder = currentNoteFolder; // Effective final for lambda
+            final Folder finalCurrentNoteFolder = currentNoteFolder;
             List<Folder> targetFolders = allFolders.stream()
                     .filter(f -> finalCurrentNoteFolder == null || f.getId() != finalCurrentNoteFolder.getId())
                     .collect(Collectors.toList());
-
-            // If the note is not in "Root" and "Root" is not its current folder, add "Root" as a move option
             Folder rootFolder = controller.getFolderByName("Root").orElse(null);
             if (rootFolder != null && (finalCurrentNoteFolder == null || finalCurrentNoteFolder.getId() != rootFolder.getId())) {
                 if (!targetFolders.stream().anyMatch(tf -> tf.getId() == rootFolder.getId())) {
-                    targetFolders.add(0, rootFolder); // Add Root to the beginning
+                    targetFolders.add(0, rootFolder);
                 }
             }
 
@@ -865,7 +834,7 @@ public class MainMenuScreen extends JPanel {
                 Folder selectedFolder = (Folder) folderCombo.getSelectedItem();
                 if (selectedFolder != null) {
                     controller.moveNoteToFolder(note, selectedFolder);
-                    populateNoteTableModel(); // Refresh notes as current folder's content might change
+                    populateNoteTableModel();
                 }
             }
         });

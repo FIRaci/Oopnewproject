@@ -1,4 +1,4 @@
-// AlarmController.java
+
 import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 public class AlarmController {
     private final NoteController noteController;
-    private final MainFrame mainFrame; // mainFrame này sẽ được dùng làm owner cho dialog
+    private final MainFrame mainFrame;
     private final ScheduledExecutorService scheduler;
     private Clip clip;
     private final ConcurrentHashMap<Long, LocalDateTime> recentlyTriggeredAlarms = new ConcurrentHashMap<>();
@@ -83,7 +83,6 @@ public class AlarmController {
                 final Alarm alarmSnapshot = new Alarm(alarm.getId(), alarm.getAlarmTime(), alarm.isRecurring(), alarm.getRecurrencePattern());
 
                 if (!alarmSnapshot.isRecurring()) {
-                    // System.out.println("    INFO: Modifying in-memory original Alarm time for \"" + note.getTitle() + "\" (AlarmID: " + alarm.getId() + ") to prevent immediate re-trigger.");
                     alarm.setAlarmTime(LocalDateTime.MIN);
                 }
 
@@ -104,26 +103,22 @@ public class AlarmController {
     }
 
     private void triggerAlarm(Note note) {
-        // System.out.println("    DEBUG: triggerAlarm() called for note: " + note.getTitle());
+
         final Alarm currentAlarmStateInNote = note.getAlarm();
         Runnable onDialogDispose = () -> {
             if(currentAlarmStateInNote != null && !currentAlarmStateInNote.isRecurring()){
                 recentlyTriggeredAlarms.remove(currentAlarmStateInNote.getId());
             }
-            // System.out.println("    DEBUG: Notification dialog general cleanup for note: \"" + note.getTitle() + "\"");
-        };
 
+        };
         playSound();
         AlarmNotificationDialog dialog = new AlarmNotificationDialog(mainFrame, note, this, onDialogDispose);
-
-        // <<< Đặt vị trí dialog ngay trước khi hiển thị >>>
         dialog.setLocationRelativeTo(this.mainFrame);
 
         dialog.setVisible(true);
     }
 
     private void playSound() {
-        // System.out.println("    DEBUG: playSound() called.");
         stopAndCloseClip();
         try {
             URL soundResourceUrl = getClass().getResource("/sound/sound.wav");
@@ -140,7 +135,6 @@ public class AlarmController {
             clip = AudioSystem.getClip();
             clip.open(audioInput);
             clip.start();
-            // System.out.println("    INFO: Sound started for Doctor.wav");
             clip.addLineListener(event -> {
                 if (event.getType() == LineEvent.Type.STOP) {
                     Clip c = (Clip) event.getSource();
@@ -274,9 +268,6 @@ public class AlarmController {
             int minWidth = 350; int minHeight = 200; int maxWidth = 500; int maxHeight = 350;
             setSize(Math.min(maxWidth, Math.max(minWidth, getWidth() + 20)),
                     Math.min(maxHeight, Math.max(minHeight, getHeight() + 20)));
-
-            // <<< DÒNG NÀY ĐÃ BỊ XÓA/COMMENT TRONG PHIÊN BẢN NÀY >>>
-            // setLocationRelativeTo(owner);
         }
 
         @Override
