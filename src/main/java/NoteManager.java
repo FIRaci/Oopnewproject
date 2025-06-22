@@ -141,6 +141,7 @@ public class NoteManager {
         Folder rootFolder = getRootFolder();
 
         for (Note note : notes) {
+            note.setDisableAutoUpdate(true);
             Folder associatedFolder = null;
             if (note.getFolderId() != 0) {
                 associatedFolder = folderMapById.get(note.getFolderId());
@@ -182,6 +183,7 @@ public class NoteManager {
                 }
             }
             note.setTags(resolvedTags);
+            note.setDisableAutoUpdate(false);
         }
 
         // Liên kết subFolders cho Folders (nếu dùng subFolderNames)

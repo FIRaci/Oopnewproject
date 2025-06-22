@@ -14,6 +14,7 @@ public class Note {
         DRAWING
     }
 
+    private transient boolean disableAutoUpdate = false;
     private long id;
     private String title;
     private String content;
@@ -193,12 +194,8 @@ public class Note {
 
     public void setFolder(Folder folder) {
         this.folder = folder;
-        if (folder != null) {
-            this.folderId = folder.getId();
-        } else {
-            this.folderId = 0L;
-        }
-        updateUpdatedAt();
+        this.folderId = (folder != null) ? folder.getId() : 0L;
+        if (!disableAutoUpdate) updateUpdatedAt();
     }
 
     public List<Tag> getTags() {
@@ -210,7 +207,11 @@ public class Note {
 
     public void setTags(List<Tag> tags) {
         this.tags = (tags != null) ? new ArrayList<>(tags) : new ArrayList<>();
-        updateUpdatedAt();
+        if (!disableAutoUpdate) updateUpdatedAt();
+    }
+
+    public void setDisableAutoUpdate(boolean disable) {
+        this.disableAutoUpdate = disable;
     }
 
     public void addTag(Tag tag) {
